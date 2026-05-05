@@ -4,6 +4,10 @@ Warden is a local small-business intelligence dashboard for storefront owners. I
 
 The project is built for a hack-day demo today with free public APIs first. Apify can be swapped in later as a paid/simple extraction layer without changing the owner-facing workflow.
 
+## Live Demo
+
+Production deployment: [https://warden-kappa.vercel.app](https://warden-kappa.vercel.app)
+
 ## What It Does
 
 - Tracks multiple storefronts from the left rail with add/edit/store-info controls.

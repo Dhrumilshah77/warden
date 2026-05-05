@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.mjs",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/apify/run",
+      "dest": "/api/apify/run.mjs"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.mjs"
+    },
+    {
+      "src": "/api/sources",
+      "dest": "/api/sources.mjs"
+    },
+    {
+      "src": "/api/intel",
+      "dest": "/api/intel.mjs"
+    },
+    {
+      "src": "/api/restock",
+      "dest": "/api/restock.mjs"
+    },
+    {
+      "src": "/app.js",
+      "dest": "/public/app.js"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.html"
+    }
+  ]
+}

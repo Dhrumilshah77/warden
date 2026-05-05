@@ -228,7 +228,7 @@ const RESTOCK_CATALOG = [
   }
 ];
 
-const server = createServer(async (req, res) => {
+export async function handleRequest(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -276,11 +276,18 @@ const server = createServer(async (req, res) => {
       detail: error instanceof Error ? error.message : String(error)
     });
   }
-});
+}
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`Warden running at http://127.0.0.1:${PORT}`);
-});
+if (isMainModule()) {
+  const server = createServer(handleRequest);
+  server.listen(PORT, "127.0.0.1", () => {
+    console.log(`Warden running at http://127.0.0.1:${PORT}`);
+  });
+}
+
+function isMainModule() {
+  return process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+}
 
 async function loadDotEnv() {
   const envPath = path.join(__dirname, ".env");
