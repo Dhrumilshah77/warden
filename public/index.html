@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warden - Storefront intelligence</title>
+  <style>
+    :root {
+      --bg: #0b0e0b;
+      --panel: #151914;
+      --panel-2: #1b2019;
+      --panel-3: #242b22;
+      --line: #394235;
+      --line-soft: #2a3328;
+      --text: #f3f2ec;
+      --muted: #c6c3ba;
+      --subtle: #8d9187;
+      --blue: #4a8fd8;
+      --green: #36c28f;
+      --amber: #d6a03c;
+      --red: #e05f5f;
+      --teal: #38b6a5;
+      --cream: #eee8da;
+      --blue-bg: rgba(74, 143, 216, 0.14);
+      --green-bg: rgba(54, 194, 143, 0.13);
+      --amber-bg: rgba(214, 160, 60, 0.13);
+      --red-bg: rgba(224, 95, 95, 0.14);
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+      --sans: "SF Pro Text", "Aptos", "Helvetica Neue", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.45;
+      overflow: hidden;
+      font-feature-settings: "kern";
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #56594e; border-radius: 8px; }
+    :focus-visible {
+      outline: 2px solid rgba(74,143,216,.82);
+      outline-offset: 2px;
+    }
+
+    .topbar {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: #10140f;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 0 0 auto;
+    }
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(54,194,143,.42);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #18241d;
+      color: var(--green);
+      font-size: 16px;
+      font-weight: 800;
+    }
+    .brand-copy { display: grid; gap: 1px; min-width: 0; }
+    .brand-main {
+      font-size: 20px;
+      font-weight: 620;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+    .brand-main span { color: var(--green); }
+    .brand-sub {
+      color: var(--subtle);
+      font-size: 12px;
+      font-weight: 560;
+      white-space: nowrap;
+    }
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      flex-wrap: nowrap;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .top-actions::-webkit-scrollbar { display: none; }
+    .top-actions .btn { flex: 0 0 auto; }
+    .translate-control {
+      flex: 0 0 auto;
+      min-height: 34px;
+      border: 1px solid rgba(224,95,95,.74);
+      border-radius: 6px;
+      background: rgba(224,95,95,.15);
+      color: #ffb6ae;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+    .translate-control select {
+      min-height: 24px;
+      border: 0;
+      outline: 0;
+      border-radius: 5px;
+      background: #301a18;
+      color: #fff0ee;
+      font-size: 12px;
+      font-weight: 620;
+    }
+    .restock-entry {
+      min-width: 94px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .btn {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 8px 11px;
+      font-size: 12px;
+      font-weight: 620;
+      white-space: nowrap;
+      transition: background-color .16s ease, border-color .16s ease, color .16s ease;
+    }
+    .btn:hover { color: var(--text); border-color: #62695e; background: #272d25; }
+    .btn:disabled {
+      cursor: progress;
+      opacity: .68;
+    }
+    .btn.primary { background: #3d86d5; border-color: #5ca6f0; color: white; }
+    .btn.good { background: #37b982; border-color: #59d99f; color: #06120d; }
+    .btn.danger { background: var(--red-bg); border-color: rgba(223,91,87,.35); color: #ffaaa6; }
+    .btn-emoji { margin-right: 5px; }
+    .btn.icon-only {
+      width: 38px;
+      padding-left: 0;
+      padding-right: 0;
+      text-align: center;
+    }
+    .btn.icon-only .btn-emoji { margin-right: 0; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 99px;
+      margin-left: 5px;
+      padding: 0 6px;
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+
+    .app-shell {
+      height: calc(100vh - 64px);
+      display: grid;
+      grid-template-columns: 264px minmax(0, 1fr);
+      gap: 1px;
+      background: var(--line);
+    }
+    .rail, .monitor {
+      min-width: 0;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+    .rail { background: #11150f; }
+    .monitor { background: #0f130f; }
+
+    .panel-head {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      padding: 15px 14px;
+      background: #11150f;
+      border-bottom: 1px solid var(--line);
+    }
+    .row, .group-head, .metric-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .kicker {
+      color: var(--subtle);
+      font-family: var(--sans);
+      font-size: 13px;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 760;
+    }
+    .search, .field-input, .field-select, .field-textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #151913;
+      color: var(--text);
+      outline: none;
+      border-radius: 6px;
+      padding: 10px 11px;
+      min-height: 39px;
+    }
+    .field-textarea { min-height: 90px; resize: vertical; }
+    .search:focus, .field-input:focus, .field-select:focus, .field-textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(74,143,216,.14);
+    }
+
+    .shops-list {
+      padding: 10px 8px 18px;
+      display: grid;
+      gap: 6px;
+    }
+    .store-card {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: inherit;
+      border-radius: 7px;
+      padding: 9px;
+      text-align: left;
+    }
+    .store-card:hover { background: #1b1f19; border-color: var(--line); }
+    .store-card.active { background: #20261e; border-color: #65715f; }
+    .avatar, .hero-avatar {
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--blue);
+      color: white;
+      font-weight: 760;
+    }
+    .avatar { width: 36px; height: 36px; font-size: 15px; }
+    .store-name { font-weight: 720; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .store-meta { color: var(--subtle); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+    .mini-bar { height: 4px; border-radius: 99px; background: #0e100c; overflow: hidden; }
+    .mini-bar span { display: block; height: 100%; border-radius: inherit; }
+    .mini-bar .risk { background: var(--red); }
+    .mini-bar .opp { background: var(--green); }
+    .rail-actions {
+      position: sticky;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: #11150f;
+    }
+    .rail-actions .wide { grid-column: 1 / -1; }
+
+    .monitor-inner { padding: 18px 20px 30px; }
+    .monitor-summary {
+      display: grid;
+      grid-template-columns: minmax(270px, 340px) minmax(0, 1fr);
+      align-items: stretch;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .summary-identity {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      padding: 14px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .hero-avatar { width: 52px; height: 52px; font-size: 20px; }
+    .hero-title {
+      font-size: 24px;
+      line-height: 1.12;
+      font-weight: 760;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+    .hero-sub { color: var(--muted); margin-top: 5px; font-weight: 650; }
+    .pill-row, .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+    .pill, .filter-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .filter-btn.active, .pill.active { background: var(--blue-bg); border-color: rgba(74,143,216,.56); color: #d9ebff; }
+
+    .scores {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin: 0;
+      grid-column: auto;
+      align-self: start;
+    }
+    .score, .metric-card, .summary-card, .signal-card, .op-card, .warning-card, .weather-card, .review-card, .source-row {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      border-radius: 7px;
+    }
+    .score {
+      padding: 10px 12px 9px;
+      min-height: 74px;
+      position: relative;
+      overflow: hidden;
+    }
+    .score-label {
+      color: var(--subtle);
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 650;
+    }
+    .score-num { margin-top: 4px; font-size: 30px; font-weight: 820; line-height: .95; }
+    .score-num.risk { color: var(--red); }
+    .score-num.opp { color: var(--green); }
+    .track { height: 5px; margin-top: 7px; border-radius: 99px; background: #0d100c; overflow: hidden; }
+    .track span { display: block; height: 100%; border-radius: inherit; }
+    .track .risk { background: var(--red); }
+    .track .opp { background: var(--green); }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+      gap: 8px;
+      margin: 0;
+      grid-column: auto;
+      align-self: start;
+    }
+    .metric-card {
+      padding: 10px 12px;
+      min-height: 74px;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 2px;
+      background: #586052;
+    }
+    .metric-card.good::before { background: var(--green); }
+    .metric-card.warn::before { background: var(--amber); }
+    .metric-card.risk::before { background: var(--red); }
+    .metric-head {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+    .metric-icon {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 6px;
+      background: rgba(255,255,255,.05);
+      font-size: 14px;
+      flex: 0 0 auto;
+    }
+    .metric-label { color: var(--subtle); font-family: var(--sans); font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 620; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .metric-value { font-size: 19px; font-weight: 760; margin-top: 6px; overflow-wrap: anywhere; }
+    .metric-detail { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .metric-card.good { border-color: rgba(35,182,132,.36); }
+    .metric-card.warn { border-color: rgba(227,167,47,.36); }
+    .metric-card.risk { border-color: rgba(223,91,87,.42); }
+
+    .summary-card { padding: 13px; margin-top: 10px; }
+    .summary-title { font-size: 15px; font-weight: 720; margin-bottom: 8px; }
+    .summary-list { display: grid; gap: 8px; }
+    .summary-item { display: grid; grid-template-columns: 120px 1fr; gap: 10px; color: var(--muted); }
+    .summary-item b { color: var(--text); font-weight: 650; }
+    .summary-text { color: var(--muted); }
+
+    .monitor-head {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      margin: -18px -18px 14px;
+      padding: 15px 18px;
+      background: #0f130f;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .head-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .updated { color: var(--subtle); font-size: 12px; white-space: nowrap; }
+    .banner-stack { display: grid; gap: 10px; margin-bottom: 14px; }
+    .banner {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      border-radius: 7px;
+      padding: 12px;
+    }
+    .banner.critical { border-color: rgba(223,91,87,.42); background: var(--red-bg); }
+    .banner.warning { border-color: rgba(227,167,47,.42); background: var(--amber-bg); }
+    .banner.opportunity { border-color: rgba(35,182,132,.42); background: var(--green-bg); }
+    .banner-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: var(--blue);
+      color: white;
+      font-size: 16px;
+      font-weight: 760;
+    }
+    .banner.critical .banner-icon { background: var(--red); }
+    .banner.warning .banner-icon { background: var(--amber); color: #140f04; }
+    .banner.opportunity .banner-icon { background: var(--green); color: #06120d; }
+    .banner-title { font-weight: 720; margin-bottom: 2px; }
+    .banner-body { color: var(--muted); }
+
+    .filters { margin-bottom: 15px; }
+    .section-block { margin-top: 18px; scroll-margin-top: 92px; }
+    .group-head { margin: 0 0 9px; }
+    .group-count { color: var(--subtle); font-family: var(--mono); font-size: 10px; }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 10px; }
+    .wide-grid { display: grid; gap: 10px; }
+
+    .op-card, .warning-card { padding: 14px; display: grid; gap: 10px; align-content: start; position: relative; overflow: hidden; }
+    .op-card { border-color: rgba(54,194,143,.34); background: #18211b; }
+    .warning-card { border-color: rgba(214,160,60,.38); background: #211e17; }
+    .warning-card.high { border-color: rgba(224,95,95,.46); background: #251a19; }
+    .op-card::before, .warning-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 2px;
+      background: var(--green);
+    }
+    .warning-card::before { background: var(--amber); }
+    .warning-card.high::before { background: var(--red); }
+    .action-title { font-size: 17px; line-height: 1.22; font-weight: 720; }
+    .action-impact { color: var(--green); font-family: var(--sans); font-size: 12px; font-weight: 660; }
+    .warning-card .action-impact { color: var(--amber); }
+    .action-copy { color: var(--muted); }
+    .card-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+    .card-type {
+      color: var(--subtle);
+      font-size: 12px;
+      font-weight: 620;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-date {
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+    .owner-step {
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding-top: 9px;
+      color: var(--text);
+    }
+    .evidence-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 2px;
+    }
+    .check-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .check-list span {
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    .source-link {
+      color: #b9d7ff;
+      font-weight: 680;
+      font-size: 12px;
+    }
+    .source-link:hover { color: white; }
+    .save-card-btn {
+      justify-self: start;
+      min-height: 30px;
+      padding: 6px 9px;
+      font-size: 11px;
+      background: rgba(255,255,255,.06);
+    }
+    .review-list { display: grid; gap: 10px; }
+    .review-card {
+      padding: 13px;
+      display: grid;
+      gap: 8px;
+      border-color: rgba(45,125,210,.34);
+      background: rgba(45,125,210,.08);
+    }
+    .review-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .review-meta span {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 6px;
+      padding: 4px 8px;
+      background: rgba(255,255,255,.04);
+    }
+
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(116px, 1fr));
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .weather-card { padding: 12px; min-width: 126px; background: #1a1f18; }
+    .weather-day { font-weight: 720; display: flex; align-items: center; gap: 6px; }
+    .weather-emoji { font-size: 16px; }
+    .weather-condition { color: var(--muted); margin-top: 4px; min-height: 34px; }
+    .weather-stat { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .weather-stat b { color: var(--text); }
+
+    .signal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 10px; }
+    .signal-grid.compact {
+      grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+      gap: 8px;
+    }
+    .signal-card {
+      min-height: 174px;
+      border-left: 3px solid var(--blue);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .signal-card.compact {
+      min-height: 128px;
+      gap: 6px;
+      padding: 12px;
+    }
+    .signal-card.critical { border-left-color: var(--red); }
+    .signal-card.warning { border-left-color: var(--amber); }
+    .signal-card.opportunity { border-left-color: var(--green); }
+    .sig-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .sig-code {
+      display: inline-grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      border-radius: 6px;
+      background: var(--blue);
+      color: white;
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 760;
+    }
+    .signal-card.critical .sig-code { background: var(--red); }
+    .signal-card.warning .sig-code { background: var(--amber); color: #120e04; }
+    .signal-card.opportunity .sig-code { background: var(--green); color: #06120d; }
+    .sig-name { color: var(--muted); font-size: 12px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sig-sev { color: var(--subtle); font-family: var(--sans); font-size: 12px; font-weight: 620; text-transform: none; }
+    .sig-title { font-size: 18px; line-height: 1.2; font-weight: 720; overflow-wrap: anywhere; }
+    .signal-card.compact .sig-title { font-size: 15px; line-height: 1.22; }
+    .sig-metric { color: var(--subtle); font-family: var(--sans); font-size: 12px; font-weight: 600; }
+    .sig-body { color: var(--muted); flex: 1; }
+    .signal-card.compact .sig-body {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex: initial;
+    }
+    .signal-card.compact .check-list,
+    .signal-card.compact .sig-foot {
+      display: none;
+    }
+    .sig-foot { display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(255,255,255,.07); padding-top: 8px; color: var(--subtle); font-family: var(--mono); font-size: 10px; }
+
+    .source-list, .citation-list { display: grid; gap: 8px; }
+    .source-row, .citation-row {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 11px;
+      color: var(--muted);
+    }
+    .citation-row { grid-template-columns: 1fr auto; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); }
+    .dot.ok { background: var(--green); }
+    .dot.warn { background: var(--red); }
+    .small-title { color: var(--text); font-weight: 700; }
+    .small-meta { color: var(--subtle); font-size: 12px; overflow-wrap: anywhere; }
+    .empty {
+      border: 1px dashed #56594e;
+      color: var(--subtle);
+      border-radius: 7px;
+      padding: 16px;
+      background: var(--panel-2);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(8, 9, 7, .78);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      width: min(920px, 100%);
+      max-height: 92vh;
+      overflow-y: auto;
+      border: 1px solid #676b5d;
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .modal.small { width: min(680px, 100%); }
+    .modal-head, .modal-body, .modal-foot { padding: 18px 20px; }
+    .modal-head { border-bottom: 1px solid var(--line); }
+    .modal-title { margin: 5px 0 0; font-size: 22px; letter-spacing: 0; }
+    .modal-body { display: grid; gap: 16px; }
+    .modal-foot { border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 9px; }
+    .form-grid { display: grid; gap: 11px; }
+    .form-grid.two { grid-template-columns: 1fr 1fr; }
+    .form-grid.three { grid-template-columns: repeat(3, 1fr); }
+    .field label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      margin-bottom: 6px;
+    }
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .type-card {
+      min-height: 72px;
+      border: 1px solid var(--line);
+      background: #22251f;
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 10px 8px;
+      font-weight: 680;
+      text-align: center;
+    }
+    .type-card .emoji {
+      display: block;
+      font-size: 20px;
+      line-height: 1;
+      margin-bottom: 7px;
+    }
+    .type-card .type-name { display: block; }
+    .type-card.active { color: var(--text); border-color: #8fc8ff; background: var(--blue-bg); }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .detail-box {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      padding: 12px;
+    }
+    .detail-box b { display: block; margin-bottom: 5px; }
+    .detail-box span { color: var(--muted); overflow-wrap: anywhere; }
+    .store-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+      gap: 10px;
+    }
+    .store-info-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 12px;
+      min-height: 96px;
+    }
+    .store-info-card.wide { grid-column: span 2; }
+    .store-info-card.full { grid-column: 1 / -1; }
+    .store-info-label {
+      color: var(--subtle);
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 680;
+      margin-bottom: 7px;
+    }
+    .store-info-value { color: var(--text); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+    .store-info-note { color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
+
+    .restock-workspace {
+      display: grid;
+      gap: 12px;
+    }
+    .restock-search {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .restock-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .restock-chip {
+      border: 1px solid var(--line);
+      background: #1b2019;
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 620;
+    }
+    .restock-chip:hover {
+      color: var(--text);
+      border-color: #65715f;
+    }
+    .restock-summary {
+      border: 1px solid rgba(74,143,216,.35);
+      background: var(--blue-bg);
+      border-radius: 7px;
+      padding: 12px 14px;
+      color: var(--muted);
+      display: grid;
+      gap: 7px;
+    }
+    .restock-summary strong {
+      color: var(--text);
+      font-size: 16px;
+    }
+    .restock-board {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: auto;
+      max-height: min(68vh, 760px);
+      background: var(--panel-2);
+    }
+    .restock-board-head,
+    .restock-row {
+      display: grid;
+      grid-template-columns: 108px minmax(174px, 1.25fr) 88px 104px 106px 78px;
+      align-items: center;
+      gap: 8px;
+    }
+    .restock-board-head {
+      padding: 10px 12px;
+      color: var(--subtle);
+      font-size: 11px;
+      font-weight: 680;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .restock-row {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .restock-row:last-child { border-bottom: 0; }
+    .restock-storefront {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .restock-logo {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: #252a22;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 760;
+    }
+    .restock-domain {
+      color: var(--subtle);
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .restock-product {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+    .restock-image {
+      width: 54px;
+      height: 46px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #151913;
+    }
+    .restock-provider-line,
+    .restock-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .restock-actions {
+      justify-content: flex-end;
+    }
+    .restock-provider {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .restock-score {
+      color: var(--green);
+      font-weight: 680;
+      font-size: 12px;
+    }
+    .restock-title {
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 680;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+    .restock-fit {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+      margin-top: 3px;
+    }
+    .restock-price {
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+    .restock-cell {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .restock-cell strong {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .restock-mobile-label {
+      display: none;
+      color: var(--subtle);
+      font-size: 11px;
+      font-weight: 650;
+    }
+    .restock-unit,
+    .restock-copy,
+    .restock-meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .restock-copy {
+      line-height: 1.35;
+      margin-top: 4px;
+    }
+    .restock-meta {
+      color: var(--subtle);
+    }
+    .restock-disclaimer {
+      color: var(--subtle);
+      font-size: 12px;
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding-top: 8px;
+    }
+
+    .chat-fab {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 44;
+      width: 54px;
+      height: 54px;
+      border: 1px solid rgba(185,215,255,.5);
+      border-radius: 50%;
+      background: var(--blue);
+      color: white;
+      box-shadow: var(--shadow);
+      font-weight: 780;
+      letter-spacing: .04em;
+    }
+    .chat-fab:hover { border-color: white; background: #5a9ee0; }
+    .chat-panel {
+      position: fixed;
+      right: 22px;
+      bottom: 88px;
+      z-index: 45;
+      display: none;
+      width: min(390px, calc(100vw - 28px));
+      max-height: min(620px, calc(100vh - 112px));
+      border: 1px solid #5b6470;
+      border-radius: 8px;
+      background: #181a16;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .chat-panel.open { display: grid; grid-template-rows: auto minmax(220px, 1fr) auto; }
+    .chat-head {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #20231e;
+    }
+    .chat-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .chat-title { font-weight: 720; }
+    .chat-context { margin-top: 4px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .chat-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      padding: 0;
+    }
+    .chat-messages {
+      overflow-y: auto;
+      padding: 14px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+    .chat-msg {
+      max-width: 88%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 10px;
+      color: var(--muted);
+      background: var(--panel-2);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .chat-msg.user {
+      justify-self: end;
+      color: white;
+      border-color: rgba(45,125,210,.45);
+      background: rgba(45,125,210,.28);
+    }
+    .chat-msg.assistant { justify-self: start; }
+    .chat-time {
+      margin-top: 4px;
+      color: var(--subtle);
+      font-family: var(--mono);
+      font-size: 9px;
+    }
+    .chat-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 14px 10px;
+    }
+    .chat-chip {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 11px;
+      font-weight: 620;
+    }
+    .chat-chip:hover { color: var(--text); border-color: #64685c; }
+    .chat-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px 14px 14px;
+      border-top: 1px solid var(--line);
+      background: #20231e;
+    }
+    .chat-input {
+      min-height: 38px;
+      max-height: 92px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #12140f;
+      color: var(--text);
+      padding: 9px 10px;
+      outline: none;
+    }
+    .chat-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(74,143,216,.14);
+    }
+    .loading-stack {
+      display: grid;
+      gap: 10px;
+    }
+    .loading-card {
+      min-height: 112px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background:
+        linear-gradient(90deg, transparent, rgba(255,255,255,.035), transparent),
+        var(--panel-2);
+      background-size: 220px 100%, auto;
+      background-position: -220px 0, 0 0;
+      animation: loadingSweep 1.2s ease-in-out infinite;
+    }
+    @keyframes loadingSweep {
+      to { background-position: calc(100% + 220px) 0, 0 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .loading-card { animation: none; }
+      * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+
+    @media (max-width: 980px) {
+      html, body { overflow: auto; height: auto; }
+      .topbar { position: sticky; top: 0; z-index: 20; height: auto; min-height: 64px; padding: 10px 14px; }
+      .top-actions { overflow-x: auto; padding-bottom: 2px; }
+      .top-actions .btn { flex: 0 0 auto; }
+      .app-shell { height: auto; grid-template-columns: 1fr; }
+      .rail {
+        grid-row: auto;
+        position: static;
+        height: auto;
+        max-height: 420px;
+      }
+      .monitor-summary { grid-template-columns: 1fr; }
+      .monitor { grid-column: auto; }
+    }
+    @media (max-width: 1120px) {
+      .brand-sub { display: none; }
+      .topbar { gap: 12px; }
+      .btn { padding-left: 9px; padding-right: 9px; }
+    }
+    @media (max-width: 760px) {
+      .rail { max-height: 480px; }
+      .scores, .metric-grid, .cards-grid, .signal-grid, .form-grid.two, .form-grid.three, .detail-grid, .store-info-grid, .restock-search { grid-template-columns: 1fr; }
+      .store-info-card.wide, .store-info-card.full { grid-column: auto; }
+      .restock-board-head { display: none; }
+      .restock-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .restock-storefront { grid-template-columns: 38px minmax(0, 1fr); }
+      .restock-logo { width: 38px; height: 38px; }
+      .restock-product { grid-template-columns: 62px minmax(0, 1fr); }
+      .restock-image { width: 62px; height: 54px; }
+      .restock-mobile-label { display: inline; }
+      .restock-actions { justify-content: flex-start; }
+      .type-grid { grid-template-columns: repeat(2, 1fr); }
+      .top-actions { width: 100%; justify-content: stretch; }
+      .top-actions button { flex: 1; }
+      .brand-mark { width: 30px; height: 30px; }
+      .chat-fab { right: 16px; bottom: 16px; }
+      .chat-panel { right: 14px; bottom: 78px; }
+    }
+
+    @media print {
+      html, body { height: auto; overflow: visible; background: white; color: #111; }
+      .topbar, .rail, .modal-overlay, .filter-row, .source-link, .chat-fab, .chat-panel { display: none !important; }
+      .app-shell { display: block; height: auto; background: white; }
+      .monitor { overflow: visible; background: white; color: #111; }
+      .score, .metric-card, .summary-card, .signal-card, .op-card, .warning-card, .weather-card, .review-card, .source-row {
+        break-inside: avoid;
+        background: white;
+        color: #111;
+        border-color: #bbb;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">W</div>
+      <div class="brand-copy">
+        <div class="brand-main">warden<span>.</span></div>
+        <div class="brand-sub">Small business impact console</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="sourcesTopBtn"><span class="btn-emoji">✓</span>Checks <span class="badge" id="healthCount">0</span></button>
+      <button class="btn" id="opportunitiesTopBtn"><span class="btn-emoji">💡</span>Plays <span class="badge" id="opportunityCount">0</span></button>
+      <button class="btn" id="warningsTopBtn"><span class="btn-emoji">⚠️</span>Alerts <span class="badge" id="warningCount">0</span></button>
+      <button class="btn" id="reviewTopBtn"><span class="btn-emoji">📝</span>Notes <span class="badge" id="reviewCount">0</span></button>
+      <button class="btn icon-only" id="emailBtn" aria-label="Email report" title="Email report"><span class="btn-emoji">✉️</span></button>
+      <button class="btn icon-only" id="pdfBtn" aria-label="PDF report" title="PDF report"><span class="btn-emoji">⬇️</span></button>
+      <button class="btn good" id="refreshTopBtn"><span class="btn-emoji">↻</span>Scan</button>
+      <button class="btn primary restock-entry" id="restockTopBtn"><span class="btn-emoji">📦</span>Restock</button>
+    </div>
+    <label class="translate-control" for="languageSelect">
+      <span id="translateLabel">Translate</span>
+      <select id="languageSelect" aria-label="Translate interface">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="zh">Chinese</option>
+        <option value="vi">Vietnamese</option>
+        <option value="fil">Filipino</option>
+      </select>
+    </label>
+  </header>
+
+  <div class="app-shell">
+    <aside class="rail">
+      <div class="panel-head">
+        <div class="row">
+          <span class="kicker">Stores <span id="storeCount">0</span></span>
+          <button class="btn" id="addStoreBtn">＋ Add</button>
+        </div>
+        <div style="height:10px"></div>
+        <input class="search" id="storeSearch" placeholder="Search stores, owners, cities" />
+      </div>
+      <div class="shops-list" id="storesList"></div>
+      <div class="rail-actions">
+        <button class="btn wide" id="detailsStoreBtn">📋 View stored info</button>
+        <button class="btn wide" id="editStoreBtn">✏️ Edit store profile</button>
+      </div>
+    </aside>
+
+    <main class="monitor">
+      <div class="monitor-inner">
+        <section class="monitor-summary">
+          <section class="scores">
+            <div class="score">
+              <div class="score-label">Risk index</div>
+              <div class="score-num risk" id="riskScore">--</div>
+              <div class="track"><span class="risk" id="riskBar" style="width:0%"></span></div>
+            </div>
+            <div class="score">
+              <div class="score-label">Opportunity index</div>
+              <div class="score-num opp" id="opportunityScore">--</div>
+              <div class="track"><span class="opp" id="opportunityBar" style="width:0%"></span></div>
+            </div>
+          </section>
+
+          <section class="metric-grid" id="metricsGrid"></section>
+        </section>
+
+        <div class="monitor-head">
+          <div class="row">
+            <div class="pill-row">
+              <span class="pill active" id="addressPill">Location</span>
+              <span class="pill" id="cityPill">City</span>
+            </div>
+            <div class="head-actions">
+              <button class="btn" id="storeNotesBtn">Notes <span class="badge" id="storeNotesCount">0</span></button>
+              <span class="updated" id="updatedText">Waiting</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="banner-stack" id="bannerStack"></div>
+
+        <div class="filters">
+          <div class="filter-row" id="subTabs">
+            <button class="filter-btn active" data-filter="all">📊 Overview</button>
+          </div>
+        </div>
+
+        <section class="section-block" id="storeInfoSection">
+          <div class="group-head"><span class="kicker">Store Info</span><span class="group-count" id="storeInfoMeta">Saved profile</span></div>
+          <div class="store-info-grid" id="storeInfoPanel"></div>
+        </section>
+
+        <section class="section-block" id="restockSection">
+          <div class="group-head"><span class="kicker">Restock & Supplies</span><span class="group-count" id="restockMeta">Compare suppliers</span></div>
+          <div class="restock-workspace">
+            <form class="restock-search" id="restockForm">
+              <input class="field-input" id="restockQuery" placeholder="Search chairs, takeout containers, gloves, receipt paper..." />
+              <button class="btn good" type="submit">🔎 Compare suppliers</button>
+            </form>
+            <div class="restock-suggestions" id="restockSuggestions"></div>
+            <div class="restock-results" id="restockResults"></div>
+          </div>
+        </section>
+
+        <section class="section-block" id="opportunitiesSection">
+          <div class="group-head"><span class="kicker">Opportunities</span><span class="group-count" id="opportunitiesMeta">0 actions</span></div>
+          <div class="cards-grid" id="opportunitiesPanel"></div>
+        </section>
+
+        <section class="section-block" id="warningsSection">
+          <div class="group-head"><span class="kicker">Warnings</span><span class="group-count" id="warningsMeta">0 actions</span></div>
+          <div class="cards-grid" id="warningsPanel"></div>
+        </section>
+
+        <section class="section-block" id="weatherSection">
+          <div class="group-head"><span class="kicker">Weather & Climate</span><span class="group-count">7 day forecast</span></div>
+          <div class="weather-grid" id="weatherPanel"></div>
+        </section>
+
+        <section class="section-block" id="reviewLaterSection">
+          <div class="group-head"><span class="kicker">Store Notes</span><span class="group-count" id="reviewLaterMeta">0 saved</span></div>
+          <div class="review-list" id="reviewLaterList"></div>
+        </section>
+
+        <section class="section-block" id="signalsSection">
+          <div id="signalsRoot"></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <button class="chat-fab" id="chatFab" aria-label="Open store assistant">AI</button>
+  <section class="chat-panel" id="chatPanel" aria-label="Store assistant">
+    <div class="chat-head">
+      <div class="chat-title-row">
+        <div>
+          <div class="chat-title">Store assistant</div>
+          <div class="chat-context" id="chatContext">Select a store to start.</div>
+        </div>
+        <button class="btn chat-close" id="chatCloseBtn" aria-label="Close chatbot">×</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-suggestions" id="chatSuggestions"></div>
+    <form class="chat-form" id="chatForm">
+      <textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask about this store..."></textarea>
+      <button class="btn good" id="chatSendBtn" type="submit">Send</button>
+    </form>
+  </section>
+
+  <div class="modal-overlay" id="checksModal">
+    <div class="modal small">
+      <div class="modal-head">
+        <div class="kicker">Diagnostics</div>
+        <h2 class="modal-title">City checks status</h2>
+      </div>
+      <div class="modal-body">
+        <div class="source-list" id="sourceHealthList"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" id="closeChecksModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="storeModal">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="kicker" id="modalKicker">Store profile</div>
+        <h2 class="modal-title" id="modalTitle">Add storefront</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid two">
+          <div class="field"><label for="modalName">Business name</label><input class="field-input" id="modalName" /></div>
+          <div class="field"><label for="modalTypeSearch">Business type</label><input class="field-input" id="modalTypeSearch" placeholder="Search type or custom" /></div>
+        </div>
+        <div class="type-grid" id="modalTypeGrid"></div>
+
+        <div class="form-grid">
+          <div class="field"><label for="modalAddress">Address line 1</label><input class="field-input" id="modalAddress" /></div>
+          <div class="field"><label for="modalAddress2">Address line 2</label><input class="field-input" id="modalAddress2" placeholder="Suite, stall, campus area" /></div>
+          <div class="form-grid three">
+            <div class="field"><label for="modalCity">City</label><input class="field-input" id="modalCity" /></div>
+            <div class="field"><label for="modalState">State</label><input class="field-input" id="modalState" value="CA" /></div>
+            <div class="field"><label for="modalZip">ZIP</label><input class="field-input" id="modalZip" /></div>
+          </div>
+        </div>
+
+        <div class="form-grid two">
+          <div class="field"><label for="modalOwner">Owner name</label><input class="field-input" id="modalOwner" /></div>
+          <div class="field"><label for="modalOwnerPhone">Owner phone</label><input class="field-input" id="modalOwnerPhone" /></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field"><label for="modalOwnerEmail">Owner email</label><input class="field-input" id="modalOwnerEmail" /></div>
+          <div class="field"><label for="modalLegalStructure">Legal structure</label><select class="field-select" id="modalLegalStructure"><option>LLC</option><option>Sole proprietor</option><option>S-Corp</option><option>C-Corp</option><option>Partnership</option><option>Nonprofit</option></select></div>
+        </div>
+
+        <div class="form-grid three">
+          <div class="field"><label for="modalFounded">Founded</label><input class="field-input" id="modalFounded" /></div>
+          <div class="field"><label for="modalFullTimeStaff">Full-time staff</label><input class="field-input" id="modalFullTimeStaff" /></div>
+          <div class="field"><label for="modalPartTimeStaff">Part-time staff</label><input class="field-input" id="modalPartTimeStaff" /></div>
+        </div>
+        <div class="form-grid three">
+          <div class="field"><label for="modalAvgTicket">Average ticket</label><input class="field-input" id="modalAvgTicket" placeholder="$14.20" /></div>
+          <div class="field"><label for="modalDailyRevenue">Typical daily revenue</label><input class="field-input" id="modalDailyRevenue" /></div>
+          <div class="field"><label for="modalInventoryValue">At-risk inventory value</label><input class="field-input" id="modalInventoryValue" /></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field"><label for="modalSuppliers">Key suppliers</label><input class="field-input" id="modalSuppliers" placeholder="Names, delivery cadence, dependencies" /></div>
+          <div class="field"><label for="modalBackupPower">Backup power / cold storage</label><input class="field-input" id="modalBackupPower" placeholder="Generator, dry ice vendor, none" /></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field"><label for="modalSecuritySystem">Security / cameras</label><input class="field-input" id="modalSecuritySystem" /></div>
+          <div class="field"><label for="modalInsuranceCarrier">Insurance carrier</label><input class="field-input" id="modalInsuranceCarrier" /></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field"><label for="modalLanguages">Languages spoken</label><input class="field-input" id="modalLanguages" placeholder="English, Spanish, ..." /></div>
+          <div class="field"><label for="modalLicenseNotes">License / permit notes</label><input class="field-input" id="modalLicenseNotes" placeholder="Health permit, seller permit, expiry dates" /></div>
+        </div>
+        <div class="field"><label for="modalDocumentNotes">Document notes</label><input class="field-input" id="modalDocumentNotes" placeholder="Lease, insurance, vendor contracts, local file paths" /></div>
+        <div class="field"><label for="modalStoreNotes">Private operating notes</label><textarea class="field-textarea" id="modalStoreNotes" placeholder="Anything useful for risk, opportunity, staffing, inventory or compliance. Optional."></textarea></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" id="closeStoreModalBtn">Cancel</button>
+        <button class="btn good" id="saveStoreModalBtn">Save and scan city</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal small">
+      <div class="modal-head">
+        <div class="kicker">Stored profile</div>
+        <h2 class="modal-title" id="detailsTitle">Store details</h2>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid" id="detailsGrid"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" id="closeDetailsModalBtn">Close</button>
+        <button class="btn primary" id="detailsEditBtn">Edit profile</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
