@@ -16,6 +16,22 @@
       "dest": "/api/apify/run.mjs"
     },
     {
+      "src": "/api/agent/session",
+      "dest": "/api/agent/session.mjs"
+    },
+    {
+      "src": "/api/agent/actions",
+      "dest": "/api/agent/actions.mjs"
+    },
+    {
+      "src": "/api/agent/execute",
+      "dest": "/api/agent/execute.mjs"
+    },
+    {
+      "src": "/api/agent/audit",
+      "dest": "/api/agent/audit.mjs"
+    },
+    {
       "src": "/api/health",
       "dest": "/api/health.mjs"
     },

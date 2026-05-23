@@ -13,43 +13,32 @@ const BUSINESS_TYPES = [
   { id: "liquor store", label: "Liquor store", icon: "🍾", aliases: "alcohol market bottle shop" }
 ];
 
+const DEMO_STORE_TEMPLATE = {
+  address2: "", state: "CA", country: "US",
+  ownerName: "", ownerPhone: "", ownerEmail: "",
+  legalStructure: "LLC", founded: "",
+  fullTimeStaff: "", partTimeStaff: "",
+  dailyRevenue: "", inventoryValue: "",
+  suppliers: "", backupPower: "", securitySystem: "",
+  insuranceCarrier: "", languages: "",
+  licenseNotes: "", documentNotes: "", storeNotes: "",
+  licenses: [], documents: [],
+  risk: 0, opportunity: 0, radiusMeters: 0, zip: ""
+};
+
 const DEFAULT_STORES = [
-  {
-    id: "sf-demo",
-    businessName: "Dhrumil's SF Shop",
-    businessType: "restaurant",
-    address: "412 Mission St",
-    address2: "",
-    city: "San Francisco",
-    state: "CA",
-    zip: "",
-    country: "US",
-    lat: 37.7909,
-    lon: -122.3971,
-    ownerName: "",
-    ownerPhone: "",
-    ownerEmail: "",
-    legalStructure: "LLC",
-    founded: "2021",
-    fullTimeStaff: "5",
-    partTimeStaff: "",
-    avgTicket: "$14.20",
-    dailyRevenue: "",
-    inventoryValue: "",
-    suppliers: "",
-    backupPower: "",
-    securitySystem: "",
-    insuranceCarrier: "",
-    languages: "",
-    licenseNotes: "",
-    documentNotes: "",
-    storeNotes: "",
-    licenses: [],
-    documents: [],
-    risk: 0,
-    opportunity: 0,
-    radiusMeters: 0
-  }
+  { ...DEMO_STORE_TEMPLATE, id: "sf-demo",         businessName: "Dhrumil's SF Shop",      businessType: "restaurant",   address: "412 Mission St",         city: "San Francisco", lat: 37.7909, lon: -122.3971, avgTicket: "$14.20", fullTimeStaff: "5", founded: "2021" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-coffee",       businessName: "Hayes Valley Coffee",    businessType: "coffee shop",  address: "598 Hayes St",           city: "San Francisco", lat: 37.7762, lon: -122.4259, avgTicket: "$6.50",  fullTimeStaff: "3" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-foodstall",    businessName: "Ferry Plaza Food Cart",  businessType: "food stall",   address: "1 Ferry Building",       city: "San Francisco", lat: 37.7956, lon: -122.3933, avgTicket: "$9",     fullTimeStaff: "2" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-grocery",      businessName: "Stockton Market",        businessType: "grocery",      address: "475 Stockton St",        city: "San Francisco", lat: 37.7919, lon: -122.4067, avgTicket: "$32",    fullTimeStaff: "8" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-retail",       businessName: "Market St Boutique",     businessType: "retail",       address: "865 Market St",          city: "San Francisco", lat: 37.7836, lon: -122.4076, avgTicket: "$45",    fullTimeStaff: "4" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-salon",        businessName: "Polk St Salon",          businessType: "salon",        address: "1810 Polk St",           city: "San Francisco", lat: 37.7912, lon: -122.4216, avgTicket: "$85",    fullTimeStaff: "6" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-barber",       businessName: "Fillmore Barbershop",    businessType: "barbershop",   address: "200 Fillmore St",        city: "San Francisco", lat: 37.7717, lon: -122.4302, avgTicket: "$35",    fullTimeStaff: "3" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-laundromat",   businessName: "Mission Wash & Fold",    businessType: "laundromat",   address: "390 Valencia St",        city: "San Francisco", lat: 37.7669, lon: -122.4225, avgTicket: "$8",     fullTimeStaff: "2" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-pharmacy",     businessName: "Castro Care Pharmacy",   businessType: "pharmacy",     address: "565 Castro St",          city: "San Francisco", lat: 37.7596, lon: -122.4350, avgTicket: "$28",    fullTimeStaff: "5" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-daycare",      businessName: "Sutter Kids Academy",    businessType: "daycare",      address: "1450 Sutter St",         city: "San Francisco", lat: 37.7868, lon: -122.4233, avgTicket: "$1,800/mo", fullTimeStaff: "8" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-auto",         businessName: "Bryant Auto Service",    businessType: "auto repair",  address: "1500 Bryant St",         city: "San Francisco", lat: 37.7691, lon: -122.4101, avgTicket: "$320",   fullTimeStaff: "4" },
+  { ...DEMO_STORE_TEMPLATE, id: "sf-liquor",       businessName: "Divisadero Wine & Spirits", businessType: "liquor store", address: "300 Divisadero St",   city: "San Francisco", lat: 37.7741, lon: -122.4377, avgTicket: "$24",    fullTimeStaff: "3" }
 ];
 
 const LANGUAGE_META = {
@@ -1135,9 +1124,15 @@ const state = {
   activeSignalFilter: "all",
   modalMode: "add",
   modalSelectedType: "restaurant",
+  agentUserId: localStorage.getItem("warden:agentUserId") || "owner-ava",
+  agentSession: null,
+  agentActions: [],
+  agentLoading: false,
   reviewItems: loadReviewItems(),
   chatThreads: loadChatThreads(),
   chatOpen: false,
+  map: null,
+  mapLayers: { store: null, places: null, radius: null },
   restockResults: null,
   restockLoading: false,
   cardCache: new Map(),
@@ -1145,12 +1140,16 @@ const state = {
 };
 
 const ids = [
-  "healthCount", "opportunityCount", "warningCount", "reviewCount", "storeNotesCount", "sourcesTopBtn", "opportunitiesTopBtn", "warningsTopBtn", "reviewTopBtn", "storeNotesBtn", "restockTopBtn", "refreshTopBtn", "pdfBtn", "emailBtn", "translateLabel", "languageSelect",
+  "healthCount", "opportunityCount", "warningCount", "reviewCount", "storeNotesCount", "sourcesTopBtn", "opportunitiesTopBtn", "warningsTopBtn", "reviewTopBtn", "storeNotesBtn", "restockTopBtn", "agentTopBtn", "refreshTopBtn", "pdfBtn", "emailBtn", "translateLabel", "languageSelect",
   "storeCount", "storeSearch", "storesList", "addStoreBtn", "detailsStoreBtn", "editStoreBtn",
   "riskScore", "riskBar", "opportunityScore", "opportunityBar",
   "metricsGrid", "addressPill", "cityPill", "updatedText", "bannerStack", "subTabs",
+  "agentSection", "agentMeta", "agentUserSelect", "agentIntegrationStrip", "agentActionsPanel", "agentAuditPanel",
   "storeInfoSection", "storeInfoMeta", "storeInfoPanel", "restockSection", "restockMeta", "restockForm", "restockQuery", "restockSuggestions", "restockResults", "opportunitiesSection", "opportunitiesMeta", "opportunitiesPanel", "warningsSection", "warningsMeta", "warningsPanel", "weatherSection", "weatherPanel",
   "reviewLaterSection", "reviewLaterMeta", "reviewLaterList", "signalsRoot", "checksModal", "sourceHealthList", "closeChecksModalBtn",
+  "mapSection", "mapCanvas", "mapProviderChip", "mapProviderLabel", "mapStats",
+  "intelSection", "intelPanel", "intelMeta",
+  "complianceSection", "compliancePanel", "complianceMeta",
   "storeModal", "modalKicker", "modalTitle", "modalName", "modalTypeSearch", "modalTypeGrid", "modalAddress", "modalAddress2", "modalCity", "modalState", "modalZip",
   "modalOwner", "modalOwnerPhone", "modalOwnerEmail", "modalLegalStructure", "modalFounded", "modalFullTimeStaff", "modalPartTimeStaff", "modalAvgTicket",
   "modalDailyRevenue", "modalInventoryValue", "modalSuppliers", "modalBackupPower", "modalSecuritySystem", "modalInsuranceCarrier", "modalLanguages",
@@ -1170,8 +1169,10 @@ function boot() {
   renderDashboard();
   renderReviewLater();
   renderChat();
+  renderAgentConsole();
   wireEvents();
   renderLanguageChrome();
+  refreshAgentSession();
   refreshIntel();
 }
 
@@ -1189,6 +1190,12 @@ function wireEvents() {
   els.reviewTopBtn.addEventListener("click", openStoreNotesView);
   els.storeNotesBtn.addEventListener("click", openStoreNotesView);
   els.restockTopBtn.addEventListener("click", openRestockView);
+  els.agentTopBtn.addEventListener("click", openAgentView);
+  els.agentUserSelect.addEventListener("change", () => {
+    state.agentUserId = els.agentUserSelect.value;
+    localStorage.setItem("warden:agentUserId", state.agentUserId);
+    refreshAgentActions();
+  });
   els.restockForm.addEventListener("submit", handleRestockSubmit);
   els.languageSelect.addEventListener("change", handleLanguageChange);
   els.chatFab.addEventListener("click", openChat);
@@ -1257,12 +1264,10 @@ function renderLanguageChrome() {
   els.reviewTopBtn.innerHTML = `<span class="btn-emoji">📝</span>${escapeHtml(t("notes"))} <span class="badge" id="reviewCount">${escapeHtml(counts.review)}</span>`;
   syncBadgeRefs();
 
-  els.emailBtn.classList.add("icon-only");
-  els.pdfBtn.classList.add("icon-only");
-  els.emailBtn.innerHTML = `<span class="btn-emoji">✉️</span>`;
-  els.pdfBtn.innerHTML = `<span class="btn-emoji">⬇️</span>`;
-  els.emailBtn.setAttribute("aria-label", t("email"));
-  els.pdfBtn.setAttribute("aria-label", t("pdf"));
+  els.emailBtn.classList.remove("icon-only");
+  els.pdfBtn.classList.remove("icon-only");
+  els.emailBtn.innerHTML = `<span class="btn-emoji">✉️</span>${escapeHtml(t("email"))}`;
+  els.pdfBtn.innerHTML = `<span class="btn-emoji">⬇️</span>${escapeHtml(t("pdf"))}`;
   els.emailBtn.title = t("email");
   els.pdfBtn.title = t("pdf");
   els.restockTopBtn.innerHTML = `<span class="btn-emoji">📦</span>${escapeHtml(t("restock"))}`;
@@ -1420,7 +1425,25 @@ function renderDashboard() {
   renderRestock();
   renderReviewLater();
   renderChat();
+  renderMap(state.latestIntel || mapBootstrapIntel(store));
+  renderAgentConsole();
   queuePageTranslation();
+}
+
+function mapBootstrapIntel(store) {
+  if (!store) return { profile: {}, marketPlaces: [], marketProvider: "overpass" };
+  return {
+    profile: {
+      businessName: store.businessName,
+      address: joinStoreAddress(store),
+      locationLabel: joinStoreAddress(store),
+      lat: Number(store.lat),
+      lon: Number(store.lon),
+      radiusMeters: Number(store.radiusMeters) || 0
+    },
+    marketPlaces: [],
+    marketProvider: "overpass"
+  };
 }
 
 function renderMetrics(metrics) {
@@ -1514,6 +1537,10 @@ function applyIntel(intel) {
   renderOpportunities(intel.opportunities || []);
   renderWarnings(intel.warnings || []);
   renderWeather(intel.weatherForecast || []);
+  renderMap(intel);
+  renderMarketIntelligence(intel);
+  renderCompliance(intel);
+  refreshAgentActions();
   renderReviewLater();
   renderSignals(intel.groups || []);
     renderSourceHealth(intel.sourceHealth || []);
@@ -1578,6 +1605,11 @@ function openRestockView() {
   } else {
     setTimeout(() => els.restockQuery?.focus(), 0);
   }
+}
+
+function openAgentView() {
+  scrollToSection(els.agentSection);
+  refreshAgentActions();
 }
 
 function openStoreNotesView() {
@@ -1653,12 +1685,14 @@ function renderRestock() {
     return;
   }
 
+  const liveProductsBlock = renderLiveProductsBlock(payload.liveProducts);
   els.restockResults.innerHTML = `
     <div class="restock-summary">
       <strong>${escapeHtml(payload.query)}</strong>
       <span>${escapeHtml(payload.summary || "")}</span>
       <div class="restock-disclaimer">${escapeHtml(payload.note || "Open supplier links to confirm live price and stock.")}</div>
     </div>
+    ${liveProductsBlock}
     <div class="restock-board" role="table" aria-label="Supplier comparison for ${escapeAttr(payload.query)}">
       <div class="restock-board-head" role="row">
         <span>Storefront</span>
@@ -1672,6 +1706,49 @@ function renderRestock() {
     </div>
   `;
   queuePageTranslation();
+}
+
+function renderLiveProductsBlock(live) {
+  if (!live || !live.products?.length) return "";
+  const cards = live.products.map((p) => `
+    <a class="live-product" href="${escapeAttr(p.url || "#")}" target="_blank" rel="noreferrer">
+      <div class="live-product-img">${p.image ? `<img src="${escapeAttr(p.image)}" alt="${escapeAttr(p.title)}" loading="lazy" onerror="this.style.display='none'" />` : ""}</div>
+      <div class="live-product-body">
+        <div class="live-product-title">${escapeHtml(p.title)}</div>
+        <div class="live-product-meta">
+          <span class="live-product-price">${escapeHtml(p.price || "—")}</span>
+          ${p.rating ? `<span class="live-product-rating">${p.rating.toFixed(1)}★ <span class="live-product-reviews">${formatCount(p.reviewsCount || 0)}</span></span>` : ""}
+        </div>
+        ${p.seller ? `<div class="live-product-seller">${escapeHtml(p.seller)}</div>` : ""}
+      </div>
+    </a>
+  `).join("");
+  const c = live.comparison || {};
+  const cmp = [
+    c.cheapest ? `<div class="live-cmp-row"><span class="live-cmp-label">💰 Cheapest</span><span class="live-cmp-value">${escapeHtml(c.cheapest.price || "")}</span><span class="live-cmp-name">${escapeHtml(c.cheapest.title)}</span></div>` : "",
+    c.mostExpensive ? `<div class="live-cmp-row"><span class="live-cmp-label">💎 Premium</span><span class="live-cmp-value">${escapeHtml(c.mostExpensive.price || "")}</span><span class="live-cmp-name">${escapeHtml(c.mostExpensive.title)}</span></div>` : "",
+    c.topRated ? `<div class="live-cmp-row"><span class="live-cmp-label">⭐ Top-rated</span><span class="live-cmp-value">${(c.topRated.rating || 0).toFixed(1)}★</span><span class="live-cmp-name">${escapeHtml(c.topRated.title)}</span></div>` : "",
+    c.mostReviewed ? `<div class="live-cmp-row"><span class="live-cmp-label">🔥 Most reviewed</span><span class="live-cmp-value">${formatCount(c.mostReviewed.reviewsCount || 0)}</span><span class="live-cmp-name">${escapeHtml(c.mostReviewed.title)}</span></div>` : ""
+  ].filter(Boolean).join("");
+  const stats = [
+    Number.isFinite(c.avgPrice) ? `<span class="live-stat"><b>$${c.avgPrice}</b>avg price</span>` : "",
+    Number.isFinite(c.avgRating) ? `<span class="live-stat"><b>${c.avgRating}★</b>avg rating</span>` : "",
+    Number.isFinite(c.priceSpread) ? `<span class="live-stat"><b>$${c.priceSpread}</b>spread</span>` : "",
+    `<span class="live-stat"><b>${live.count}</b>scraped products</span>`
+  ].filter(Boolean).join("");
+  return `
+    <section class="live-products">
+      <div class="live-products-head">
+        <div class="live-products-title-row">
+          <span class="live-chip"><span class="live-dot"></span>Live products via Apify</span>
+          <span class="live-products-stats">${stats}</span>
+        </div>
+        <div class="live-products-sub">Real images, prices and reviews scraped this minute.</div>
+      </div>
+      <div class="live-products-grid">${cards}</div>
+      ${cmp ? `<div class="live-comparison"><div class="live-comparison-head">Quick comparison</div>${cmp}</div>` : ""}
+    </section>
+  `;
 }
 
 function renderRestockSuggestions(suggestions) {
@@ -1819,17 +1896,828 @@ function renderWeather(days) {
   const show = state.activeSignalFilter === "all" || state.activeSignalFilter === "Weather & Climate";
   els.weatherSection.style.display = show ? "" : "none";
   if (!show) return;
-  els.weatherPanel.innerHTML = days.map((day) => `
+
+  const valid = days.filter((d) => Number.isFinite(Number(d.highF)) || Number.isFinite(Number(d.lowF)));
+  const allLows = valid.map((d) => Number(d.lowF)).filter(Number.isFinite);
+  const allHighs = valid.map((d) => Number(d.highF)).filter(Number.isFinite);
+  const tempMin = allLows.length ? Math.min(...allLows) : 50;
+  const tempMax = allHighs.length ? Math.max(...allHighs) : 80;
+  const tempRange = Math.max(1, tempMax - tempMin);
+  const allWind = days.map((d) => Number(d.windMph)).filter(Number.isFinite);
+  const windMax = allWind.length ? Math.max(...allWind, 12) : 20;
+
+  els.weatherPanel.innerHTML = days.map((day) => {
+    const lo = Number(day.lowF);
+    const hi = Number(day.highF);
+    const tempLeft = Number.isFinite(lo) ? Math.max(0, ((lo - tempMin) / tempRange) * 100) : 0;
+    const tempWidth = Number.isFinite(lo) && Number.isFinite(hi) ? Math.max(4, ((hi - lo) / tempRange) * 100) : 100;
+    const rain = Number(day.rainProbability) || 0;
+    const wind = Number(day.windMph) || 0;
+    const windPct = Math.min(100, (wind / windMax) * 100);
+    return `
     <article class="weather-card">
       <div class="weather-day"><span class="weather-emoji" aria-hidden="true">${escapeHtml(weatherEmoji(day.condition))}</span>${escapeHtml(day.day || day.date)}</div>
       <div class="weather-condition">${escapeHtml(day.condition || "Forecast")}</div>
       <div class="weather-stat"><span>High / low</span><b>${tempText(day.highF)} / ${tempText(day.lowF)}</b></div>
-      <div class="weather-stat"><span>Rain</span><b>${percentText(day.rainProbability)}</b></div>
-      <div class="weather-stat"><span>Wind</span><b>${mphText(day.windMph)}</b></div>
+      <div class="weather-spark" title="Daily temperature range across the week">
+        <span class="weather-spark-label">°F</span>
+        <div class="weather-spark-track"><div class="weather-spark-fill temp" style="left:${tempLeft.toFixed(1)}%;width:${tempWidth.toFixed(1)}%"></div></div>
+      </div>
+      <div class="weather-spark" title="Rain probability">
+        <span class="weather-spark-label">☔</span>
+        <div class="weather-spark-track"><div class="weather-spark-fill rain" style="left:0;width:${rain.toFixed(0)}%"></div></div>
+      </div>
+      <div class="weather-spark" title="Peak wind">
+        <span class="weather-spark-label">💨</span>
+        <div class="weather-spark-track"><div class="weather-spark-fill wind" style="left:0;width:${windPct.toFixed(0)}%"></div></div>
+      </div>
+      <div class="weather-stat"><span>Rain · Wind</span><b>${percentText(day.rainProbability)} · ${mphText(day.windMph)}</b></div>
       <div class="evidence-row">${sourceAnchor(day.url, day.source)}${reviewButton(reviewCardFromWeather(day))}</div>
     </article>
-  `).join("") || `<div class="empty">Weekly forecast has not loaded yet.</div>`;
+  `;
+  }).join("") || `<div class="empty">Weekly forecast has not loaded yet.</div>`;
   queuePageTranslation();
+}
+
+function initMap(lat, lon) {
+  if (typeof L === "undefined" || !els.mapCanvas) return null;
+  if (state.map) return state.map;
+  const map = L.map(els.mapCanvas, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: false,
+    preferCanvas: true
+  }).setView([lat, lon], 13);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+  map.on("click", () => map.scrollWheelZoom.enable());
+  map.on("mouseout", () => map.scrollWheelZoom.disable());
+  state.map = map;
+  return map;
+}
+
+function renderMap(intel) {
+  if (!els.mapCanvas) return;
+  const profile = intel?.profile || {};
+  const lat = Number(profile.lat);
+  const lon = Number(profile.lon);
+  const places = Array.isArray(intel?.marketPlaces) ? intel.marketPlaces : [];
+  const provider = intel?.marketProvider || "overpass";
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    els.mapCanvas.innerHTML = `<div class="map-empty">Pick a store with a valid address to see the city map.</div>`;
+    if (els.mapProviderLabel) els.mapProviderLabel.textContent = "Awaiting location";
+    if (els.mapStats) els.mapStats.innerHTML = "";
+    return;
+  }
+
+  if (typeof L === "undefined") {
+    els.mapCanvas.innerHTML = `<div class="map-empty">Loading map library...</div>`;
+    setTimeout(() => renderMap(intel), 250);
+    return;
+  }
+  // If we previously showed the loading/empty placeholder, clear it BEFORE Leaflet
+  // takes over the container. Once Leaflet owns the div we must never touch its
+  // innerHTML again — Leaflet caches DOM references and the next invalidateSize()
+  // would crash with "Cannot read properties of null (reading 'offsetWidth')".
+  if (!state.map) {
+    els.mapCanvas.innerHTML = "";
+  }
+  const map = initMap(lat, lon) || state.map;
+  if (!map) {
+    if (!state.map) {
+      els.mapCanvas.innerHTML = `<div class="map-empty">Map library failed to load. Check your network and refresh.</div>`;
+    }
+    return;
+  }
+  setTimeout(() => map.invalidateSize(), 50);
+
+  // Clear previous overlays
+  for (const key of ["store", "places", "radius"]) {
+    const layer = state.mapLayers[key];
+    if (layer) {
+      map.removeLayer(layer);
+      state.mapLayers[key] = null;
+    }
+  }
+
+  // City-scope radius circle
+  const radiusMeters = Number(profile.radiusMeters) || Number(profile.cityRadiusMeters) || 0;
+  if (radiusMeters > 200) {
+    const circle = L.circle([lat, lon], {
+      radius: radiusMeters,
+      color: "#4a8fd8",
+      weight: 1.4,
+      opacity: 0.55,
+      fillColor: "#4a8fd8",
+      fillOpacity: 0.06,
+      dashArray: "5, 6"
+    }).addTo(map);
+    state.mapLayers.radius = circle;
+  }
+
+  // Competitors layer
+  const placeMarkers = [];
+  for (const place of places) {
+    const placeLat = Number(place.lat);
+    const placeLon = Number(place.lon);
+    if (!Number.isFinite(placeLat) || !Number.isFinite(placeLon)) continue;
+    const rating = Number(place.rating) || 0;
+    const reviews = Number(place.reviews) || 0;
+    const isHigh = rating >= 4.5 && reviews >= 200;
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="map-marker-place ${isHigh ? "high" : ""}" title="${escapeAttr(place.name || "")}"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    const marker = L.marker([placeLat, placeLon], { icon, riseOnHover: true });
+    const ratingBits = [];
+    if (rating) ratingBits.push(`${rating.toFixed(1)}★ (${formatCount(reviews)})`);
+    if (place.price) ratingBits.push(escapeHtml(place.price));
+    const ratingLine = ratingBits.length ? `<div class="map-popup-rating">${ratingBits.join(" · ")}</div>` : "";
+    const tagLine = Array.isArray(place.reviewsTags) && place.reviewsTags.length
+      ? `<div class="map-popup-meta">Themes: ${place.reviewsTags.slice(0, 3).map((t) => escapeHtml(t.title)).join(", ")}</div>`
+      : "";
+    const linkLine = place.url ? `<a class="map-popup-link" href="${escapeAttr(place.url)}" target="_blank" rel="noreferrer">View on Google Maps →</a>` : "";
+    marker.bindPopup(`
+      <div class="map-popup">
+        <div class="map-popup-name">${escapeHtml(place.name || "Place")}</div>
+        <div class="map-popup-meta">${escapeHtml([place.category, place.address || place.cuisine].filter(Boolean).join(" · "))}</div>
+        ${ratingLine}
+        ${tagLine}
+        ${linkLine}
+      </div>
+    `);
+    placeMarkers.push(marker);
+  }
+  if (placeMarkers.length) {
+    state.mapLayers.places = L.layerGroup(placeMarkers).addTo(map);
+  }
+
+  // Active store marker (drawn last so it sits on top)
+  const storeIcon = L.divIcon({
+    className: "",
+    html: `<div class="map-marker-store"><div class="map-marker-store-inner">★</div></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 27]
+  });
+  const storeMarker = L.marker([lat, lon], { icon: storeIcon, zIndexOffset: 1000 }).addTo(map);
+  storeMarker.bindPopup(`
+    <div class="map-popup">
+      <div class="map-popup-name">${escapeHtml(profile.businessName || "This store")}</div>
+      <div class="map-popup-meta">${escapeHtml(profile.locationLabel || profile.address || "")}</div>
+    </div>
+  `);
+  state.mapLayers.store = storeMarker;
+
+  // Fit bounds to include store + places (cap zoom so we don't drift too far out)
+  const points = [[lat, lon]];
+  for (const m of placeMarkers) points.push(m.getLatLng());
+  if (points.length > 1) {
+    map.fitBounds(L.latLngBounds(points).pad(0.15), { maxZoom: 14 });
+  } else {
+    map.setView([lat, lon], 14);
+  }
+
+  // Provider chip + stats
+  if (els.mapProviderChip && els.mapProviderLabel) {
+    const isApify = provider === "apify";
+    els.mapProviderChip.classList.toggle("osm", !isApify);
+    els.mapProviderLabel.textContent = isApify
+      ? `Live · Google Places via Apify · ${places.length} pins`
+      : `OpenStreetMap city scan · ${places.length} pins`;
+  }
+  if (els.mapStats) {
+    const validPlaces = places.filter((p) => Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lon)));
+    const ratings = validPlaces.map((p) => Number(p.rating)).filter((n) => n > 0);
+    const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length) : null;
+    const reviewSum = validPlaces.reduce((sum, p) => sum + (Number(p.reviews) || 0), 0);
+    const radiusMi = radiusMeters ? (radiusMeters / 1609).toFixed(1) : null;
+    const stats = [
+      validPlaces.length ? { label: "Pins", value: validPlaces.length } : null,
+      avgRating ? { label: "Avg rating", value: `${avgRating.toFixed(1)}★` } : null,
+      reviewSum ? { label: "Reviews", value: formatCount(reviewSum) } : null,
+      radiusMi ? { label: "Radius", value: `${radiusMi} mi` } : null
+    ].filter(Boolean);
+    els.mapStats.innerHTML = stats.map((stat) => `<span class="map-stat"><b>${escapeHtml(stat.value)}</b>${escapeHtml(stat.label)}</span>`).join("");
+  }
+}
+
+function renderMarketIntelligence(intel) {
+  if (!els.intelPanel) return;
+  const intelligence = intel?.marketIntelligence;
+  const provider = intel?.marketProvider || "overpass";
+
+  if (els.intelMeta) {
+    els.intelMeta.textContent = provider === "apify"
+      ? `Live · ${intelligence?.competitorsAnalyzed || 0} competitors analyzed via Apify`
+      : "Available with Apify · enable APIFY_TOKEN to scan menu, price tier and review themes";
+  }
+
+  if (!intelligence || !intelligence.competitorsAnalyzed) {
+    els.intelPanel.innerHTML = `<div class="intel-empty">${provider === "apify" ? "Live scan returned no scoreable competitors yet. Try refreshing once the cache repopulates." : "Competitor intelligence unlocks when Apify is enabled. Free public sources don't expose price tiers or review themes."}</div>`;
+    return;
+  }
+
+  const cards = [];
+
+  if (intelligence.priceDistribution?.some((p) => p.count > 0)) {
+    const dominant = intelligence.dominantTier;
+    const max = Math.max(1, ...intelligence.priceDistribution.map((p) => p.count));
+    const bars = intelligence.priceDistribution.map((p) => {
+      const h = Math.round((p.count / max) * 92);
+      const dom = p.tier === dominant ? "dominant" : "";
+      return `
+        <div class="intel-price-col ${dom}">
+          <div class="intel-price-track">
+            <div class="intel-price-fill" style="height:${h}%"></div>
+          </div>
+          <div class="intel-price-tier">${escapeHtml(p.label)}</div>
+          <div class="intel-price-pct">${p.count} · ${p.pct}%</div>
+        </div>
+      `;
+    }).join("");
+    cards.push(`
+      <article class="intel-card">
+        <div class="intel-card-head">
+          <div class="intel-card-title">Price tier distribution</div>
+          <span class="intel-card-pill">${intelligence.pricedCompetitors} priced</span>
+        </div>
+        <div class="intel-headline">${dominant ? `Dominant tier nearby: ${escapeHtml(intelligence.dominantTierLabel)}` : "Not enough priced competitors yet"}</div>
+        <div class="intel-body">${dominant ? "Price your signature item against where the cluster is, not where you wish it was." : "Most nearby places hide their price tier on Google. Browse them on the map."}</div>
+        <div class="intel-price-bars">${bars}</div>
+      </article>
+    `);
+  }
+
+  if (intelligence.topReviewTags?.length) {
+    const tags = intelligence.topReviewTags.slice(0, 12).map((tag) => {
+      const cls = intelligence.positivePraise?.some((t) => t.title === tag.title)
+        ? "praise"
+        : intelligence.negativeFlags?.some((t) => t.title === tag.title)
+          ? "flag"
+          : "";
+      return `<span class="intel-tag ${cls}">${escapeHtml(tag.title)}<span class="intel-tag-count">${formatCount(tag.count)}</span></span>`;
+    }).join("");
+    cards.push(`
+      <article class="intel-card">
+        <div class="intel-card-head">
+          <div class="intel-card-title">What customers talk about nearby</div>
+          <span class="intel-card-pill">${intelligence.topReviewTags.length} themes</span>
+        </div>
+        <div class="intel-headline">${intelligence.avgRating ? `Block average: ${intelligence.avgRating.toFixed(1)} stars` : "Aggregated review themes"}</div>
+        <div class="intel-body">Hover green chips to mirror in your own messaging. Audit yellow chips before customers find them at your store.</div>
+        <div class="intel-tag-cloud">${tags}</div>
+      </article>
+    `);
+  }
+
+  if (intelligence.topRated?.length) {
+    cards.push(`
+      <article class="intel-card">
+        <div class="intel-card-head">
+          <div class="intel-card-title">Top-ranked nearby</div>
+          <span class="intel-card-pill">scoring: rating × log(reviews)</span>
+        </div>
+        <div class="intel-leaders">
+          ${intelligence.topRated.map((leader) => `
+            <a class="intel-leader" href="${escapeAttr(leader.url || "#")}" target="_blank" rel="noreferrer">
+              <span><b>${escapeHtml(leader.name)}</b></span>
+              <span class="intel-leader-rating">${leader.rating?.toFixed(1) || "--"}★ ${formatCount(leader.reviews || 0)}</span>
+              <span class="intel-leader-price">${escapeHtml(leader.price || "—")}</span>
+            </a>
+          `).join("")}
+        </div>
+      </article>
+    `);
+  }
+
+  if (intelligence.categoryBreakdown) {
+    cards.push(renderCategoryBreakdownCard(intelligence.categoryBreakdown));
+  }
+
+  if (intelligence.hoursCoverage) {
+    cards.push(renderHoursCoverageCard(intelligence.hoursCoverage));
+  }
+
+  if (intelligence.busyHeatmap) {
+    cards.push(renderBusyHeatmapCard(intelligence.busyHeatmap));
+  }
+
+  if (Array.isArray(intelligence.priceVsRating) && intelligence.priceVsRating.length >= 3) {
+    cards.push(renderPriceRatingScatterCard(intelligence.priceVsRating));
+  }
+
+  if (intelligence.recommendations?.length) {
+    for (const rec of intelligence.recommendations) {
+      cards.push(`
+        <article class="intel-card recommendation full">
+          <div class="intel-card-head">
+            <div class="intel-card-title">Profit play</div>
+            <span class="intel-card-pill">data → action</span>
+          </div>
+          <div class="intel-headline">${escapeHtml(rec.title)}</div>
+          <div class="intel-rec-action">${escapeHtml(rec.action)}</div>
+          <div class="intel-detail">${escapeHtml(rec.detail || "")}</div>
+        </article>
+      `);
+    }
+  }
+
+  els.intelPanel.innerHTML = cards.join("") || `<div class="intel-empty">Live data loaded but not enough signal to compute pricing or review intelligence yet.</div>`;
+  wireScatterTooltip();
+  queuePageTranslation();
+}
+
+function wireScatterTooltip() {
+  const anchor = document.getElementById("scatterAnchor");
+  if (!anchor) return;
+  const svg = anchor.querySelector(".scatter-svg");
+  const tip = anchor.querySelector(".scatter-tooltip");
+  if (!svg || !tip) return;
+  let points = [];
+  try { points = JSON.parse(svg.dataset.points || "[]"); } catch { points = []; }
+  const dots = svg.querySelectorAll(".scatter-dot");
+  dots.forEach((dot) => {
+    dot.addEventListener("mouseenter", (event) => {
+      const i = Number(event.target.dataset.i);
+      const p = points[i];
+      if (!p) return;
+      const rect = anchor.getBoundingClientRect();
+      const dotRect = event.target.getBoundingClientRect();
+      tip.innerHTML = `<b>${escapeHtml(p.name)}</b><br>${escapeHtml(p.price || "—")} · ${(p.rating || 0).toFixed(1)}★ · ${formatCount(p.reviews || 0)} reviews`;
+      tip.style.left = `${dotRect.left - rect.left + dotRect.width / 2}px`;
+      tip.style.top = `${dotRect.top - rect.top}px`;
+      tip.classList.add("visible");
+    });
+    dot.addEventListener("mouseleave", () => tip.classList.remove("visible"));
+    dot.addEventListener("click", (event) => {
+      const i = Number(event.target.dataset.i);
+      const p = points[i];
+      if (p?.url) window.open(p.url, "_blank", "noopener");
+    });
+  });
+}
+
+const COMPLIANCE_GROUPS = [
+  { key: "industry",     icon: "🎯", title: "Required for your industry",  cls: "industry" },
+  { key: "registration", icon: "🏛️", title: "Tax & registration",          cls: "" },
+  { key: "insurance",    icon: "🛡️", title: "Insurance & coverage",        cls: "insurance" },
+  { key: "employer",     icon: "👥", title: "Employer & HR records",       cls: "" },
+  { key: "storefront",   icon: "🏪", title: "Storefront & accessibility",  cls: "" },
+  { key: "records",      icon: "📂", title: "Records to keep handy",       cls: "records" }
+];
+
+function renderCompliance(intel) {
+  if (!els.compliancePanel) return;
+  const list = (intel && Array.isArray(intel.licenseChecklist)) ? intel.licenseChecklist : [];
+  const store = selectedStore();
+  if (els.complianceMeta) {
+    if (list.length) {
+      const required = list.filter((i) => i.priority === "required").length;
+      els.complianceMeta.textContent = `${required} required · ${list.length} total documents`;
+    } else {
+      els.complianceMeta.textContent = "Industry-specific + universal docs with evidence";
+    }
+  }
+  if (!list.length) {
+    els.compliancePanel.innerHTML = `<div class="empty">Loading compliance checklist…</div>`;
+    return;
+  }
+  const buckets = new Map();
+  for (const item of list) {
+    const key = item.category || "records";
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(item);
+  }
+  const businessLabel = labelType(store?.businessType || "retail").toLowerCase();
+  const html = COMPLIANCE_GROUPS.map((group) => {
+    const items = buckets.get(group.key) || [];
+    if (!items.length) return "";
+    const titleText = group.key === "industry" ? `Required for your ${businessLabel}` : group.title;
+    const requiredCount = items.filter((i) => i.priority === "required").length;
+    const rows = items.map((item) => {
+      const priority = item.priority || "recommended";
+      const meta = [];
+      if (item.authority) meta.push(`<span class="compliance-meta-item">${escapeHtml(item.authority)}</span>`);
+      if (item.renewal) meta.push(`<span class="compliance-meta-item">Renew: ${escapeHtml(item.renewal)}</span>`);
+      const evidence = item.url
+        ? `<a class="compliance-evidence" href="${escapeAttr(item.url)}" target="_blank" rel="noreferrer">View evidence →</a>`
+        : `<span class="compliance-evidence-disabled">No public link</span>`;
+      return `
+        <div class="compliance-row">
+          <span class="compliance-priority ${priority}">${escapeHtml(priority)}</span>
+          <div class="compliance-body">
+            <div class="compliance-name">${escapeHtml(item.name)}</div>
+            ${item.why ? `<div class="compliance-why">${escapeHtml(item.why)}</div>` : ""}
+            ${meta.length ? `<div class="compliance-meta">${meta.join("")}</div>` : ""}
+          </div>
+          ${evidence}
+        </div>
+      `;
+    }).join("");
+    return `
+      <section class="compliance-group ${group.cls}">
+        <div class="compliance-group-head">
+          <div class="compliance-group-title"><span class="compliance-group-icon">${group.icon}</span>${escapeHtml(titleText)}</div>
+          <span class="compliance-group-pill">${items.length} item${items.length === 1 ? "" : "s"}${requiredCount ? ` · ${requiredCount} required` : ""}</span>
+        </div>
+        <div class="compliance-list">${rows}</div>
+      </section>
+    `;
+  }).filter(Boolean).join("");
+  els.compliancePanel.innerHTML = html || `<div class="empty">No checklist items found for this profile.</div>`;
+  queuePageTranslation();
+}
+
+async function refreshAgentSession() {
+  try {
+    const response = await fetch(`/api/agent/session?${new URLSearchParams({ userId: state.agentUserId })}`);
+    if (!response.ok) throw new Error(`Agent session failed with status ${response.status}`);
+    state.agentSession = await response.json();
+    if (state.agentSession?.selectedUser?.id) state.agentUserId = state.agentSession.selectedUser.id;
+  } catch (error) {
+    state.agentSession = {
+      ok: false,
+      error: error.message,
+      users: [],
+      integrations: {}
+    };
+  }
+  renderAgentConsole();
+  refreshAgentActions();
+}
+
+async function refreshAgentActions() {
+  const store = selectedStore();
+  if (!store) return;
+  state.agentLoading = true;
+  renderAgentConsole();
+  try {
+    const response = await fetch("/api/agent/actions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userId: state.agentUserId,
+        store,
+        intel: compactIntelForAgent(state.latestIntel)
+      })
+    });
+    if (!response.ok) throw new Error(`Agent actions failed with status ${response.status}`);
+    const data = await response.json();
+    state.agentActions = data.actions || [];
+    state.agentSession = { ...(state.agentSession || {}), ...data, users: state.agentSession?.users || data.users || [] };
+  } catch (error) {
+    state.agentActions = [];
+    state.agentSession = { ...(state.agentSession || {}), actionError: error.message };
+  } finally {
+    state.agentLoading = false;
+    renderAgentConsole();
+  }
+}
+
+function renderAgentConsole() {
+  if (!els.agentSection) return;
+  const session = state.agentSession || {};
+  const users = session.users || [];
+  if (users.length) {
+    const current = users.some((u) => u.id === state.agentUserId) ? state.agentUserId : users[0].id;
+    if (els.agentUserSelect.value !== current || els.agentUserSelect.options.length !== users.length) {
+      els.agentUserSelect.innerHTML = users.map((user) => `
+        <option value="${escapeAttr(user.id)}">${escapeHtml(user.name)} · ${escapeHtml(user.title)}</option>
+      `).join("");
+      els.agentUserSelect.value = current;
+      state.agentUserId = current;
+    }
+  } else {
+    els.agentUserSelect.innerHTML = `<option>Loading users...</option>`;
+  }
+
+  const integrations = session.integrations || {};
+  const entries = Object.entries(integrations);
+  els.agentIntegrationStrip.innerHTML = entries.length ? entries.map(([name, item]) => `
+    <article class="agent-integration">
+      <div class="agent-integration-head">
+        <span>${escapeHtml(agentIntegrationLabel(name))}</span>
+        <span class="agent-mode ${escapeAttr(String(item.mode || "").replace(/_/g, "-"))}">${escapeHtml(item.mode || "mock")}</span>
+      </div>
+      <div class="agent-integration-body">${escapeHtml(item.role || "")}</div>
+    </article>
+  `).join("") : `<div class="empty">Loading integration status...</div>`;
+
+  const modeText = entries.map(([name, item]) => `${agentIntegrationLabel(name)}: ${item.mode || "mock"}`).join(" · ");
+  els.agentMeta.textContent = modeText || "Scalekit + Entire ready";
+
+  if (state.agentLoading) {
+    els.agentActionsPanel.innerHTML = loadingCards(4);
+  } else if (!state.agentActions.length) {
+    els.agentActionsPanel.innerHTML = `<div class="empty">${escapeHtml(session.actionError || session.error || "Agent actions load after the city scan finishes.")}</div>`;
+  } else {
+    els.agentActionsPanel.innerHTML = state.agentActions.map(renderAgentActionCard).join("");
+  }
+
+  els.agentActionsPanel.querySelectorAll("[data-agent-execute]").forEach((button) => {
+    button.addEventListener("click", () => executeAgentAction(button.dataset.agentExecute));
+  });
+
+  renderAgentAudit(session.audit || []);
+  queuePageTranslation();
+}
+
+function renderAgentActionCard(action) {
+  const decision = action.policy?.decision || "blocked";
+  const canClick = decision === "allowed" || decision === "needs_approval";
+  const buttonText = decision === "allowed" ? "Execute as user" : decision === "needs_approval" ? "Request approval" : "Blocked";
+  return `
+    <article class="agent-action ${escapeAttr(decision)}">
+      <div class="agent-action-head">
+        <div>
+          <div class="agent-action-title">${escapeHtml(action.title)}</div>
+          <div class="agent-evidence">${escapeHtml(action.target)} · ${escapeHtml(action.category || "action")}</div>
+        </div>
+        <span class="agent-decision ${escapeAttr(decision)}">${escapeHtml(decision.replace("_", " "))}</span>
+      </div>
+      <div class="agent-action-copy">${escapeHtml(action.summary || "")}</div>
+      <div class="agent-policy-copy">${escapeHtml(action.policy?.reason || "")}</div>
+      <div class="agent-evidence">Evidence: ${escapeHtml(action.evidence || "Warden scan")}</div>
+      <div class="agent-action-foot">
+        <span class="agent-evidence">Scopes: ${escapeHtml((action.requiredScopes || []).join(", ") || "none")}</span>
+        <button class="btn ${decision === "allowed" ? "good" : ""}" data-agent-execute="${escapeAttr(action.id)}" ${canClick ? "" : "disabled"}>${escapeHtml(buttonText)}</button>
+      </div>
+    </article>
+  `;
+}
+
+async function executeAgentAction(actionId) {
+  const action = state.agentActions.find((item) => item.id === actionId);
+  const store = selectedStore();
+  if (!action || !store) return;
+  try {
+    const response = await fetch("/api/agent/execute", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userId: state.agentUserId,
+        store,
+        intel: compactIntelForAgent(state.latestIntel),
+        action
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || `Agent execute failed with status ${response.status}`);
+    renderBanners([{
+      level: data.executed ? "opportunity" : data.policy?.decision === "needs_approval" ? "warning" : "critical",
+      title: data.executed ? "Delegated action executed" : data.policy?.decision === "needs_approval" ? "Approval required" : "Action blocked",
+      body: data.message || data.policy?.reason || "Agent policy decision recorded."
+    }]);
+    await refreshAgentActions();
+    scrollToSection(els.agentSection);
+  } catch (error) {
+    renderBanners([{ level: "critical", title: "Agent action failed", body: error.message }]);
+  }
+}
+
+function renderAgentAudit(audit) {
+  const items = audit || [];
+  els.agentAuditPanel.innerHTML = `
+    <div class="agent-audit-title">User-scoped audit trail</div>
+    ${items.length ? items.slice(0, 5).map((event) => `
+      <div class="agent-audit-row">
+        <span>${escapeHtml(formatDateTime(event.at))}</span>
+        <span><b>${escapeHtml(event.userName || "User")}</b> ${escapeHtml(event.executed ? "executed" : "attempted")} ${escapeHtml(event.actionTitle || "action")} for ${escapeHtml(event.storeName || "store")}</span>
+        <span class="agent-audit-decision">${escapeHtml(event.decision || "logged")}</span>
+      </div>
+    `).join("") : `<div class="empty">No delegated actions yet. Switch users, execute an allowed action, then watch this fill in.</div>`}
+  `;
+}
+
+function compactIntelForAgent(intel) {
+  if (!intel) return null;
+  return {
+    generatedAt: intel.generatedAt,
+    marketProvider: intel.marketProvider,
+    marketPlaces: (intel.marketPlaces || []).slice(0, 10),
+    marketIntelligence: intel.marketIntelligence,
+    opportunities: (intel.opportunities || []).slice(0, 4),
+    warnings: (intel.warnings || []).slice(0, 4),
+    licenseChecklist: (intel.licenseChecklist || []).slice(0, 12)
+  };
+}
+
+function agentIntegrationLabel(name) {
+  const labels = { apify: "Apify", scalekit: "Scalekit", entire: "Entire", gemini: "Gemini" };
+  return labels[name] || titleCase(name);
+}
+
+function renderBusyHeatmapCard(busy) {
+  const { days, hours, grid, peakDay, peakHour, peakValue, contributing } = busy;
+  const hourLabels = hours.map((h) => h % 6 === 0 ? `${h === 0 ? "12a" : h === 12 ? "12p" : h > 12 ? (h - 12) + "p" : h + "a"}` : "");
+  const cells = grid.map((row, d) => {
+    const rowCells = row.map((value, h) => {
+      const isPeak = days[d] === peakDay && h === peakHour;
+      return `<div class="heat-cell ${isPeak ? "peak" : ""}" style="background:${heatmapColor(value)}" title="${days[d]} ${hourLabels[h] || h}: ${value}% busy"></div>`;
+    }).join("");
+    return `<div class="heatmap-row">${rowCells}</div>`;
+  }).join("");
+
+  return `
+    <article class="intel-card full">
+      <div class="intel-card-head">
+        <div class="intel-card-title">When this block is busy</div>
+        <span class="intel-card-pill">${contributing} popular-times scans</span>
+      </div>
+      <div class="intel-headline">Peak: ${escapeHtml(peakDay)} at ${escapeHtml(formatHourLabel(peakHour))} · ~${peakValue}% busy</div>
+      <div class="intel-body">Use this to align staff schedules, prep timing, and pickup pushes with neighborhood foot traffic. Hover any cell for the exact percent.</div>
+      <div class="heatmap-wrap">
+        <div class="heatmap-y">
+          <div></div>
+          ${days.map((d) => `<div>${escapeHtml(d)}</div>`).join("")}
+        </div>
+        <div class="heatmap-grid">
+          <div class="heatmap-hours">${hourLabels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}</div>
+          ${cells}
+        </div>
+      </div>
+      <div class="heatmap-legend">
+        <span>Quiet</span>
+        <div class="heatmap-legend-bar"></div>
+        <span>Packed</span>
+      </div>
+    </article>
+  `;
+}
+
+function heatmapColor(value) {
+  // 0..100 → dark green → green → amber → pink
+  const v = Math.max(0, Math.min(100, Number(value) || 0));
+  if (v < 5) return "#181c17";
+  if (v < 25) return `rgba(35, 90, 55, ${0.35 + v / 100})`;
+  if (v < 50) return `rgba(74, 139, 65, ${0.6 + v / 220})`;
+  if (v < 70) return `rgba(214, 160, 60, ${0.75 + v / 320})`;
+  return `rgba(255, 144, 232, ${0.7 + v / 320})`;
+}
+
+function formatHourLabel(hour) {
+  if (hour === 0) return "12am";
+  if (hour < 12) return `${hour}am`;
+  if (hour === 12) return "12pm";
+  return `${hour - 12}pm`;
+}
+
+function renderPriceRatingScatterCard(points) {
+  const W = 380;
+  const H = 200;
+  const padL = 36;
+  const padR = 12;
+  const padT = 14;
+  const padB = 30;
+  const x = (tier) => padL + ((tier - 1) / 3) * (W - padL - padR);
+  const yMin = 3.3;
+  const yMax = 5.0;
+  const y = (rating) => padT + (1 - (rating - yMin) / (yMax - yMin)) * (H - padT - padB);
+
+  const ratings = points.map((p) => p.rating).filter((r) => r > 0);
+  const avgRating = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 4.5;
+  const tiers = points.map((p) => p.tier);
+  const avgTier = tiers.length ? tiers.reduce((a, b) => a + b, 0) / tiers.length : 2;
+
+  const maxReviews = Math.max(...points.map((p) => p.reviews || 1), 10);
+  const minR = 4;
+  const maxR = 14;
+  const dotRadius = (reviews) => {
+    const ratio = Math.log10(Math.max(10, reviews)) / Math.log10(Math.max(10, maxReviews));
+    return Math.max(minR, Math.min(maxR, minR + ratio * (maxR - minR)));
+  };
+
+  const gridRatings = [3.5, 4.0, 4.5, 5.0];
+  const yAxis = gridRatings.map((r) => `
+    <line class="scatter-grid" x1="${padL}" y1="${y(r)}" x2="${W - padR}" y2="${y(r)}" />
+    <text class="scatter-tick" x="${padL - 6}" y="${y(r) + 3}" text-anchor="end">${r.toFixed(1)}★</text>
+  `).join("");
+  const xAxis = [1, 2, 3, 4].map((tier) => `
+    <text class="scatter-tick" x="${x(tier)}" y="${H - padB + 16}" text-anchor="middle">${"$".repeat(tier)}</text>
+  `).join("");
+
+  const dots = points.map((p, i) => {
+    const isHigh = (p.rating >= 4.5) && (p.reviews >= 200);
+    return `<circle class="scatter-dot ${isHigh ? "high" : ""}" cx="${x(p.tier)}" cy="${y(p.rating)}" r="${dotRadius(p.reviews)}" data-i="${i}"></circle>`;
+  }).join("");
+
+  return `
+    <article class="intel-card full">
+      <div class="intel-card-head">
+        <div class="intel-card-title">Price vs rating landscape</div>
+        <span class="intel-card-pill">${points.length} competitors</span>
+      </div>
+      <div class="intel-headline">Block average sits near ${"$".repeat(Math.round(avgTier))} · ${avgRating.toFixed(1)}★</div>
+      <div class="intel-body">Bigger circles = more reviews. Gold dots are high-rated, well-reviewed places. Hover any dot for details.</div>
+      <div class="scatter-wrap scatter-anchor" id="scatterAnchor">
+        <svg class="scatter-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" data-points='${escapeAttr(JSON.stringify(points))}'>
+          <line class="scatter-axis-line" x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" />
+          <line class="scatter-axis-line" x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}" />
+          ${yAxis}
+          ${xAxis}
+          <rect class="scatter-zone" x="${Math.max(padL, x(Math.floor(avgTier)))}" y="${y(avgRating + 0.15)}" width="${x(Math.ceil(avgTier) + 1) - x(Math.floor(avgTier))}" height="${y(avgRating - 0.15) - y(avgRating + 0.15)}" rx="6" />
+          ${dots}
+        </svg>
+        <div class="scatter-tooltip" id="scatterTooltip"></div>
+      </div>
+      <div class="scatter-legend">
+        <span><span class="scatter-legend-dot" style="background:var(--green)"></span>nearby place</span>
+        <span><span class="scatter-legend-dot" style="background:var(--pop-2)"></span>high quality (≥4.5★, ≥200 reviews)</span>
+        <span>circle size = review volume</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderCategoryBreakdownCard(breakdown) {
+  const palette = ["#36c28f", "#4a8fd8", "#ff90e8", "#ffd84d", "#e05f5f", "#38b6a5", "#9d7cff"];
+  const entries = breakdown.entries || [];
+  if (!entries.length) return "";
+  const total = breakdown.total || entries.reduce((s, e) => s + e.count, 0);
+  const dominant = entries[0];
+  const radius = 72;
+  const cx = 80;
+  const cy = 80;
+  const inner = 44;
+  let cumulative = 0;
+  const slices = entries.map((e, i) => {
+    const frac = e.count / total;
+    const startA = cumulative * Math.PI * 2 - Math.PI / 2;
+    cumulative += frac;
+    const endA = cumulative * Math.PI * 2 - Math.PI / 2;
+    const large = frac > 0.5 ? 1 : 0;
+    const x1 = cx + Math.cos(startA) * radius;
+    const y1 = cy + Math.sin(startA) * radius;
+    const x2 = cx + Math.cos(endA) * radius;
+    const y2 = cy + Math.sin(endA) * radius;
+    const ix1 = cx + Math.cos(endA) * inner;
+    const iy1 = cy + Math.sin(endA) * inner;
+    const ix2 = cx + Math.cos(startA) * inner;
+    const iy2 = cy + Math.sin(startA) * inner;
+    const color = palette[i % palette.length];
+    const path = `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} L ${ix1.toFixed(2)} ${iy1.toFixed(2)} A ${inner} ${inner} 0 ${large} 0 ${ix2.toFixed(2)} ${iy2.toFixed(2)} Z`;
+    return { path, color, entry: e };
+  });
+  const legend = slices.map(({ color, entry }) => `
+    <div class="donut-legend-row">
+      <span class="donut-legend-swatch" style="background:${color}"></span>
+      <span class="donut-legend-label">${escapeHtml(entry.label)}</span>
+      <span class="donut-legend-count">${entry.count}</span>
+      <span class="donut-legend-pct">${entry.pct}%</span>
+    </div>
+  `).join("");
+  const svgSlices = slices.map((s) => `<path class="donut-slice" d="${s.path}" fill="${s.color}"></path>`).join("");
+  return `
+    <article class="intel-card full">
+      <div class="intel-card-head">
+        <div class="intel-card-title">${escapeHtml(breakdown.sectorLabel || "Block category mix")}</div>
+        <span class="intel-card-pill">${total} places</span>
+      </div>
+      <div class="intel-headline">${escapeHtml(dominant.label)} dominates · ${dominant.pct}% of nearby</div>
+      <div class="intel-body">If your store leans the same way, you're competing on quality. If you're different, you have a niche — make it obvious in your signage and listing.</div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 160 160" preserveAspectRatio="xMidYMid meet">
+          ${svgSlices}
+          <text class="donut-center" x="80" y="78" text-anchor="middle">${total}</text>
+          <text class="donut-center-sub" x="80" y="94" text-anchor="middle">on this block</text>
+        </svg>
+        <div class="donut-legend">${legend}</div>
+      </div>
+    </article>
+  `;
+}
+
+function renderHoursCoverageCard(hours) {
+  const max = Math.max(...hours.avgOpenByHour, 1);
+  const bars = hours.avgOpenByHour.map((value, h) => {
+    const pct = (value / max) * 100;
+    const isPeak = h === hours.peakHour && value > 0;
+    const cls = value <= 0 ? "zero" : isPeak ? "peak" : "";
+    return `<div class="hours-bar ${cls}" style="height:${Math.max(value > 0 ? 8 : 3, pct).toFixed(1)}%" title="${formatHourLabel(h)}: ~${value.toFixed(1)} of ${hours.contributing} places open"></div>`;
+  }).join("");
+  const axis = Array.from({ length: 24 }, (_, h) => `<span>${h % 6 === 0 ? formatHourLabel(h) : ""}</span>`).join("");
+  return `
+    <article class="intel-card full">
+      <div class="intel-card-head">
+        <div class="intel-card-title">When nearby places are open</div>
+        <span class="intel-card-pill">${hours.contributing} parsed schedules</span>
+      </div>
+      <div class="intel-headline">Coverage peaks at ${escapeHtml(formatHourLabel(hours.peakHour))} · ~${hours.peakValue.toFixed(1)} of ${hours.contributing} open</div>
+      <div class="intel-body">Each bar = average number of nearby places open at that hour. Gaps are opportunity windows; peaks are when the block is fully staffed.</div>
+      <div class="hours-timeline">${bars}</div>
+      <div class="hours-axis">${axis}</div>
+      <div class="hours-summary">
+        ${hours.openEarlyCount ? `<span class="hours-stat"><b>${hours.openEarlyCount}</b>open before 8am</span>` : ""}
+        ${hours.openLateCount ? `<span class="hours-stat"><b>${hours.openLateCount}</b>open past 9pm</span>` : ""}
+        ${hours.open24Count ? `<span class="hours-stat"><b>${hours.open24Count}</b>open 24h</span>` : ""}
+      </div>
+    </article>
+  `;
 }
 
 function renderSignals(groups) {
@@ -1838,7 +2726,19 @@ function renderSignals(groups) {
     queuePageTranslation();
     return;
   }
-  let visible = groups;
+
+  // Dedupe: don't render signals whose headline matches a card already
+  // shown in the Opportunities or Warnings panels above. This was the
+  // "Crime and Safety repeating" issue — same item appeared in both views.
+  const dedupeKeys = new Set();
+  const intel = state.latestIntel || {};
+  for (const o of intel.opportunities || []) dedupeKeys.add(normalizeSignalKey(o.title));
+  for (const w of intel.warnings || []) dedupeKeys.add(normalizeSignalKey(w.title));
+
+  let visible = (groups || []).map((group) => ({
+    ...group,
+    signals: (group.signals || []).filter((s) => !dedupeKeys.has(normalizeSignalKey(s.headline)))
+  }));
   if (state.activeSignalFilter === "Warnings") {
     visible = groups.map((group) => ({
       ...group,
@@ -1868,6 +2768,15 @@ function renderSignals(groups) {
   `;
   }).join("");
   queuePageTranslation();
+}
+
+function normalizeSignalKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
 }
 
 function renderSignalCard(signal, compact = false) {
@@ -2097,22 +3006,52 @@ function renderChat() {
   const store = selectedStore();
   if (!store || !els.chatPanel) return;
   els.chatPanel.classList.toggle("open", state.chatOpen);
-  els.chatContext.textContent = `${labelType(store.businessType)} · ${store.city || "city not set"} · ${store.businessName || "Store"}`;
+
+  const liveOk = state.latestIntel ? "Live · grounded in city scan" : "Loading scan…";
+  els.chatContext.innerHTML = `<span class="helper-status-dot"></span>${escapeHtml(store.businessName || "Store")} · ${escapeHtml(labelType(store.businessType))} · ${escapeHtml(store.city || "no city set")} <span style="opacity:.55;margin-left:6px">${escapeHtml(liveOk)}</span>`;
+
   const thread = chatThreadForStore(store.id);
   const messages = thread.length ? thread : [{
     role: "assistant",
     text: chatGreeting(store),
     at: new Date().toISOString()
   }];
-  els.chatMessages.innerHTML = messages.map((message) => `
-    <div class="chat-msg ${message.role === "user" ? "user" : "assistant"}">
-      <div>${escapeHtml(message.text || "")}</div>
-      <div class="chat-time">${escapeHtml(formatDateTime(message.at))}</div>
-    </div>
-  `).join("");
-  els.chatSuggestions.innerHTML = chatSuggestions(store).map((label) => `
-    <button class="chat-chip" type="button" data-chat-suggestion="${escapeAttr(label)}">${escapeHtml(label)}</button>
-  `).join("");
+  els.chatMessages.innerHTML = messages.map((message) => {
+    const cls = [
+      "helper-msg",
+      message.role === "user" ? "user" : "assistant",
+      message.pending ? "pending" : "",
+      message.live ? "live" : "",
+      message.fallback ? "fallback" : ""
+    ].filter(Boolean).join(" ");
+    let badge = "";
+    if (message.live) {
+      badge = `<span class="helper-msg-badge live">⚡ POWERED BY APIFY</span>`;
+    } else if (message.fallback && message.role === "assistant") {
+      badge = `<span class="helper-msg-badge fallback" title="${escapeAttr(message.fallbackReason || "no LLM key")}">offline</span>`;
+    }
+    return `
+      <div class="${cls}">
+        <div>${escapeHtml(message.text || "")}</div>
+        ${(badge || (message.role === "assistant" && message.at)) ? `<div class="helper-msg-meta">${badge}<span>${escapeHtml(formatDateTime(message.at))}</span></div>` : ""}
+      </div>
+    `;
+  }).join("");
+
+  const suggestions = chatSuggestions(store);
+  if (!suggestions.length) {
+    els.chatSuggestions.innerHTML = `<div class="helper-empty">Loading questions…</div>`;
+  } else {
+    els.chatSuggestions.innerHTML = suggestions.map((chip) => {
+      const icon = chip.kind === "intel" ? "📊" : chip.kind === "warn" ? "⚠️" : "💡";
+      return `
+        <button class="helper-pin ${chip.kind || ""}" type="button" data-chat-suggestion="${escapeAttr(chip.text)}">
+          <span class="helper-pin-icon">${icon}</span>
+          <span>${escapeHtml(chip.text)}</span>
+        </button>
+      `;
+    }).join("");
+  }
   els.chatSuggestions.querySelectorAll("[data-chat-suggestion]").forEach((button) => {
     button.addEventListener("click", () => sendChatMessage(button.dataset.chatSuggestion));
   });
@@ -2128,17 +3067,103 @@ function handleChatSubmit(event) {
   sendChatMessage(text);
 }
 
-function sendChatMessage(text) {
+async function sendChatMessage(text) {
   const store = selectedStore();
   if (!store) return;
-  const now = new Date().toISOString();
+  const userAt = new Date().toISOString();
   const thread = chatThreadForStore(store.id);
-  thread.push({ role: "user", text, at: now });
-  thread.push({ role: "assistant", text: buildChatReply(text), at: new Date().toISOString() });
+  thread.push({ role: "user", text, at: userAt });
+  thread.push({ role: "assistant", text: "Thinking", at: new Date().toISOString(), pending: true });
   state.chatThreads[store.id] = thread.slice(-40);
   saveChatThreads();
   state.chatOpen = true;
   renderChat();
+
+  const history = thread
+    .slice(0, -1)
+    .filter((m) => !m.pending)
+    .slice(-8)
+    .map((m) => ({ role: m.role, content: m.text }));
+
+  let liveReply = null;
+  let liveError = null;
+  let model = null;
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        store,
+        intel: compactIntelForChat(state.latestIntel),
+        history
+      })
+    });
+    const data = await response.json();
+    if (data.ok && data.reply) {
+      liveReply = data.reply;
+      model = data.model;
+    } else {
+      liveError = data.error || `chat endpoint returned ${response.status}`;
+    }
+  } catch (error) {
+    liveError = error.message || "chat fetch failed";
+  }
+
+  // Drop the pending placeholder
+  thread.pop();
+  if (liveReply) {
+    thread.push({ role: "assistant", text: liveReply, at: new Date().toISOString(), live: true, model });
+  } else {
+    thread.push({
+      role: "assistant",
+      text: buildChatReply(text),
+      at: new Date().toISOString(),
+      fallback: true,
+      fallbackReason: liveError
+    });
+  }
+  state.chatThreads[store.id] = thread.slice(-40);
+  saveChatThreads();
+  renderChat();
+}
+
+function compactIntelForChat(intel) {
+  if (!intel) return null;
+  return {
+    generatedAt: intel.generatedAt,
+    profile: intel.profile,
+    opportunities: (intel.opportunities || []).slice(0, 6).map((o) => ({
+      title: o.title, action: o.action, why: o.why, type: o.type, when: o.when
+    })),
+    warnings: (intel.warnings || []).slice(0, 6).map((w) => ({
+      title: w.title, action: w.action, why: w.why, urgency: w.urgency, type: w.type
+    })),
+    weatherForecast: (intel.weatherForecast || []).slice(0, 3),
+    marketIntelligence: intel.marketIntelligence,
+    // Send a slim list of actual nearby competitors so the bot can name names
+    // when answering store-specific questions like "who's the closest competitor"
+    // or "what's the best-reviewed Italian restaurant near me?"
+    nearbyPlaces: (intel.marketPlaces || []).slice(0, 10).map((p) => ({
+      name: p.name,
+      category: p.category,
+      rating: p.rating,
+      reviews: p.reviews,
+      price: p.price,
+      address: p.address,
+      neighborhood: p.neighborhood
+    })),
+    // Compliance checklist so the bot can answer "what permits do I need" with the
+    // exact authoritative URLs already loaded.
+    compliance: (intel.licenseChecklist || []).slice(0, 30).map((c) => ({
+      name: c.name,
+      category: c.category,
+      priority: c.priority,
+      authority: c.authority,
+      renewal: c.renewal,
+      url: c.url
+    }))
+  };
 }
 
 function chatThreadForStore(storeId) {
@@ -2151,13 +3176,41 @@ function chatGreeting(store) {
 }
 
 function chatSuggestions(store) {
+  const intel = state.latestIntel || {};
+  const mi = intel.marketIntelligence || {};
+  const type = labelType(store.businessType).toLowerCase();
+  const city = store.city || "this city";
+  const peak = mi.busyHeatmap?.peakDay
+    ? `Why does this block peak ${mi.busyHeatmap.peakDay} ${formatHourLabel(mi.busyHeatmap.peakHour)}?`
+    : null;
+  const tier = mi.dominantTierLabel
+    ? `Should I price at ${mi.dominantTierLabel} like the block, or different?`
+    : null;
+  const themes = mi.topReviewTags?.length
+    ? `Can I steal "${mi.topReviewTags[0].title}" as a menu/feature angle?`
+    : null;
+  const warningCount = (intel.warnings || []).filter((w) => w.urgency !== "Low").length;
+  const warnQ = warningCount
+    ? `Walk me through my ${warningCount} active warning${warningCount === 1 ? "" : "s"}`
+    : null;
+
   return [
-    "What should I do today?",
-    `How can this ${labelType(store.businessType).toLowerCase()} make more profit?`,
-    "Summarize warnings",
-    "Use media trends",
-    "Check my notes"
-  ];
+    { text: "What should I do today?", kind: "intel" },
+    { text: peak, kind: "intel" },
+    { text: tier, kind: "intel" },
+    { text: themes, kind: "intel" },
+    { text: warnQ, kind: "warn" },
+    { text: `How do I make this ${type} more profitable?`, kind: "" },
+    { text: "What POS system should I use?", kind: "" },
+    { text: "How do I respond to a 1-star review?", kind: "" },
+    { text: "Best way to get more Google reviews?", kind: "" },
+    { text: `What promo would work for a slow Tuesday in ${city}?`, kind: "" },
+    { text: `Hiring a part-time worker — what wage in ${city}?`, kind: "" },
+    { text: "Should I get a beer & wine license?", kind: "" },
+    { text: "How do I negotiate my lease renewal?", kind: "" },
+    { text: "What's my biggest blind spot right now?", kind: "intel" },
+    { text: "Compare me to top-rated nearby", kind: "intel" }
+  ].filter((c) => c.text);
 }
 
 function buildChatReply(input) {
@@ -2434,8 +3487,108 @@ function renderModalTypeGrid() {
     button.addEventListener("click", () => {
       state.modalSelectedType = button.dataset.type;
       renderModalTypeGrid();
+      applyTypeToModalForm(state.modalSelectedType);
     });
   });
+  applyTypeToModalForm(state.modalSelectedType);
+}
+
+const FIELD_LABELS_BY_TYPE = {
+  restaurant: {
+    modalAvgTicket:       { label: "Average ticket per customer", placeholder: "$14.20" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$3,500" },
+    modalInventoryValue:  { label: "At-risk perishable inventory",placeholder: "$2,500 in walk-in" },
+    modalSuppliers:       { label: "Food suppliers and cadence",  placeholder: "Sysco daily, US Foods 2x/wk" },
+    modalLicenseNotes:    { label: "Health permit, food handler", placeholder: "Health permit #, expiry, food handler cards" }
+  },
+  "coffee shop": {
+    modalAvgTicket:       { label: "Average ticket",              placeholder: "$6.50" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$1,400" },
+    modalInventoryValue:  { label: "Bean / dairy / pastry stock", placeholder: "$1,200 perishable" },
+    modalSuppliers:       { label: "Roaster + dairy supplier",    placeholder: "Stumptown 3x/wk, dairy daily" },
+    modalLicenseNotes:    { label: "Health permit + food handler",placeholder: "Permit #, expiry" }
+  },
+  "food stall": {
+    modalAvgTicket:       { label: "Average order",               placeholder: "$9" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$700" },
+    modalInventoryValue:  { label: "Daily food prep value",       placeholder: "$300" },
+    modalSuppliers:       { label: "Food + commissary suppliers", placeholder: "Restaurant Depot weekly" },
+    modalLicenseNotes:    { label: "MFF / event permits",         placeholder: "MFF permit, food handler, fire permit" }
+  },
+  grocery: {
+    modalAvgTicket:       { label: "Average basket",              placeholder: "$32" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$8,000" },
+    modalInventoryValue:  { label: "Cold-chain inventory",        placeholder: "$25,000 fridge/freezer" },
+    modalSuppliers:       { label: "Distributors / produce",      placeholder: "UNFI, Veritable Vegetable" },
+    modalLicenseNotes:    { label: "Seller permit, health permit",placeholder: "" }
+  },
+  retail: {
+    modalAvgTicket:       { label: "Average basket",              placeholder: "$45" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$2,000" },
+    modalInventoryValue:  { label: "Stock at risk (theft, dead)", placeholder: "$8,000" },
+    modalSuppliers:       { label: "Wholesalers / brand reps",    placeholder: "" },
+    modalLicenseNotes:    { label: "Seller permit, sales tax",    placeholder: "" }
+  },
+  salon: {
+    modalAvgTicket:       { label: "Average service price",       placeholder: "$85" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$1,200" },
+    modalInventoryValue:  { label: "Color / product / tool stock",placeholder: "$3,500" },
+    modalSuppliers:       { label: "Beauty supply rep",           placeholder: "SalonCentric, CosmoProf" },
+    modalLicenseNotes:    { label: "Cosmetology / shop license",  placeholder: "License #, renewal date" }
+  },
+  barbershop: {
+    modalAvgTicket:       { label: "Average cut price",           placeholder: "$35" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$700" },
+    modalInventoryValue:  { label: "Product / clipper stock",     placeholder: "$800" },
+    modalSuppliers:       { label: "Supply rep",                  placeholder: "" },
+    modalLicenseNotes:    { label: "Barber / shop license",       placeholder: "License #, renewal" }
+  },
+  laundromat: {
+    modalAvgTicket:       { label: "Avg load / wash-fold",        placeholder: "$8 self / $1.75/lb fold" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$600" },
+    modalInventoryValue:  { label: "Detergent / supply / parts",  placeholder: "$1,500" },
+    modalSuppliers:       { label: "Detergent + parts supplier",  placeholder: "Continental, Speed Queen" },
+    modalLicenseNotes:    { label: "Business + water permits",    placeholder: "" }
+  },
+  pharmacy: {
+    modalAvgTicket:       { label: "Average basket",              placeholder: "$28" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$5,000" },
+    modalInventoryValue:  { label: "Rx + OTC stock",              placeholder: "$80,000" },
+    modalSuppliers:       { label: "Wholesaler",                  placeholder: "AmerisourceBergen, Cardinal" },
+    modalLicenseNotes:    { label: "Pharmacy + DEA license",      placeholder: "License #s, renewal dates" }
+  },
+  daycare: {
+    modalAvgTicket:       { label: "Monthly tuition per child",   placeholder: "$1,800" },
+    modalDailyRevenue:    { label: "Capacity / daily attendance", placeholder: "32 of 40 enrolled" },
+    modalInventoryValue:  { label: "Supplies / curriculum / food",placeholder: "$2,000" },
+    modalSuppliers:       { label: "Curriculum / food vendor",    placeholder: "" },
+    modalLicenseNotes:    { label: "State childcare license",     placeholder: "License #, renewal" }
+  },
+  "auto repair": {
+    modalAvgTicket:       { label: "Average ticket",              placeholder: "$320" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$1,800" },
+    modalInventoryValue:  { label: "Parts inventory",             placeholder: "$12,000" },
+    modalSuppliers:       { label: "Parts suppliers",             placeholder: "NAPA, AutoZone Pro" },
+    modalLicenseNotes:    { label: "BAR / smog license",          placeholder: "BAR #, smog inspector cert" }
+  },
+  "liquor store": {
+    modalAvgTicket:       { label: "Average basket",              placeholder: "$24" },
+    modalDailyRevenue:    { label: "Typical daily revenue",       placeholder: "$2,500" },
+    modalInventoryValue:  { label: "Bottle inventory",            placeholder: "$45,000" },
+    modalSuppliers:       { label: "Distributor reps",            placeholder: "Southern Glazer's, RNDC" },
+    modalLicenseNotes:    { label: "ABC Type 21 license",         placeholder: "License #, renewal" }
+  }
+};
+
+function applyTypeToModalForm(type) {
+  const map = FIELD_LABELS_BY_TYPE[normalizeType(type)] || FIELD_LABELS_BY_TYPE.retail;
+  for (const [fieldId, config] of Object.entries(map)) {
+    const input = document.getElementById(fieldId);
+    if (!input) continue;
+    if (config.placeholder !== undefined) input.placeholder = config.placeholder;
+    const labelEl = document.querySelector(`label[for="${fieldId}"]`);
+    if (labelEl && config.label) labelEl.textContent = config.label;
+  }
 }
 
 function saveStoreFromModal() {
@@ -2690,13 +3843,34 @@ function reviewItemsForStore(storeId) {
 }
 
 function loadStores() {
+  let userStores = [];
   try {
     const raw = localStorage.getItem("warden:stores");
     const parsed = raw ? JSON.parse(raw) : null;
-    return Array.isArray(parsed) && parsed.length ? parsed.map(migrateStore) : structuredClone(DEFAULT_STORES);
+    userStores = Array.isArray(parsed) ? parsed.map(migrateStore) : [];
   } catch {
-    return structuredClone(DEFAULT_STORES);
+    userStores = [];
   }
+
+  // First-time bootstrap: ensure all SF demo storefronts are present so the user
+  // sees the full preloaded set in the rail. We only do this once; after that the
+  // user's add/remove actions are preserved (the flag prevents re-adding stores
+  // they explicitly removed).
+  const bootstrapped = (() => {
+    try { return localStorage.getItem("warden:demoBootstrapped"); } catch { return null; }
+  })();
+  if (!bootstrapped) {
+    const userIds = new Set(userStores.map((s) => s.id));
+    const missingDemo = DEFAULT_STORES.filter((s) => !userIds.has(s.id));
+    const merged = [...userStores, ...structuredClone(missingDemo)];
+    try {
+      localStorage.setItem("warden:stores", JSON.stringify(merged));
+      localStorage.setItem("warden:demoBootstrapped", "1");
+    } catch {}
+    return merged.length ? merged : structuredClone(DEFAULT_STORES);
+  }
+
+  return userStores.length ? userStores : structuredClone(DEFAULT_STORES);
 }
 
 function migrateStore(store) {

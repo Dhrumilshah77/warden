@@ -16,15 +16,60 @@ await check("static app shell", async () => {
   assert(html.includes("id=\"storeInfoSection\""), "right-side store info view should be present");
   assert(!html.includes("id=\"removeStoreBtn\""), "visible store remove button should not be present");
   assert(html.includes("id=\"chatFab\""), "floating chatbot button should be present");
-  assert(html.includes("Store assistant"), "chatbot popup should be present");
+  assert(html.includes("Warden Helper"), "chatbot popup should be present");
+  assert(html.includes("id=\"agentSection\""), "delegated agent console should be present");
+  assert(html.includes("id=\"agentUserSelect\""), "delegated user selector should be present");
   assert(!html.includes("Review Later"), "app shell should use Notes, not Review Later");
   const appJs = await (await fetch(`${BASE}/app.js`)).text();
   assert(appJs.includes("Add to notes"), "card save buttons should say Add to notes");
   assert(appJs.includes("openStoreInfoView"), "View stored info should open the right-side store info view");
+  assert(appJs.includes("executeAgentAction"), "delegated agent actions should be executable from the UI");
   assert(!appJs.includes("removeStoreBtn"), "app JS should not wire a visible remove store button");
   assert(appJs.includes("buildChatReply"), "chatbot should have store-aware reply logic");
   assert(appJs.includes("warden:chatThreads"), "chatbot should persist per-store memory");
   assert(!/Review Later|Review later|review later/.test(appJs), "app JS should not expose Review Later wording");
+});
+
+await check("delegated action policy changes by user", async () => {
+  const owner = await postJson("/api/agent/actions", {
+    userId: "owner-ava",
+    store: {
+      businessName: "Mission Demo",
+      businessType: "restaurant",
+      address: "412 Mission St",
+      city: "San Francisco",
+      state: "CA"
+    },
+    intel: {
+      marketProvider: "apify",
+      marketPlaces: [{ name: "Nearby Restaurant" }],
+      marketIntelligence: { competitorsAnalyzed: 12, busyHeatmap: { peakDay: "Sat", peakHour: 19 }, topReviewTags: [{ title: "clam chowder" }] },
+      opportunities: [{ title: "Block peaks Sat 7pm", action: "Staff up" }],
+      warnings: [],
+      licenseChecklist: [{ name: "Retail food facility health permit", priority: "required", authority: "SFDPH", url: "https://www.sf.gov/" }]
+    }
+  });
+  const associate = await postJson("/api/agent/actions", {
+    userId: "associate-mia",
+    store: {
+      businessName: "Mission Demo",
+      businessType: "restaurant",
+      address: "412 Mission St",
+      city: "San Francisco",
+      state: "CA"
+    },
+    intel: {
+      marketProvider: "apify",
+      marketPlaces: [{ name: "Nearby Restaurant" }],
+      marketIntelligence: { competitorsAnalyzed: 12, busyHeatmap: { peakDay: "Sat", peakHour: 19 }, topReviewTags: [{ title: "clam chowder" }] },
+      opportunities: [{ title: "Block peaks Sat 7pm", action: "Staff up" }],
+      warnings: [],
+      licenseChecklist: [{ name: "Retail food facility health permit", priority: "required", authority: "SFDPH", url: "https://www.sf.gov/" }]
+    }
+  });
+  assert(owner.actions.some((action) => action.policy.decision === "allowed"), "owner should have at least one allowed delegated action");
+  assert(associate.actions.some((action) => action.policy.decision === "blocked"), "associate should be blocked from privileged delegated actions");
+  assert(owner.integrations.scalekit && owner.integrations.entire && owner.integrations.apify, "agent response should expose sponsor integration status");
 });
 
 await check("custom restock search uses exact supplier links", async () => {
@@ -157,6 +202,17 @@ async function intel(params) {
 
 async function json(path) {
   const response = await fetch(`${BASE}${path}`);
+  const text = await response.text();
+  assert(response.ok, `HTTP ${response.status}: ${text.slice(0, 240)}`);
+  return JSON.parse(text);
+}
+
+async function postJson(path, body) {
+  const response = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
   const text = await response.text();
   assert(response.ok, `HTTP ${response.status}: ${text.slice(0, 240)}`);
   return JSON.parse(text);

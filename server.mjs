@@ -1,15 +1,24 @@
 import { createServer } from "node:http";
 import { createReadStream } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "public");
+const CACHE_DIR = path.join(__dirname, "cache");
+const PLACES_CACHE_FILE = path.join(CACHE_DIR, "places-cache.json");
+const PRODUCTS_CACHE_FILE = path.join(CACHE_DIR, "products-cache.json");
 const PORT = Number(process.env.PORT || 4173);
 const APP_USER_AGENT = "Warden/0.2 (local storefront intelligence; contact: local)";
 
+// Apify caches must be declared before loadDiskCaches() runs so the loader can
+// populate them. Functions further down the file still use the same identifiers.
+const APIFY_PLACES_CACHE = new Map();
+const APIFY_PRODUCTS_CACHE = new Map();
+
 await loadDotEnv();
+await loadDiskCaches();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -33,6 +42,55 @@ const DEFAULT_PROFILE = {
   lon: -122.3971,
   radiusMeters: 1200
 };
+
+const DELEGATED_ACTION_AUDIT = [];
+
+const DEMO_AGENT_USERS = [
+  {
+    id: "owner-ava",
+    name: "Ava Patel",
+    email: "ava@missiondemo.com",
+    role: "owner",
+    title: "Owner",
+    tenantId: "tenant-mission-demo",
+    tenantName: "Mission Demo Group",
+    scopes: [
+      "storefront.hours.write",
+      "marketing.campaign.write",
+      "customer.segment.write",
+      "suppliers.order.write",
+      "compliance.task.write"
+    ]
+  },
+  {
+    id: "manager-ben",
+    name: "Ben Lee",
+    email: "ben@missiondemo.com",
+    role: "manager",
+    title: "Store manager",
+    tenantId: "tenant-mission-demo",
+    tenantName: "Mission Demo Group",
+    scopes: [
+      "marketing.campaign.write",
+      "customer.segment.write",
+      "compliance.task.write",
+      "suppliers.order.draft"
+    ]
+  },
+  {
+    id: "associate-mia",
+    name: "Mia Garcia",
+    email: "mia@missiondemo.com",
+    role: "associate",
+    title: "Front counter associate",
+    tenantId: "tenant-mission-demo",
+    tenantName: "Mission Demo Group",
+    scopes: [
+      "notes.write",
+      "marketing.campaign.draft"
+    ]
+  }
+];
 
 const SOURCE_CATALOG = [
   {
@@ -245,6 +303,30 @@ export async function handleRequest(req, res) {
       return sendJson(res, 200, { sources: SOURCE_CATALOG });
     }
 
+    if (url.pathname === "/api/agent/session") {
+      return sendJson(res, 200, buildAgentSession(url.searchParams));
+    }
+
+    if (url.pathname === "/api/agent/actions") {
+      const body = req.method === "POST" ? await readJsonBody(req) : {};
+      return sendJson(res, 200, buildAgentActions(body || {}, url.searchParams));
+    }
+
+    if (url.pathname === "/api/agent/execute") {
+      if (req.method !== "POST") return sendJson(res, 405, { error: "POST only" });
+      const body = await readJsonBody(req);
+      const payload = await executeDelegatedAction(body || {});
+      return sendJson(res, payload.ok ? 200 : 400, payload);
+    }
+
+    if (url.pathname === "/api/agent/audit") {
+      const tenantId = url.searchParams.get("tenantId");
+      const audit = tenantId
+        ? DELEGATED_ACTION_AUDIT.filter((event) => event.tenantId === tenantId)
+        : DELEGATED_ACTION_AUDIT;
+      return sendJson(res, 200, { ok: true, audit: audit.slice(0, 40) });
+    }
+
     if (url.pathname === "/api/intel") {
       const profile = profileFromSearch(url.searchParams);
       const payload = await buildIntel(profile);
@@ -253,8 +335,15 @@ export async function handleRequest(req, res) {
 
     if (url.pathname === "/api/restock") {
       const profile = profileFromSearch(url.searchParams);
-      const payload = buildRestockComparison(profile, url.searchParams);
+      const payload = await buildRestockComparison(profile, url.searchParams);
       return sendJson(res, 200, payload);
+    }
+
+    if (url.pathname === "/api/chat") {
+      if (req.method !== "POST") return sendJson(res, 405, { error: "POST only" });
+      const body = await readJsonBody(req);
+      const payload = await handleChat(body || {});
+      return sendJson(res, payload.ok ? 200 : payload.fallback ? 503 : 500, payload);
     }
 
     if (url.pathname === "/api/apify/run") {
@@ -306,14 +395,820 @@ async function loadDotEnv() {
   }
 }
 
+// Disk-backed Apify cache so warm scans survive server restarts. The cache
+// is written to ./cache/{places,products}-cache.json after every successful
+// Apify call and replayed on startup.
+async function loadDiskCaches() {
+  await loadOneDiskCache(PLACES_CACHE_FILE, "places");
+  await loadOneDiskCache(PRODUCTS_CACHE_FILE, "products");
+}
+
+async function loadOneDiskCache(file, label) {
+  try {
+    const raw = await readFile(file, "utf8");
+    const data = JSON.parse(raw);
+    const target = label === "places" ? "APIFY_PLACES_CACHE" : "APIFY_PRODUCTS_CACHE";
+    let count = 0;
+    for (const [key, value] of Object.entries(data)) {
+      if (target === "APIFY_PLACES_CACHE") {
+        APIFY_PLACES_CACHE.set(key, value);
+      } else {
+        APIFY_PRODUCTS_CACHE.set(key, value);
+      }
+      count += 1;
+    }
+    if (count) console.log(`Loaded ${count} ${label} cache entries from ${path.basename(file)}`);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      console.warn(`Failed to load ${label} cache: ${error.message}`);
+    }
+  }
+}
+
+let placesPersistPending = false;
+let productsPersistPending = false;
+function persistPlacesCache() {
+  if (placesPersistPending) return;
+  placesPersistPending = true;
+  setTimeout(() => {
+    placesPersistPending = false;
+    flushCacheToDisk(PLACES_CACHE_FILE, APIFY_PLACES_CACHE).catch((error) => {
+      console.warn(`Failed to persist places cache: ${error.message}`);
+    });
+  }, 200);
+}
+function persistProductsCache() {
+  if (productsPersistPending) return;
+  productsPersistPending = true;
+  setTimeout(() => {
+    productsPersistPending = false;
+    flushCacheToDisk(PRODUCTS_CACHE_FILE, APIFY_PRODUCTS_CACHE).catch((error) => {
+      console.warn(`Failed to persist products cache: ${error.message}`);
+    });
+  }, 200);
+}
+async function flushCacheToDisk(file, cacheMap) {
+  await mkdir(CACHE_DIR, { recursive: true });
+  const obj = Object.fromEntries(cacheMap);
+  await writeFile(file, JSON.stringify(obj, null, 2));
+}
+
 function redactEnvStatus() {
   return {
     apify: Boolean(process.env.APIFY_TOKEN),
-    socrata: Boolean(process.env.SOCRATA_APP_TOKEN)
+    socrata: Boolean(process.env.SOCRATA_APP_TOKEN),
+    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+    gemini: Boolean(process.env.GEMINI_API_KEY),
+    scalekit: Boolean(process.env.SCALEKIT_ENVIRONMENT_URL && process.env.SCALEKIT_CLIENT_ID && process.env.SCALEKIT_CLIENT_SECRET),
+    entire: Boolean(process.env.ENTIRE_API_KEY || process.env.ENTIRE_API_URL)
   };
 }
 
-function buildRestockComparison(profile, params) {
+async function readJsonBody(req) {
+  return await new Promise((resolve) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      const text = Buffer.concat(chunks).toString("utf8");
+      if (!text) return resolve({});
+      try { resolve(JSON.parse(text)); } catch { resolve({}); }
+    });
+    req.on("error", () => resolve({}));
+  });
+}
+
+function buildAgentSession(params = new URLSearchParams()) {
+  const selectedUser = demoAgentUser(params.get("userId") || params.get("as") || "owner-ava");
+  return {
+    ok: true,
+    selectedUser,
+    users: DEMO_AGENT_USERS,
+    integrations: agentIntegrationStatus(),
+    message: "Demo mode shows the last-mile agent pattern: Apify supplies evidence, Scalekit gates who the agent can act as, Entire receives the user-scoped business action, and Warden records the audit trail.",
+    judgingHooks: [
+      "Same recommendation behaves differently for owner, manager, and associate.",
+      "Every execution is scoped to tenant, user, role, and action permission.",
+      "Blocked actions still create an audit event so the demo shows accountability."
+    ]
+  };
+}
+
+function buildAgentActions(body = {}, params = new URLSearchParams()) {
+  const user = demoAgentUser(body.userId || params.get("userId") || "owner-ava");
+  const store = storeFromPayload(body.store) || profileFromSearch(params);
+  const intel = body.intel || null;
+  const actions = recommendedDelegatedActions(store, intel).map((action) => ({
+    ...action,
+    policy: evaluateDelegatedPolicy(user, action)
+  }));
+  return {
+    ok: true,
+    user,
+    tenant: { id: user.tenantId, name: user.tenantName },
+    integrations: agentIntegrationStatus(),
+    actions,
+    audit: DELEGATED_ACTION_AUDIT.filter((event) => event.tenantId === user.tenantId).slice(0, 12)
+  };
+}
+
+async function executeDelegatedAction(body = {}) {
+  const user = demoAgentUser(body.userId || body.user?.id || "owner-ava");
+  const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
+  const action = normalizeDelegatedAction(body.action, store, body.intel);
+  const policy = evaluateDelegatedPolicy(user, action);
+  const auditEvent = {
+    id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    at: new Date().toISOString(),
+    tenantId: user.tenantId,
+    tenantName: user.tenantName,
+    userId: user.id,
+    userName: user.name,
+    userRole: user.role,
+    storeName: store.businessName || "Unnamed storefront",
+    actionId: action.id,
+    actionTitle: action.title,
+    target: action.target,
+    decision: policy.decision,
+    reason: policy.reason,
+    evidence: action.evidence,
+    executed: policy.decision === "allowed"
+  };
+
+  if (policy.decision !== "allowed") {
+    DELEGATED_ACTION_AUDIT.unshift(auditEvent);
+    return {
+      ok: true,
+      executed: false,
+      policy,
+      auditEvent,
+      message: policy.decision === "needs_approval"
+        ? `${user.name} needs owner approval before Warden can execute this action.`
+        : `${user.name} is not allowed to execute this action for this tenant.`
+    };
+  }
+
+  const scalekit = await executeScalekitDelegation({ user, store, action });
+  const entire = await executeEntireAction({ user, store, action, scalekit });
+  auditEvent.scalekit = scalekit.summary;
+  auditEvent.entire = entire.summary;
+  auditEvent.externalRef = entire.referenceId;
+  DELEGATED_ACTION_AUDIT.unshift(auditEvent);
+  return {
+    ok: true,
+    executed: true,
+    policy,
+    scalekit,
+    entire,
+    auditEvent,
+    message: `${action.title} executed as ${user.name} (${user.role}) for ${store.businessName || "this storefront"}.`
+  };
+}
+
+function agentIntegrationStatus() {
+  const scalekitConfigured = Boolean(process.env.SCALEKIT_ENVIRONMENT_URL && process.env.SCALEKIT_CLIENT_ID && process.env.SCALEKIT_CLIENT_SECRET);
+  const entireConfigured = Boolean(process.env.ENTIRE_API_KEY || process.env.ENTIRE_API_URL);
+  return {
+    apify: {
+      configured: Boolean(process.env.APIFY_TOKEN),
+      mode: process.env.APIFY_TOKEN ? "live" : "public-fallback",
+      role: "Live market and supplier evidence"
+    },
+    scalekit: {
+      configured: scalekitConfigured,
+      mode: scalekitConfigured ? (process.env.SCALEKIT_MODE || "live-ready") : "mock",
+      role: "Delegated user authorization and permission boundary"
+    },
+    entire: {
+      configured: entireConfigured,
+      mode: entireConfigured ? (process.env.ENTIRE_MODE || "live-ready") : "mock",
+      role: "Business action destination for CRM/campaign/task updates"
+    },
+    gemini: {
+      configured: Boolean(process.env.GEMINI_API_KEY),
+      mode: process.env.GEMINI_API_KEY ? (process.env.GEMINI_MODEL || "gemini-2.5-flash") : "not configured",
+      role: "LLM answer synthesis when Anthropic is not configured"
+    }
+  };
+}
+
+function demoAgentUser(userId) {
+  return DEMO_AGENT_USERS.find((user) => user.id === userId || user.role === userId) || DEMO_AGENT_USERS[0];
+}
+
+function storeFromPayload(store) {
+  if (!store || typeof store !== "object") return null;
+  const address = [store.address, store.address2, store.city, store.state, store.zip].map((part) => String(part || "").trim()).filter(Boolean).join(", ");
+  return {
+    businessName: store.businessName || store.name || "Unnamed storefront",
+    businessType: normalizeType(store.businessType || store.type || "retail"),
+    address: address || store.address || "",
+    city: store.city || inferCityFromPayload(store.address || ""),
+    state: store.state || "CA",
+    lat: Number(store.lat),
+    lon: Number(store.lon),
+    radiusMeters: Number(store.radiusMeters || 0)
+  };
+}
+
+function normalizeDelegatedAction(action, store, intel) {
+  if (action && typeof action === "object" && action.id && action.title) return action;
+  return recommendedDelegatedActions(store, intel)[0];
+}
+
+function recommendedDelegatedActions(store, intel) {
+  const type = labelForType(store.businessType || "retail").toLowerCase();
+  const city = store.city || "your city";
+  const firstOpportunity = intel?.opportunities?.[0];
+  const firstWarning = (intel?.warnings || []).find((warning) => warning.urgency !== "Low") || intel?.warnings?.[0];
+  const market = intel?.marketIntelligence || {};
+  const peak = market.busyHeatmap?.peakDay
+    ? `${market.busyHeatmap.peakDay} ${formatHour12(market.busyHeatmap.peakHour)}`
+    : "next peak window";
+  const topTheme = market.topReviewTags?.[0]?.title || (type.includes("restaurant") ? "signature item" : "best seller");
+  const compliance = intel?.licenseChecklist?.find((item) => item.priority === "required") || null;
+  const apifyEvidence = intel?.marketProvider === "apify"
+    ? `Apify Google Places: ${market.competitorsAnalyzed || intel.marketPlaces?.length || 0} nearby records`
+    : `Public scan: ${intel?.marketPlaces?.length || 0} nearby map records`;
+
+  return [
+    delegatedAction({
+      id: "publish-peak-promo",
+      title: `Publish a ${peak} promo`,
+      target: "Entire.io Campaign",
+      category: "customer-growth",
+      risk: "medium",
+      requiredScopes: ["marketing.campaign.write", "customer.segment.write"],
+      allowedRoles: ["owner", "manager"],
+      summary: `Use Warden's live demand scan to create a targeted offer for customers near ${city}.`,
+      payload: {
+        campaignName: `${store.businessName || "Store"} ${peak} demand offer`,
+        audience: `${city} nearby customers`,
+        offer: `Feature ${topTheme} during ${peak}`,
+        evidence: apifyEvidence
+      },
+      evidence: firstOpportunity?.title || apifyEvidence,
+      nextStep: "Create a campaign draft in Entire, tagged to this storefront and user."
+    }),
+    delegatedAction({
+      id: "update-extended-hours",
+      title: "Update extended-hours recommendation",
+      target: "Google Business Profile via Scalekit",
+      category: "storefront-ops",
+      risk: "high",
+      requiredScopes: ["storefront.hours.write"],
+      allowedRoles: ["owner"],
+      approvalRoles: ["manager"],
+      summary: `If the block is busy late, let the owner update public hours as the real store user.`,
+      payload: {
+        proposedHours: `Pilot extended coverage around ${peak}`,
+        reason: market.hoursCoverage?.openLateCount
+          ? `${market.hoursCoverage.openLateCount} nearby places stay open past 9pm`
+          : `Peak demand signal found for ${peak}`
+      },
+      evidence: market.hoursCoverage?.contributing
+        ? `${market.hoursCoverage.contributing} competitor schedules parsed`
+        : apifyEvidence,
+      nextStep: "Owner approves and Scalekit executes the connected profile update on their behalf."
+    }),
+    delegatedAction({
+      id: "create-compliance-task",
+      title: `Create compliance task: ${compliance?.name || "required documents"}`,
+      target: "Entire.io Task",
+      category: "compliance",
+      risk: "medium",
+      requiredScopes: ["compliance.task.write"],
+      allowedRoles: ["owner", "manager"],
+      summary: `Turn a required permit or document into an assigned follow-up with the evidence link attached.`,
+      payload: {
+        task: compliance?.name || "Review required storefront documents",
+        authority: compliance?.authority || "Local authority",
+        evidenceUrl: compliance?.url || "",
+        priority: compliance?.priority || "required"
+      },
+      evidence: compliance?.url || firstWarning?.title || "Compliance checklist",
+      nextStep: "Create the task in Entire with the current user's identity and tenant."
+    }),
+    delegatedAction({
+      id: "draft-supplier-order",
+      title: "Draft a supplier restock order",
+      target: "Entire.io Vendor Order",
+      category: "inventory",
+      risk: "high",
+      requiredScopes: ["suppliers.order.write"],
+      allowedRoles: ["owner"],
+      approvalRoles: ["manager"],
+      summary: `Prepare a restock order for the item most likely to protect tomorrow's sales.`,
+      payload: {
+        item: type.includes("restaurant") ? "takeout containers" : "cleaning supplies",
+        estimatedBudget: 320,
+        guardrail: "Draft only unless owner approves purchase"
+      },
+      evidence: firstOpportunity?.title || "Restock recommendation",
+      nextStep: "Draft order in Entire; require owner approval before money moves."
+    })
+  ];
+}
+
+function delegatedAction(input) {
+  return {
+    id: input.id,
+    title: input.title,
+    target: input.target,
+    category: input.category,
+    risk: input.risk || "medium",
+    requiredScopes: input.requiredScopes || [],
+    allowedRoles: input.allowedRoles || ["owner"],
+    approvalRoles: input.approvalRoles || [],
+    summary: input.summary,
+    payload: input.payload || {},
+    evidence: input.evidence || "",
+    nextStep: input.nextStep || "Execute with delegated user identity."
+  };
+}
+
+function evaluateDelegatedPolicy(user, action) {
+  const missingScopes = (action.requiredScopes || []).filter((scope) => !user.scopes.includes(scope));
+  const roleAllowed = (action.allowedRoles || []).includes(user.role);
+  const approvalAllowed = (action.approvalRoles || []).includes(user.role);
+  if (roleAllowed && !missingScopes.length) {
+    return {
+      decision: "allowed",
+      tone: "good",
+      reason: `${user.title} has ${action.requiredScopes.join(", ") || "the required scope"} for this tenant.`
+    };
+  }
+  if (approvalAllowed || (user.role === "manager" && action.risk === "high")) {
+    return {
+      decision: "needs_approval",
+      tone: "warn",
+      reason: `${user.title} can prepare this action, but owner approval is required before execution.`,
+      missingScopes
+    };
+  }
+  return {
+    decision: "blocked",
+    tone: "risk",
+    reason: `${user.title} cannot execute ${action.title}; required role is ${action.allowedRoles.join(" or ")}.`,
+    missingScopes
+  };
+}
+
+async function executeScalekitDelegation({ user, store, action }) {
+  const configured = Boolean(process.env.SCALEKIT_ENVIRONMENT_URL && process.env.SCALEKIT_CLIENT_ID && process.env.SCALEKIT_CLIENT_SECRET);
+  const liveUrl = process.env.SCALEKIT_AGENT_PROXY_URL || "";
+  if (configured && liveUrl) {
+    try {
+      const response = await fetchJson(liveUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${process.env.SCALEKIT_CLIENT_SECRET}`
+        },
+        body: JSON.stringify({ user, store, action })
+      }, 12000);
+      return {
+        mode: "live",
+        summary: "Scalekit proxy executed user-scoped authorization",
+        response
+      };
+    } catch (error) {
+      return {
+        mode: "live-ready-fallback",
+        summary: `Scalekit live proxy not reachable: ${error.message}`,
+        response: null
+      };
+    }
+  }
+  return {
+    mode: configured ? "sdk-ready" : "mock",
+    summary: `Authorized ${action.title} as ${user.email} for tenant ${user.tenantId}`,
+    connectedAccount: {
+      provider: "scalekit",
+      userId: user.id,
+      tenantId: user.tenantId,
+      scopes: action.requiredScopes,
+      status: "ACTIVE"
+    }
+  };
+}
+
+async function executeEntireAction({ user, store, action, scalekit }) {
+  const configured = Boolean(process.env.ENTIRE_API_KEY || process.env.ENTIRE_API_URL);
+  const apiUrl = process.env.ENTIRE_API_URL || "";
+  const referenceId = `entire-${Date.now()}-${slugify(action.id).slice(0, 20)}`;
+  if (configured && apiUrl) {
+    try {
+      const response = await fetchJson(apiUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(process.env.ENTIRE_API_KEY ? { authorization: `Bearer ${process.env.ENTIRE_API_KEY}` } : {})
+        },
+        body: JSON.stringify({
+          referenceId,
+          actor: { userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId },
+          storefront: { name: store.businessName, city: store.city, type: store.businessType },
+          action,
+          delegatedAuth: scalekit.connectedAccount || scalekit.summary
+        })
+      }, 12000);
+      return { mode: "live", summary: "Entire action endpoint accepted the user-scoped payload", referenceId, response };
+    } catch (error) {
+      return { mode: "live-ready-fallback", summary: `Entire endpoint not reachable: ${error.message}`, referenceId, response: null };
+    }
+  }
+  return {
+    mode: configured ? "api-ready" : "mock",
+    summary: `Created ${action.target} record as ${user.email}`,
+    referenceId,
+    record: {
+      id: referenceId,
+      object: action.target,
+      owner: user.email,
+      tenantId: user.tenantId,
+      payload: action.payload
+    }
+  };
+}
+
+function inferCityFromPayload(address) {
+  const text = String(address || "").toLowerCase();
+  return ["San Francisco", "Santa Clara", "San Jose", "Oakland", "Berkeley", "Palo Alto", "Mountain View", "Sunnyvale", "San Mateo"].find((city) => text.includes(city.toLowerCase())) || "";
+}
+
+async function handleChat({ message, store, intel, history }) {
+  const text = String(message || "").trim();
+  if (!text) {
+    return { ok: false, error: "Empty message" };
+  }
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
+    return {
+      ok: false,
+      fallback: true,
+      error: "No LLM key configured. Add GEMINI_API_KEY or ANTHROPIC_API_KEY to .env to enable the live chatbot."
+    };
+  }
+
+  const model = process.env.ANTHROPIC_API_KEY
+    ? (process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001")
+    : (process.env.GEMINI_MODEL || "gemini-2.5-flash");
+  const system = buildChatSystemPrompt(store || {}, intel || null);
+  const messages = [];
+  for (const turn of (Array.isArray(history) ? history : []).slice(-8)) {
+    const role = turn?.role === "assistant" ? "assistant" : "user";
+    const content = String(turn?.content || turn?.text || "").trim();
+    if (content) messages.push({ role, content });
+  }
+  if (!messages.length || messages[messages.length - 1].content !== text) {
+    messages.push({ role: "user", content: text });
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY && process.env.GEMINI_API_KEY) {
+    return callGeminiChat({ model, system, messages });
+  }
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1200,
+        system,
+        messages
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      return {
+        ok: false,
+        fallback: true,
+        error: `Anthropic ${response.status}: ${errText.slice(0, 240)}`
+      };
+    }
+    const data = await response.json();
+    const reply = (data.content || []).map((part) => part?.text || "").join("\n").trim();
+    return {
+      ok: true,
+      reply: reply || "I didn't have anything to add — try asking about warnings, opportunities, weather, or competitor pricing.",
+      model: data.model || model,
+      usage: data.usage || null
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      fallback: true,
+      error: `Chat call failed: ${error.message}`
+    };
+  }
+}
+
+async function callGeminiChat({ model, system, messages }) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
+  const contents = messages.map((message) => ({
+    role: message.role === "assistant" ? "model" : "user",
+    parts: [{ text: message.content }]
+  }));
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents,
+        generationConfig: {
+          temperature: 0.35,
+          maxOutputTokens: 1200
+        }
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      return {
+        ok: false,
+        fallback: true,
+        error: `Gemini ${response.status}: ${errText.slice(0, 240)}`
+      };
+    }
+    const data = await response.json();
+    const reply = (data.candidates || [])
+      .flatMap((candidate) => candidate.content?.parts || [])
+      .map((part) => part.text || "")
+      .join("\n")
+      .trim();
+    return {
+      ok: true,
+      reply: reply || "I didn't have anything to add — try asking about warnings, opportunities, competitors, permits, or delegated actions.",
+      model,
+      usage: data.usageMetadata || null,
+      provider: "gemini"
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      fallback: true,
+      error: `Gemini call failed: ${error.message}`
+    };
+  }
+}
+
+function buildChatSystemPrompt(store, intel) {
+  const lines = [];
+  const storeName = store.businessName || "this storefront";
+  const storeType = labelForType(store.businessType || "retail").toLowerCase();
+  const storeCity = store.city || (intel?.profile?.city) || "your city";
+  const storeAddress = store.address || (intel?.profile?.locationLabel) || "";
+  const storeState = store.state || "CA";
+  const storeNeighborhood = (intel?.marketPlaces || []).map((p) => p.neighborhood).filter(Boolean)[0] || "";
+
+  lines.push(`You are Warden, an expert small-business advisor for ${storeName} — a ${storeType} ${storeAddress ? `at ${storeAddress}` : ""} in ${storeCity}, ${storeState}${storeNeighborhood ? ` (${storeNeighborhood} neighborhood)` : ""}.`);
+  lines.push("");
+  lines.push("CRITICAL RULES — FOLLOW EVERY TIME:");
+  lines.push(`1. Every answer must be ANCHORED to ${storeName}'s specific location and business type. Reference "${storeCity}" and "${storeType}" naturally. Never give generic boilerplate.`);
+  lines.push("2. When the LIVE INTEL block contains a relevant data point (price tier of nearby places, review themes, weather forecast, peak busy time, warnings, opportunities, nearby competitors, compliance docs), CITE IT directly with the actual numbers and names. That's our edge over generic AI.");
+  lines.push("3. When asked about competitors, name them from NEARBY PLACES below, not generic ones. When asked about permits/licenses/documents, use the COMPLIANCE block below with its evidence URLs — link to the actual gov pages.");
+  lines.push("4. For anything not in the intel, use your general business knowledge confidently — but still tailor to a " + storeType + " in " + storeCity + ".");
+  lines.push("5. Don't INVENT specific facts about THIS store (its sales, its actual reviews, its inspection history) that aren't in the profile or intel. General industry benchmarks are fine.");
+  lines.push("6. Format: short paragraphs or numbered lists. Use **bold** for the punchline. 150–400 words depending on complexity.");
+  lines.push("7. Never refuse a shop-related question. If a question is genuinely off-topic (politics, personal therapy, unrelated code review), gently redirect to storefront topics.");
+  lines.push("");
+  lines.push("ACTIVE STORE PROFILE:");
+  lines.push(`- Name: ${storeName}`);
+  lines.push(`- Type: ${storeType}`);
+  lines.push(`- Address: ${storeAddress || "(not set)"}`);
+  lines.push(`- City / State: ${storeCity}, ${storeState}`);
+  if (storeNeighborhood) lines.push(`- Neighborhood: ${storeNeighborhood}`);
+  if (intel?.profile?.lat && intel?.profile?.lon) lines.push(`- Coordinates: ${Number(intel.profile.lat).toFixed(4)}, ${Number(intel.profile.lon).toFixed(4)}`);
+  if (intel?.profile?.cityScopeLabel) lines.push(`- Monitoring scope: ${intel.profile.cityScopeLabel}`);
+  if (store.avgTicket) lines.push(`- Average ticket: ${store.avgTicket}`);
+  if (store.fullTimeStaff || store.partTimeStaff) lines.push(`- Staff: ${store.fullTimeStaff || "?"} FT, ${store.partTimeStaff || "?"} PT`);
+  if (store.dailyRevenue) lines.push(`- Typical daily revenue: ${store.dailyRevenue}`);
+  if (store.inventoryValue) lines.push(`- At-risk inventory: ${store.inventoryValue}`);
+  if (store.suppliers) lines.push(`- Key suppliers: ${store.suppliers}`);
+  if (store.licenseNotes) lines.push(`- License notes: ${store.licenseNotes}`);
+  if (store.insuranceCarrier) lines.push(`- Insurance carrier: ${store.insuranceCarrier}`);
+  if (store.backupPower) lines.push(`- Backup power: ${store.backupPower}`);
+  if (store.storeNotes) lines.push(`- Owner notes: ${store.storeNotes}`);
+  lines.push("");
+
+  if (!intel) {
+    lines.push("LIVE INTEL: not yet loaded for this scan. Answer using general knowledge tailored to a " + storeType + " in " + storeCity + ". If the question needs specific local data (weather, competitors, warnings, pricing), say the city scan hasn't completed but still give a useful general answer.");
+    return lines.join("\n");
+  }
+
+  lines.push(`=== LIVE INTEL (scanned ${intel.generatedAt || "recently"} for ${storeCity}) ===`);
+
+  if (Array.isArray(intel.warnings) && intel.warnings.length) {
+    lines.push("");
+    lines.push(`WARNINGS (${intel.warnings.length}):`);
+    for (const w of intel.warnings.slice(0, 6)) {
+      lines.push(`- [${w.urgency || "Medium"}] ${w.title} — ${w.action || w.why || ""}`);
+    }
+  }
+
+  if (Array.isArray(intel.opportunities) && intel.opportunities.length) {
+    lines.push("");
+    lines.push(`OPPORTUNITIES (${intel.opportunities.length}):`);
+    for (const o of intel.opportunities.slice(0, 6)) {
+      lines.push(`- ${o.title} — ${o.action || o.why || ""}`);
+    }
+  }
+
+  if (Array.isArray(intel.weatherForecast) && intel.weatherForecast.length) {
+    lines.push("");
+    lines.push(`WEATHER NEAR ${storeCity.toUpperCase()} (next 3 days):`);
+    for (const d of intel.weatherForecast.slice(0, 3)) {
+      lines.push(`- ${d.day || d.date}: ${d.condition || ""}, high ${d.highF ?? "?"}F / low ${d.lowF ?? "?"}F, rain ${d.rainProbability ?? "?"}%, wind ${d.windMph ?? "?"}mph`);
+    }
+  }
+
+  const mi = intel.marketIntelligence;
+  if (mi) {
+    lines.push("");
+    lines.push(`MARKET INTELLIGENCE (Apify Google Places scan, ${mi.competitorsAnalyzed || 0} competitors near ${storeName}):`);
+    if (mi.dominantTierLabel) lines.push(`- Dominant price tier on this block: ${mi.dominantTierLabel} (${mi.priceDistribution?.find((p) => p.tier === mi.dominantTier)?.pct || 0}%)`);
+    if (mi.avgRating) lines.push(`- Block average rating: ${mi.avgRating.toFixed ? mi.avgRating.toFixed(1) : mi.avgRating}★`);
+    if (mi.busyHeatmap?.peakDay) lines.push(`- Block peak demand: ${mi.busyHeatmap.peakDay} ${mi.busyHeatmap.peakHour}:00 (~${mi.busyHeatmap.peakValue}% busy across ${mi.busyHeatmap.contributing} places)`);
+    if (Array.isArray(mi.topReviewTags) && mi.topReviewTags.length) {
+      lines.push(`- Top review themes on this block: ${mi.topReviewTags.slice(0, 8).map((t) => `${t.title} (${t.places} places)`).join(", ")}`);
+    }
+    if (Array.isArray(mi.topRated) && mi.topRated.length) {
+      lines.push(`- Top-rated nearby: ${mi.topRated.map((r) => `${r.name} ${r.rating?.toFixed?.(1) || ""}★`).join(", ")}`);
+    }
+    if (mi.categoryBreakdown?.entries?.length) {
+      lines.push(`- Category mix: ${mi.categoryBreakdown.entries.slice(0, 4).map((e) => `${e.label} ${e.pct}%`).join(", ")}`);
+    }
+    if (mi.hoursCoverage?.contributing) {
+      lines.push(`- Hours coverage: ${mi.hoursCoverage.openEarlyCount || 0} places open before 8am, ${mi.hoursCoverage.openLateCount || 0} past 9pm, ${mi.hoursCoverage.open24Count || 0} open 24h`);
+    }
+    if (Array.isArray(mi.recommendations) && mi.recommendations.length) {
+      lines.push("");
+      lines.push("DATA-BACKED RECOMMENDATIONS (already shown to the owner):");
+      for (const r of mi.recommendations) {
+        lines.push(`- ${r.title} → ${r.action}`);
+      }
+    }
+  }
+
+  if (Array.isArray(intel.nearbyPlaces) && intel.nearbyPlaces.length) {
+    lines.push("");
+    lines.push(`NEARBY PLACES (specific competitors near ${storeName}):`);
+    for (const p of intel.nearbyPlaces.slice(0, 8)) {
+      const bits = [p.name];
+      if (p.category) bits.push(p.category);
+      if (p.rating) bits.push(`${p.rating}★ (${p.reviews || 0} reviews)`);
+      if (p.price) bits.push(p.price);
+      if (p.address) bits.push(p.address);
+      lines.push(`- ${bits.join(" · ")}`);
+    }
+    lines.push("USE THESE NAMES when the user asks about competitors, who's nearby, or who to compare against.");
+  }
+
+  if (Array.isArray(intel.compliance) && intel.compliance.length) {
+    lines.push("");
+    lines.push(`COMPLIANCE & DOCUMENTS for this ${storeType} in ${storeCity} (cite the URL when answering permit/license questions):`);
+    const byCat = new Map();
+    for (const c of intel.compliance) {
+      const k = c.category || "other";
+      if (!byCat.has(k)) byCat.set(k, []);
+      byCat.get(k).push(c);
+    }
+    for (const [cat, items] of byCat) {
+      lines.push(`  [${cat}]`);
+      for (const c of items.slice(0, 6)) {
+        const url = c.url ? ` ${c.url}` : "";
+        lines.push(`  - [${c.priority}] ${c.name} (${c.authority})${url}`);
+      }
+    }
+  }
+
+  lines.push("");
+  lines.push(`Reminder: anchor every answer to ${storeName} in ${storeCity}. Cite specific numbers, competitor names, and gov URLs from the LIVE INTEL above.`);
+
+  return lines.join("\n");
+}
+
+const APIFY_PRODUCTS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function fetchApifyProducts(query, businessType) {
+  if (!process.env.APIFY_TOKEN || process.env.APIFY_PRODUCTS_DISABLED === "1") return null;
+  const actorId = process.env.APIFY_PRODUCTS_ACTOR || "axesso_data/amazon-search-scraper";
+  const max = Number(process.env.APIFY_PRODUCTS_MAX || 6);
+  const cleanQuery = String(query || "").trim();
+  if (!cleanQuery) return null;
+
+  const cacheKey = `${actorId}|${cleanQuery.toLowerCase()}|${normalizeType(businessType)}|${max}`;
+  const cached = APIFY_PRODUCTS_CACHE.get(cacheKey);
+  if (cached && Date.now() - cached.at < APIFY_PRODUCTS_TTL_MS) return cached.payload;
+
+  const input = buildProductsActorInput(actorId, cleanQuery, max);
+  const result = await runApifyActor(actorId, input, 180000);
+  if (!result.ok || !Array.isArray(result.items) || !result.items.length) {
+    return null;
+  }
+  const products = result.items.slice(0, max).map((p) => normalizeProduct(p)).filter((p) => p.title && p.image);
+  if (!products.length) return null;
+  const payload = { products, query: cleanQuery, actorId, count: products.length };
+  APIFY_PRODUCTS_CACHE.set(cacheKey, { at: Date.now(), payload });
+  persistProductsCache();
+  return payload;
+}
+
+function buildProductsActorInput(actorId, query, max) {
+  // Each Apify product actor wants a slightly different input shape — handle the
+  // common ones explicitly. For unknown actors fall back to a generic search payload.
+  if (actorId.includes("junglee") || actorId === "junglee/amazon-crawler") {
+    return {
+      categoryOrProductUrls: [{ url: `https://www.amazon.com/s?k=${encodeURIComponent(query).replace(/%20/g, "+")}` }],
+      maxItemsPerStartUrl: max,
+      proxyConfiguration: { useApifyProxy: true },
+      scrapeProductDetails: false
+    };
+  }
+  if (actorId.includes("amazon")) {
+    return {
+      keyword: query,
+      keywords: [query],
+      searchTerms: [query],
+      domainCode: "com",
+      countryCode: "US",
+      sortBy: "featured",
+      maxItemsPerStartUrl: max,
+      maxResults: max,
+      maxItems: max,
+      pages: 1,
+      maxPagesPerStartUrl: 1
+    };
+  }
+  if (actorId.includes("google-shopping")) {
+    return { queries: [query], maxItemsPerQuery: max, country: "US", language: "en" };
+  }
+  if (actorId.includes("walmart")) {
+    return { queries: [query], maxItems: max };
+  }
+  return { searchTerms: [query], maxItems: max, query };
+}
+
+function normalizeProduct(raw) {
+  if (!raw || typeof raw !== "object") return { title: "", image: "" };
+  const title = raw.title || raw.name || raw.productName || raw.itemTitle || "";
+  const image =
+    raw.image ||
+    raw.imageUrl ||
+    raw.thumbnail ||
+    raw.thumbnailImage ||
+    raw.mainImage ||
+    (Array.isArray(raw.highResolutionImages) ? raw.highResolutionImages[0] : "") ||
+    (Array.isArray(raw.galleryThumbnails) ? raw.galleryThumbnails[0] : "") ||
+    (Array.isArray(raw.images) ? raw.images[0] : "") ||
+    "";
+  const priceRaw = raw.price || raw.priceWithCurrency || raw.priceText || raw.currentPrice || raw.salePrice || "";
+  let price = "";
+  let priceNumber = null;
+  if (typeof priceRaw === "string") {
+    price = priceRaw.trim();
+    const m = price.match(/[\d,.]+/);
+    priceNumber = m ? Number(m[0].replace(/,/g, "")) : null;
+  } else if (priceRaw && typeof priceRaw === "object") {
+    const v = Number(priceRaw.value ?? priceRaw.amount ?? priceRaw.current);
+    const cur = priceRaw.currency || priceRaw.currencyCode || "$";
+    if (Number.isFinite(v)) {
+      priceNumber = v;
+      price = `${cur}${v.toFixed(2)}`;
+    } else {
+      price = String(priceRaw.displayString || priceRaw.text || priceRaw.label || "").trim();
+    }
+  } else if (typeof priceRaw === "number") {
+    priceNumber = priceRaw;
+    price = `$${priceRaw.toFixed(2)}`;
+  }
+  if (!price && Number.isFinite(priceNumber)) price = `$${priceNumber.toFixed(2)}`;
+  // junglee/amazon-crawler returns price as { value, currency } — handle that.
+  if (!price && raw.price && typeof raw.price === "object") {
+    const v = Number(raw.price.value);
+    if (Number.isFinite(v)) {
+      priceNumber = v;
+      price = `${raw.price.currency || "$"}${v.toFixed(2)}`;
+    }
+  }
+  return {
+    title: String(title).trim(),
+    image: String(image).trim(),
+    price: price || "Live price",
+    priceNumber: Number.isFinite(priceNumber) ? priceNumber : null,
+    rating: Number(raw.stars ?? raw.rating ?? raw.averageRating) || null,
+    reviewsCount: Number(raw.reviewsCount ?? raw.numberOfReviews ?? raw.totalReviews ?? (typeof raw.reviews === "number" ? raw.reviews : 0)) || 0,
+    url: raw.url || raw.link || raw.detailUrl || raw.productUrl || "",
+    asin: raw.asin || raw.sku || raw.itemId || "",
+    seller: raw.brand || raw.seller || raw.merchant || ""
+  };
+}
+
+async function buildRestockComparison(profile, params) {
   const query = String(params.get("q") || params.get("query") || "").replace(/\s+/g, " ").trim();
   const businessType = normalizeType(profile.businessType || params.get("businessType") || "retail");
   const storeName = profile.businessName || "this store";
@@ -326,6 +1221,15 @@ function buildRestockComparison(profile, params) {
     : category.options.map((option) => restockOption(option, category, searchText, businessType)))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
+
+  // Live product enrichment via Apify — pulls real product images, prices, ratings.
+  // Works for any storefront type because it scrapes a generic product search.
+  let liveProducts = null;
+  try {
+    liveProducts = await fetchApifyProducts(searchText, businessType);
+  } catch (error) {
+    liveProducts = null;
+  }
 
   return {
     ok: true,
@@ -348,7 +1252,40 @@ function buildRestockComparison(profile, params) {
       url: provider.url(searchText)
     })),
     suggestions: restockSuggestionsForType(businessType),
-    options
+    options,
+    liveProducts: liveProducts ? {
+      count: liveProducts.products.length,
+      actorId: liveProducts.actorId,
+      query: liveProducts.query,
+      products: liveProducts.products,
+      comparison: buildProductComparison(liveProducts.products)
+    } : null
+  };
+}
+
+function buildProductComparison(products) {
+  if (!Array.isArray(products) || products.length === 0) return null;
+  const priced = products.filter((p) => Number.isFinite(p.priceNumber));
+  const rated = products.filter((p) => Number.isFinite(p.rating) && p.rating > 0);
+  const reviewed = products.filter((p) => Number(p.reviewsCount) > 0);
+  const cheapest = priced.length ? priced.reduce((min, p) => (p.priceNumber < min.priceNumber ? p : min), priced[0]) : null;
+  const mostExpensive = priced.length ? priced.reduce((max, p) => (p.priceNumber > max.priceNumber ? p : max), priced[0]) : null;
+  const topRated = rated.length ? rated.reduce((best, p) => {
+    const score = (p.rating || 0) * Math.log10(Math.max(10, p.reviewsCount || 10));
+    const bestScore = (best.rating || 0) * Math.log10(Math.max(10, best.reviewsCount || 10));
+    return score > bestScore ? p : best;
+  }, rated[0]) : null;
+  const mostReviewed = reviewed.length ? reviewed.reduce((max, p) => (p.reviewsCount > max.reviewsCount ? p : max), reviewed[0]) : null;
+  const avgPrice = priced.length ? priced.reduce((s, p) => s + p.priceNumber, 0) / priced.length : null;
+  const avgRating = rated.length ? rated.reduce((s, p) => s + (p.rating || 0), 0) / rated.length : null;
+  return {
+    cheapest: cheapest ? { title: cheapest.title, price: cheapest.price, url: cheapest.url, image: cheapest.image } : null,
+    mostExpensive: mostExpensive ? { title: mostExpensive.title, price: mostExpensive.price, url: mostExpensive.url, image: mostExpensive.image } : null,
+    topRated: topRated ? { title: topRated.title, rating: topRated.rating, reviewsCount: topRated.reviewsCount, url: topRated.url, image: topRated.image } : null,
+    mostReviewed: mostReviewed ? { title: mostReviewed.title, reviewsCount: mostReviewed.reviewsCount, rating: mostReviewed.rating, url: mostReviewed.url, image: mostReviewed.image } : null,
+    avgPrice: Number.isFinite(avgPrice) ? Number(avgPrice.toFixed(2)) : null,
+    avgRating: Number.isFinite(avgRating) ? Number(avgRating.toFixed(2)) : null,
+    priceSpread: priced.length >= 2 ? Number((mostExpensive.priceNumber - cheapest.priceNumber).toFixed(2)) : null
   };
 }
 
@@ -656,6 +1593,9 @@ async function buildIntel(profile) {
     licenseChecklist: licenseChecklistFor(context),
     sourceHealth,
     sources: SOURCE_CATALOG,
+    marketPlaces: (feeds.marketScan?.items || []).slice(0, 40),
+    marketProvider: feeds.marketScan?.provider || "overpass",
+    marketIntelligence: feeds.marketScan?.intelligence || null,
     rawPreview: {
       weather: feeds.weather?.current || null,
       air: feeds.air?.current || null,
@@ -947,7 +1887,563 @@ async function fetch311Cases(profile) {
   return { ok: true, sourceUrl, items, count: items.length };
 }
 
+// 7-day TTL so demo data survives reboots / overnight gaps without re-burning Apify credits.
+const APIFY_PLACES_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function fetchApifyPlaces(profile) {
+  const radius = clamp(Number(profile.radiusMeters || profile.cityRadiusMeters || 16000), 3000, 35000);
+  const sourceUrl = osmMapUrl(profile);
+  const actorId = process.env.APIFY_PLACES_ACTOR || "compass/crawler-google-places";
+  const max = Number(process.env.APIFY_MAX_PLACES || 10);
+  const queries = competitorSearchQueries(profile);
+  const consoleUrl = `https://console.apify.com/actors/${actorId.replace("/", "~")}`;
+
+  const cacheKey = [
+    actorId,
+    "v6",
+    String(profile.city || "").toLowerCase().trim(),
+    String(profile.state || "").toLowerCase().trim(),
+    normalizeType(profile.businessType),
+    max
+  ].join("|");
+  const cached = APIFY_PLACES_CACHE.get(cacheKey);
+  if (cached && (Date.now() - cached.at) < APIFY_PLACES_TTL_MS) {
+    return { ...cached.payload, message: `${cached.payload.message} (cached ${Math.round((Date.now() - cached.at) / 1000)}s ago)` };
+  }
+
+  // Tight search radius so Google Maps returns places ACTUALLY near the store,
+  // not anything that mentions the city in a 75 km bounding box.
+  const radiusKmCap = Number(process.env.APIFY_PLACES_RADIUS_KM || 6);
+  const searchRadiusKm = Math.min(radiusKmCap, Math.max(2, Math.round(radius / 1000)));
+  const input = {
+    searchStringsArray: queries,
+    maxCrawledPlacesPerSearch: max,
+    language: "en",
+    skipClosedPlaces: true,
+    additionalInfo: true,
+    scrapePlaceDetailPage: true,
+    customGeolocation: {
+      type: "Point",
+      coordinates: [Number(profile.lon), Number(profile.lat)],
+      radiusKm: searchRadiusKm
+    }
+  };
+  if (profile.city) {
+    input.locationQuery = [profile.city, profile.state || "", "USA"].filter(Boolean).join(", ");
+  }
+
+  const result = await runApifyActor(actorId, input, 240000);
+  if (!result.ok) {
+    return {
+      ok: false,
+      sourceUrl,
+      technicalUrl: consoleUrl,
+      provider: "apify",
+      items: [],
+      count: 0,
+      error: result.error,
+      message: `Apify Actor ${actorId} did not return: ${result.error}`
+    };
+  }
+
+  const items = (result.items || []).map((place) => ({
+    name: place.title || place.name || "Place",
+    category: place.categoryName || place.category || (Array.isArray(place.categories) ? place.categories[0] : "") || "business",
+    categories: Array.isArray(place.categories) ? place.categories : [],
+    cuisine: Array.isArray(place.categories) ? place.categories.find((c) => /food|cuisine|kitchen/i.test(c)) || "" : "",
+    openingHours: formatApifyHours(place.openingHours),
+    openingHoursStruct: parseOpeningHours(place.openingHours),
+    rating: Number(place.totalScore ?? place.rating) || null,
+    reviews: Number(place.reviewsCount ?? 0) || null,
+    price: typeof place.price === "string" ? place.price.trim() : "",
+    priceTier: priceTierFromString(place.price),
+    description: typeof place.description === "string" ? place.description : "",
+    reviewsTags: Array.isArray(place.reviewsTags) ? place.reviewsTags.slice(0, 8).map((tag) => ({
+      title: String(tag.title || tag.name || tag).trim(),
+      count: Number(tag.count) || 0
+    })).filter((tag) => tag.title) : [],
+    popularTimes: compactPopularTimes(place.popularTimesHistogram),
+    liveBusyText: place.popularTimesLiveText || "",
+    liveBusyPercent: Number(place.popularTimesLivePercent) || null,
+    reviewsDistribution: place.reviewsDistribution || null,
+    neighborhood: place.neighborhood || "",
+    menuUrl: place.menu || "",
+    phone: place.phone || place.phoneUnformatted || "",
+    website: place.website || "",
+    address: place.address || "",
+    lat: Number(place.location?.lat ?? place.lat),
+    lon: Number(place.location?.lng ?? place.lon ?? place.lng),
+    url: place.url || place.googleUrl || ""
+  })).filter((item) => item.name && item.category);
+
+  const categories = topCounts(items.map((item) => item.category), 8);
+  const sameCategory = competitorCategories(profile.businessType);
+  const competitors = items
+    .filter((item) => sameCategory.some((term) => String(item.category).toLowerCase().includes(term)))
+    .sort((a, b) => apifyCompetitorScore(b) - apifyCompetitorScore(a))
+    .slice(0, 15);
+
+  const intelligence = buildMarketIntelligence(items, competitors, profile);
+  const payload = {
+    ok: true,
+    sourceUrl,
+    technicalUrl: consoleUrl,
+    provider: "apify",
+    actorId,
+    items: items.slice(0, 80),
+    count: items.length,
+    summary: {
+      radiusMeters: radius,
+      topCategories: categories,
+      competitorCount: competitors.length,
+      sampleCompetitors: competitors.slice(0, 6)
+    },
+    intelligence,
+    message: `${profile.city || "City"} Google Places scan via Apify Actor ${actorId} returned ${items.length} live business records.`
+  };
+  APIFY_PLACES_CACHE.set(cacheKey, { at: Date.now(), payload });
+  persistPlacesCache();
+  return payload;
+}
+
+function priceTierFromString(value) {
+  const text = String(value || "").trim();
+  if (!text) return 0;
+  // Numeric ranges like "$20–30", "$50-100" win over dollar count.
+  const numMatch = text.match(/\d+/);
+  if (numMatch) {
+    const num = Number(numMatch[0]);
+    if (Number.isFinite(num) && num > 0) {
+      if (num <= 12) return 1;
+      if (num <= 25) return 2;
+      if (num <= 45) return 3;
+      return 4;
+    }
+  }
+  // Pure $-token strings ("$", "$$", "$$$", "$$$$").
+  const dollars = (text.match(/\$/g) || []).length;
+  if (dollars > 0) return Math.min(dollars, 4);
+  return 0;
+}
+
+function priceTierLabel(tier) {
+  return tier > 0 ? "$".repeat(Math.min(tier, 4)) : "—";
+}
+
+function buildMarketIntelligence(items, competitors, profile) {
+  const sample = competitors.length >= 4 ? competitors : items;
+  const priceCounts = [0, 0, 0, 0]; // index 0 = $, 1 = $$, 2 = $$$, 3 = $$$$
+  let priced = 0;
+  for (const item of sample) {
+    const tier = item.priceTier || priceTierFromString(item.price);
+    if (tier >= 1 && tier <= 4) {
+      priceCounts[tier - 1] += 1;
+      priced += 1;
+    }
+  }
+  const dominantTierIndex = priceCounts.indexOf(Math.max(...priceCounts));
+  const dominantTier = priced > 0 ? dominantTierIndex + 1 : 0;
+  const priceDistribution = priceCounts.map((count, index) => ({
+    tier: index + 1,
+    label: priceTierLabel(index + 1),
+    count,
+    pct: priced ? Math.round((count / priced) * 100) : 0
+  }));
+
+  const tagCounts = new Map();
+  for (const item of sample) {
+    for (const tag of item.reviewsTags || []) {
+      const key = tag.title.toLowerCase();
+      const prev = tagCounts.get(key) || { title: tag.title, count: 0, places: 0 };
+      prev.count += tag.count;
+      prev.places += 1;
+      tagCounts.set(key, prev);
+    }
+  }
+  const topReviewTags = [...tagCounts.values()]
+    .sort((a, b) => (b.places * 1000 + b.count) - (a.places * 1000 + a.count))
+    .slice(0, 12);
+
+  const ratings = sample.map((item) => Number(item.rating)).filter((r) => r > 0);
+  const avgRating = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
+  const topRated = [...sample]
+    .filter((item) => Number(item.rating) > 0)
+    .sort((a, b) => (Number(b.rating) || 0) * Math.log10(Math.max(10, Number(b.reviews) || 10)) - (Number(a.rating) || 0) * Math.log10(Math.max(10, Number(a.reviews) || 10)))
+    .slice(0, 3)
+    .map((item) => ({ name: item.name, rating: item.rating, reviews: item.reviews, price: item.price, url: item.url }));
+
+  const recommendations = [];
+  if (dominantTier >= 3) {
+    recommendations.push({
+      title: `Most nearby spots are ${priceTierLabel(dominantTier)} — premium pricing is normalized in this area`,
+      action: "Test a premium signature item or chef's special priced 25-40% above your current top item. Track redemption for two weeks.",
+      detail: `${priceCounts[dominantTier - 1]} of ${priced} priced competitors fall in the ${priceTierLabel(dominantTier)} tier.`
+    });
+  } else if (dominantTier === 2) {
+    recommendations.push({
+      title: `Neighborhood is ${priceTierLabel(dominantTier)} — pricing battle is real`,
+      action: "Differentiate on speed, portion size, or one signature item rather than discounting. Run a 2-week A/B on a +$2 add-on.",
+      detail: `${priceCounts[1]} of ${priced} priced competitors are ${priceTierLabel(2)}.`
+    });
+  } else if (dominantTier === 1) {
+    recommendations.push({
+      title: `Most nearby spots are ${priceTierLabel(dominantTier)} — value-driven block`,
+      action: "Lead with a clear bundle/combo under $12. Avoid premium-only menu — it will under-convert in this area.",
+      detail: `${priceCounts[0]} of ${priced} priced competitors are ${priceTierLabel(1)}.`
+    });
+  }
+
+  if (avgRating >= 4.5) {
+    recommendations.push({
+      title: `Tough block: nearby average is ${avgRating.toFixed(1)}★`,
+      action: `Reviews are the moat here. Ask your top customers for one-line Google reviews this week — every new ${avgRating.toFixed(1)}★ review compounds discovery.`,
+      detail: `${ratings.length} priced competitors averaging ${avgRating.toFixed(1)}★.`
+    });
+  }
+
+  const positivePraise = topReviewTags.filter((tag) => /good|great|fresh|friendly|fast|best|delicious|amazing|excellent|cozy|clean|quick|tasty/i.test(tag.title)).slice(0, 5);
+  const negativeFlags = topReviewTags.filter((tag) => /slow|rude|small|expensive|wait|long|noisy|crowded|dirty|cold/i.test(tag.title)).slice(0, 4);
+  if (negativeFlags.length) {
+    recommendations.push({
+      title: `Common complaints in this area: ${negativeFlags.map((t) => t.title).join(", ")}`,
+      action: `Audit your store for these specific issues — they hurt nearby competitors. If you already do these well, feature it on signage / menu / website.`,
+      detail: `Themes appear in reviews of ${negativeFlags.reduce((sum, t) => sum + t.places, 0)} nearby places.`
+    });
+  }
+  if (positivePraise.length) {
+    recommendations.push({
+      title: `Customers nearby praise: ${positivePraise.map((t) => t.title).join(", ")}`,
+      action: `Match these themes in your front-of-house experience and lean into the same words in your Google business description and Yelp page.`,
+      detail: `Aggregated from ${positivePraise.reduce((sum, t) => sum + t.places, 0)} review tag mentions.`
+    });
+  }
+
+  // Specific menu items / amenities mentioned across multiple places — these
+  // are the signature dishes and features customers in this neighborhood
+  // expect or seek. Surfacing them is uniquely useful (and only possible
+  // because Apify scrapes review tags).
+  const signatureSignals = topReviewTags.filter((tag) =>
+    tag.places >= 3 &&
+    tag.title.split(/\s+/).length >= 2 &&
+    !/good|great|fresh|friendly|fast|best|slow|rude|small|expensive|wait/i.test(tag.title)
+  ).slice(0, 5);
+  if (signatureSignals.length) {
+    const list = signatureSignals.map((t) => `"${t.title}" (${t.places})`).join(", ");
+    recommendations.push({
+      title: `Signature signals in this block: ${signatureSignals.slice(0, 4).map((t) => t.title).join(", ")}`,
+      action: `Customers actively look for these in this area. Add the closest match to your menu or storefront signage and call it out in your Google business description.`,
+      detail: `Mentions across nearby places: ${list}.`
+    });
+  }
+
+  const busyHeatmap = aggregateBusyHeatmap(sample);
+  if (busyHeatmap?.peakDay && busyHeatmap.peakValue >= 60) {
+    recommendations.push({
+      title: `Block peaks ${busyHeatmap.peakDay} at ${formatHour12(busyHeatmap.peakHour)} (~${busyHeatmap.peakValue}% busy)`,
+      action: "Staff up 30 min ahead of the peak window. Pre-prep top sellers, push pickup before peak so dine-in seats free up faster, and put your highest-margin item on counter signage.",
+      detail: `Aggregated from ${busyHeatmap.contributing} nearby places' popular-times histograms.`
+    });
+  }
+  const priceVsRating = sample
+    .filter((item) => item.priceTier > 0 && Number(item.rating) > 0)
+    .map((item) => ({
+      name: item.name,
+      tier: item.priceTier,
+      price: item.price,
+      rating: Number(item.rating),
+      reviews: Number(item.reviews) || 0,
+      url: item.url
+    }));
+
+  const categoryBreakdown = computeCategoryBreakdown(sample, profile);
+  const hoursCoverage = computeHoursCoverage(sample);
+
+  if (hoursCoverage?.openLateCount && profile && ["restaurant", "coffee shop", "laundromat", "pharmacy", "liquor store"].includes(normalizeType(profile.businessType))) {
+    recommendations.push({
+      title: `${hoursCoverage.openLateCount} of ${hoursCoverage.contributing} nearby places stay open past 9pm`,
+      action: "If your hours close earlier, you may be missing the late evening window. Pilot extended hours on Fri/Sat for 2 weeks and measure incremental revenue against added labor cost.",
+      detail: `Hours coverage was parsed from ${hoursCoverage.contributing} nearby places.`
+    });
+  }
+  if (hoursCoverage?.openEarlyCount && profile && ["coffee shop", "restaurant", "grocery", "pharmacy"].includes(normalizeType(profile.businessType))) {
+    recommendations.push({
+      title: `${hoursCoverage.openEarlyCount} of ${hoursCoverage.contributing} nearby places open before 8am`,
+      action: "Early-morning is a real demand window in this block. If you don't already, add a 7am open Mon-Fri and track foot traffic vs current opening time.",
+      detail: `Hours coverage parsed from ${hoursCoverage.contributing} nearby places.`
+    });
+  }
+
+  return {
+    competitorsAnalyzed: sample.length,
+    pricedCompetitors: priced,
+    avgRating: Number(avgRating.toFixed(2)) || null,
+    dominantTier,
+    dominantTierLabel: dominantTier ? priceTierLabel(dominantTier) : "",
+    priceDistribution,
+    topReviewTags,
+    positivePraise,
+    negativeFlags,
+    topRated,
+    recommendations,
+    busyHeatmap,
+    priceVsRating,
+    categoryBreakdown,
+    hoursCoverage
+  };
+}
+
+function parseOpeningHours(hours) {
+  // Apify returns either a string ("Monday: 11 AM to 10 PM; ...") or an array
+  // ([{day: "Monday", hours: "11 AM to 10 PM"}, ...]). We normalize to a 7-element
+  // array of {open, close} hour numbers (0-24, with -1 = closed, 24 = open 24h).
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const out = days.map(() => null);
+  let entries = [];
+  if (typeof hours === "string") {
+    entries = hours.split(/;|,/).map((part) => part.trim()).filter(Boolean);
+  } else if (Array.isArray(hours)) {
+    entries = hours.map((h) => `${h.day || h.weekDay || ""}: ${h.hours || h.openTime || ""}`);
+  } else {
+    return out;
+  }
+
+  for (const entry of entries) {
+    const m = entry.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*:?\s*(.+)/i);
+    if (!m) continue;
+    const dayIdx = days.findIndex((d) => d.toLowerCase() === m[1].toLowerCase());
+    if (dayIdx < 0) continue;
+    const range = m[2].trim();
+    if (/closed/i.test(range)) {
+      out[dayIdx] = { open: -1, close: -1 };
+      continue;
+    }
+    if (/(24\s*hours|open\s*24)/i.test(range)) {
+      out[dayIdx] = { open: 0, close: 24 };
+      continue;
+    }
+    const rm = range.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:to|–|—|-)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+    if (!rm) continue;
+    out[dayIdx] = {
+      open: hourToFloat(rm[1], rm[2], rm[3]),
+      close: hourToFloat(rm[4], rm[5], rm[6])
+    };
+  }
+  return out;
+}
+
+function hourToFloat(hStr, mStr, ampm) {
+  let h = Number(hStr);
+  const m = Number(mStr) || 0;
+  const period = String(ampm || "").toLowerCase();
+  if (period === "pm" && h < 12) h += 12;
+  if (period === "am" && h === 12) h = 0;
+  return h + m / 60;
+}
+
+function computeCategoryBreakdown(places, profile) {
+  const counts = new Map();
+  for (const p of places || []) {
+    if (!p.category) continue;
+    const label = String(p.category).trim();
+    counts.set(label, (counts.get(label) || 0) + 1);
+  }
+  const total = places?.length || 0;
+  if (!total) return null;
+  const entries = [...counts.entries()]
+    .map(([label, count]) => ({ label, count, pct: Math.round((count / total) * 100) }))
+    .sort((a, b) => b.count - a.count);
+  const top = entries.slice(0, 5);
+  const otherCount = entries.slice(5).reduce((sum, e) => sum + e.count, 0);
+  if (otherCount) {
+    top.push({ label: "Other", count: otherCount, pct: Math.round((otherCount / total) * 100) });
+  }
+  const sectorLabel = breakdownSectorLabel(profile?.businessType);
+  return { sectorLabel, total, entries: top };
+}
+
+function breakdownSectorLabel(businessType) {
+  const type = normalizeType(businessType);
+  const labels = {
+    "restaurant":   "Cuisines on this block",
+    "coffee shop":  "Café styles on this block",
+    "food stall":   "Food types on this block",
+    "grocery":      "Grocery formats on this block",
+    "retail":       "Retail categories on this block",
+    "salon":        "Salon types on this block",
+    "barbershop":   "Barber styles on this block",
+    "laundromat":   "Laundry services on this block",
+    "pharmacy":     "Pharmacy formats on this block",
+    "daycare":      "Childcare formats on this block",
+    "auto repair":  "Auto service types on this block",
+    "liquor store": "Beverage retail on this block"
+  };
+  return labels[type] || "Categories on this block";
+}
+
+function computeHoursCoverage(places) {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const hoursOpenCount = Array.from({ length: 24 }, () => 0);
+  let contributing = 0;
+  let openLateCount = 0;
+  let openEarlyCount = 0;
+  let open24Count = 0;
+  for (const p of places || []) {
+    const oh = p.openingHoursStruct;
+    if (!Array.isArray(oh) || !oh.some(Boolean)) continue;
+    contributing += 1;
+    let everLate = false;
+    let everEarly = false;
+    let any24 = false;
+    for (const day of oh) {
+      if (!day || day.open < 0) continue;
+      if (day.open <= 0 && day.close >= 24) any24 = true;
+      if (day.close >= 21 || (day.close > 0 && day.close < day.open)) everLate = true;
+      if (day.open <= 8) everEarly = true;
+      const start = Math.max(0, Math.floor(day.open));
+      const end = Math.min(24, Math.ceil(day.close <= day.open ? 24 : day.close));
+      for (let h = start; h < end; h += 1) hoursOpenCount[h] += 1;
+    }
+    if (everLate) openLateCount += 1;
+    if (everEarly) openEarlyCount += 1;
+    if (any24) open24Count += 1;
+  }
+  if (!contributing) return null;
+  // Normalize: count is summed across all days, so divide by 7 to get an avg-per-day count.
+  const avgOpenByHour = hoursOpenCount.map((sum) => Math.round((sum / 7) * 10) / 10);
+  let peakHour = 0;
+  let peakValue = 0;
+  for (let h = 0; h < 24; h += 1) {
+    if (avgOpenByHour[h] > peakValue) {
+      peakValue = avgOpenByHour[h];
+      peakHour = h;
+    }
+  }
+  return {
+    contributing,
+    openLateCount,
+    openEarlyCount,
+    open24Count,
+    avgOpenByHour,
+    peakHour,
+    peakValue,
+    days
+  };
+}
+
+function compactPopularTimes(histogram) {
+  if (!histogram || typeof histogram !== "object") return null;
+  const dayMap = { Su: "Sun", Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat" };
+  const out = {};
+  for (const [shortDay, full] of Object.entries(dayMap)) {
+    const entries = histogram[shortDay];
+    if (!Array.isArray(entries)) continue;
+    const hours = new Array(24).fill(0);
+    for (const e of entries) {
+      const h = Number(e?.hour);
+      const v = Number(e?.occupancyPercent);
+      if (Number.isFinite(h) && h >= 0 && h <= 23 && Number.isFinite(v)) {
+        hours[h] = v;
+      }
+    }
+    out[full] = hours;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function aggregateBusyHeatmap(places) {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const grid = days.map(() => new Array(24).fill(0));
+  const counts = days.map(() => new Array(24).fill(0));
+  let contributing = 0;
+  for (const place of places || []) {
+    const pt = place?.popularTimes;
+    if (!pt) continue;
+    contributing += 1;
+    for (let d = 0; d < days.length; d += 1) {
+      const dayName = days[d];
+      const arr = pt[dayName];
+      if (!Array.isArray(arr)) continue;
+      for (let h = 0; h < 24; h += 1) {
+        if (arr[h] > 0) {
+          grid[d][h] += arr[h];
+          counts[d][h] += 1;
+        }
+      }
+    }
+  }
+  if (!contributing) return null;
+  const avg = grid.map((row, d) => row.map((sum, h) => counts[d][h] ? Math.round(sum / counts[d][h]) : 0));
+  let peakDay = "";
+  let peakHour = 0;
+  let peakValue = 0;
+  for (let d = 0; d < days.length; d += 1) {
+    for (let h = 0; h < 24; h += 1) {
+      if (avg[d][h] > peakValue) {
+        peakValue = avg[d][h];
+        peakDay = days[d];
+        peakHour = h;
+      }
+    }
+  }
+  return { days, hours: Array.from({ length: 24 }, (_, i) => i), grid: avg, peakDay, peakHour, peakValue, contributing };
+}
+
+function formatHour12(hour) {
+  if (hour === 0) return "12am";
+  if (hour < 12) return `${hour}am`;
+  if (hour === 12) return "12pm";
+  return `${hour - 12}pm`;
+}
+
+function competitorSearchQueries(profile) {
+  const city = profile.city || profile.locationLabel || "";
+  const type = normalizeType(profile.businessType);
+  const tail = city ? ` in ${city}` : " near me";
+  const queriesByType = {
+    "restaurant":   [`restaurants${tail}`, `popular dining${tail}`],
+    "coffee shop":  [`coffee shops${tail}`, `cafes${tail}`],
+    "food stall":   [`food trucks${tail}`, `street food${tail}`],
+    "grocery":      [`grocery stores${tail}`, `supermarkets${tail}`],
+    "retail":       [`shops${tail}`, `boutiques${tail}`],
+    "salon":        [`hair salons${tail}`, `nail salons${tail}`],
+    "barbershop":   [`barber shops${tail}`, `men's haircuts${tail}`],
+    "laundromat":   [`laundromats${tail}`, `wash and fold${tail}`],
+    "pharmacy":     [`pharmacies${tail}`, `drug stores${tail}`],
+    "daycare":      [`daycares${tail}`, `childcare${tail}`],
+    "auto repair":  [`auto repair shops${tail}`, `mechanics${tail}`],
+    "liquor store": [`liquor stores${tail}`, `wine and spirits${tail}`]
+  };
+  return queriesByType[type] || [`${type}s${tail}`, `${type}${tail}`];
+}
+
+function formatApifyHours(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map((h) => `${h.day || h.weekDay || ""}: ${h.hours || h.openTime || ""}`.trim())
+      .filter((line) => line && line !== ":")
+      .join("; ");
+  }
+  return "";
+}
+
+function apifyCompetitorScore(item) {
+  const rating = Number(item.rating) || 0;
+  const reviews = Math.log10(Math.max(10, Number(item.reviews) || 10));
+  return rating * 18 + reviews * 12;
+}
+
 async function fetchMarketScan(profile) {
+  if (process.env.APIFY_TOKEN && process.env.APIFY_PLACES_DISABLED !== "1") {
+    try {
+      const apifyResult = await fetchApifyPlaces(profile);
+      if (apifyResult?.ok && apifyResult.count > 0) return apifyResult;
+    } catch (error) {
+      console.warn(`Apify places scan failed, falling back to Overpass: ${error.message}`);
+    }
+  }
+
   const radius = clamp(Number(profile.radiusMeters || profile.cityRadiusMeters || 16000), 3000, 35000);
   const sourceUrl = osmMapUrl(profile);
   const query = `
@@ -1217,12 +2713,12 @@ async function fetchNaturalEvents(profile) {
   return { ok: true, sourceUrl, events, count: events.length };
 }
 
-async function runApifyActor(actorId, input) {
+async function runApifyActor(actorId, input, timeoutMs = 240000) {
   if (!process.env.APIFY_TOKEN) {
     return {
       ok: false,
       error: "APIFY_TOKEN is not configured.",
-      next: "Add APIFY_TOKEN to /Users/dhrumilshah/Warden/.env when you want Actor-backed sources."
+      next: "Add APIFY_TOKEN to .env when you want Actor-backed sources."
     };
   }
 
@@ -1233,7 +2729,7 @@ async function runApifyActor(actorId, input) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
-    }, 120000);
+    }, timeoutMs);
     return { ok: true, actorId, count: Array.isArray(items) ? items.length : 0, items };
   } catch (error) {
     return { ok: false, actorId, error: error.message };
@@ -1339,21 +2835,15 @@ function synthesizeSignals(profile, feeds) {
   const warningSignals = signals.filter((s) => s.severity === "critical" || s.severity === "warning");
   const warnings = buildWarnings(profile, feeds, warningSignals, maxOwnerWarnings);
 
-  for (const item of opportunities.slice(0, 6)) {
-    signals.push(signal({
-      group: "Opportunities",
-      severity: "opportunity",
-      code: "OP",
-      name: item.type,
-      headline: item.title,
-      metric: item.impact,
-      body: `${item.why} ${item.action}`,
-      source: item.source,
-      url: item.url
-    }));
-  }
+  // Note: we no longer re-push opportunities into the signals array.
+  // The Opportunities and Warnings panels render their own dedicated cards above
+  // the Signals section, so duplicating them in the grouped Signals view caused
+  // the same Crime/Safety + market cards to appear twice.
 
-  const groups = groupSignals(signals);
+  // Dedupe signals within each group by normalized headline so two near-identical
+  // safety articles don't both render as separate cards.
+  const dedupedSignals = dedupeSignalsByHeadline(signals);
+  const groups = groupSignals(dedupedSignals);
   const sortedBanners = banners.slice(0, 4);
 
   if (!sortedBanners.length) {
@@ -1855,6 +3345,32 @@ function addHazardSignals(signals, earthquakes, eonet) {
   }
 }
 
+function dedupeSignalsByHeadline(signals) {
+  const seenByGroup = new Map();
+  const out = [];
+  for (const s of signals || []) {
+    const key = `${s.group || ""}|${normalizeHeadlineKey(s.headline)}`;
+    if (!s.headline) {
+      out.push(s);
+      continue;
+    }
+    if (!seenByGroup.has(key)) {
+      seenByGroup.set(key, true);
+      out.push(s);
+    }
+  }
+  return out;
+}
+
+function normalizeHeadlineKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+}
+
 function groupSignals(signals) {
   const order = [
     "Opportunities",
@@ -2223,7 +3739,7 @@ function buildMetrics(profile, feeds, signals, opportunities, warnings) {
   const sourceCount = Object.keys(feeds).length;
   const area = storeAreaLabel(profile);
   const radiusMi = Math.round((profile.radiusMeters || 0) / 1609 * 10) / 10;
-  return [
+  const base = [
     {
       label: "Monitoring Area",
       value: profile.cityScopeLabel || `${profile.city || "City"} city-wide`,
@@ -2261,6 +3777,170 @@ function buildMetrics(profile, feeds, signals, opportunities, warnings) {
       tone: "info"
     }
   ];
+  return [...base, ...industrySpecificMetrics(profile, feeds)];
+}
+
+function industrySpecificMetrics(profile, feeds) {
+  const type = normalizeType(profile?.businessType);
+  const mi = feeds?.marketScan?.intelligence;
+  if (!mi) return [];
+  const out = [];
+
+  if (mi.dominantTierLabel) {
+    const dominantPct = mi.priceDistribution?.find((p) => p.tier === mi.dominantTier)?.pct || 0;
+    out.push({
+      label: pricingLabelForType(type),
+      value: mi.dominantTierLabel,
+      detail: `${dominantPct}% of nearby`,
+      tone: "info"
+    });
+  }
+
+  if (mi.avgRating) {
+    out.push({
+      label: "Block avg rating",
+      value: `${mi.avgRating.toFixed(1)}★`,
+      detail: `${mi.competitorsAnalyzed} competitors`,
+      tone: mi.avgRating >= 4.6 ? "warn" : "good"
+    });
+  }
+
+  const peak = mi.busyHeatmap;
+  if (peak?.peakDay && peak.peakValue >= 50) {
+    out.push({
+      label: peakDemandLabelForType(type),
+      value: `${peak.peakDay} ${formatHour12(peak.peakHour)}`,
+      detail: `~${peak.peakValue}% busy block-wide`,
+      tone: "info"
+    });
+  }
+
+  const cb = mi.categoryBreakdown;
+  if (cb?.entries?.length && ["restaurant", "coffee shop", "food stall", "grocery", "retail", "salon", "auto repair", "liquor store"].includes(type)) {
+    const top = cb.entries[0];
+    out.push({
+      label: dominantLabelForType(type),
+      value: shortLabel(top.label, 22),
+      detail: `${top.pct}% of nearby (${top.count})`,
+      tone: "info"
+    });
+  }
+
+  if (type === "laundromat" || type === "pharmacy" || type === "liquor store") {
+    const hc = mi.hoursCoverage;
+    if (hc?.contributing) {
+      const pct = Math.round((hc.openLateCount / hc.contributing) * 100);
+      out.push({
+        label: "Late-hour competitors",
+        value: `${hc.openLateCount}/${hc.contributing}`,
+        detail: `${pct}% open past 9pm`,
+        tone: pct > 50 ? "warn" : "info"
+      });
+    }
+    if (type === "laundromat" && hc?.open24Count) {
+      out.push({
+        label: "24-hour rivals",
+        value: String(hc.open24Count),
+        detail: `of ${hc.contributing} parsed schedules`,
+        tone: hc.open24Count > 0 ? "warn" : "good"
+      });
+    }
+  }
+
+  if (type === "salon" || type === "barbershop") {
+    if (mi.topReviewTags?.length) {
+      const topService = mi.topReviewTags.find((t) => t.places >= 3 && t.title.split(/\s+/).length >= 2);
+      if (topService) {
+        out.push({
+          label: "Most-asked service nearby",
+          value: shortLabel(topService.title, 22),
+          detail: `mentioned at ${topService.places} places`,
+          tone: "info"
+        });
+      }
+    }
+  }
+
+  if (type === "restaurant" || type === "coffee shop" || type === "food stall") {
+    if (mi.topReviewTags?.length) {
+      const dish = mi.topReviewTags.find((t) => t.places >= 3 && t.title.split(/\s+/).length >= 2 && !/seating|view|outdoor|bar|service|atmosphere/i.test(t.title));
+      if (dish) {
+        out.push({
+          label: "Top dish/item theme",
+          value: shortLabel(dish.title, 22),
+          detail: `at ${dish.places} nearby places`,
+          tone: "info"
+        });
+      }
+    }
+  }
+
+  if (type === "daycare") {
+    out.push({
+      label: "Family-zone signals",
+      value: String(mi.competitorsAnalyzed || 0),
+      detail: "nearby childcare options",
+      tone: "info"
+    });
+  }
+
+  return out.slice(0, 4);
+}
+
+function pricingLabelForType(type) {
+  const labels = {
+    restaurant: "Block price tier",
+    "coffee shop": "Block price tier",
+    "food stall": "Block price tier",
+    grocery: "Basket price tier",
+    retail: "Basket price tier",
+    salon: "Service price tier",
+    barbershop: "Cut price tier",
+    laundromat: "Service price tier",
+    "auto repair": "Ticket size tier",
+    pharmacy: "Basket price tier",
+    "liquor store": "Bottle price tier",
+    daycare: "Tuition tier"
+  };
+  return labels[type] || "Block price tier";
+}
+
+function peakDemandLabelForType(type) {
+  const labels = {
+    restaurant: "Peak meal window",
+    "coffee shop": "Peak coffee window",
+    "food stall": "Peak rush window",
+    salon: "Peak booking window",
+    barbershop: "Peak booking window",
+    laundromat: "Peak laundry window",
+    pharmacy: "Peak counter window",
+    daycare: "Peak family window",
+    "auto repair": "Peak service window",
+    "liquor store": "Peak buying window",
+    grocery: "Peak basket window",
+    retail: "Peak walk-in window"
+  };
+  return labels[type] || "Peak demand window";
+}
+
+function dominantLabelForType(type) {
+  const labels = {
+    restaurant: "Dominant cuisine nearby",
+    "coffee shop": "Dominant café type",
+    "food stall": "Dominant food type",
+    grocery: "Dominant grocery format",
+    retail: "Dominant retail category",
+    salon: "Dominant salon type",
+    barbershop: "Dominant barber style",
+    "auto repair": "Dominant service type",
+    "liquor store": "Dominant beverage focus"
+  };
+  return labels[type] || "Dominant category";
+}
+
+function shortLabel(value, max = 22) {
+  const clean = String(value || "").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 
 function buildWeatherForecast(weather) {
@@ -2404,11 +4084,13 @@ function osmElementUrl(element) {
   return `https://www.openstreetmap.org/${element.type}/${element.id}`;
 }
 
-function osmMapUrl(profile) {
-  const lat = Number(profile.lat);
-  const lon = Number(profile.lon);
+function osmMapUrl(profile, pinLat, pinLon) {
+  const lat = Number(pinLat ?? profile.lat);
+  const lon = Number(pinLon ?? profile.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return "https://www.openstreetmap.org/";
-  return `https://www.openstreetmap.org/#map=13/${lat.toFixed(5)}/${lon.toFixed(5)}`;
+  // Marker URL: drops a pin at lat/lon and zooms to street level so "view evidence" is
+  // an actual point on the map, not just a centered tile view.
+  return `https://www.openstreetmap.org/?mlat=${lat.toFixed(6)}&mlon=${lon.toFixed(6)}#map=17/${lat.toFixed(5)}/${lon.toFixed(5)}`;
 }
 
 function readableEvidenceUrl(profile, url) {
@@ -2443,108 +4125,329 @@ function licenseChecklistFor(profile) {
   const type = normalizeType(profile.businessType);
   const city = String(profile.city || "").toLowerCase();
   const sf = city.includes("san francisco") || isSanFrancisco(profile);
-  const santaClara = city.includes("santa clara");
-  const common = [
-    {
-      id: "business-registration",
-      name: "Business registration certificate",
-      priority: "required",
-      status: "track",
-      authority: sf ? "San Francisco Treasurer & Tax Collector" : santaClara ? "City of Santa Clara Finance Department" : "City/County business office",
-      renewal: "Annual or local schedule",
-      url: sf ? "https://www.sf.gov/register-your-business" : santaClara ? "https://www.santaclaraca.gov/business-development/business-services/business-tax-certificate" : "https://www.ca.gov/service/?item=register-a-business"
-    },
-    {
-      id: "seller-permit",
-      name: "California seller's permit",
-      priority: "required",
-      status: "track",
-      authority: "California Department of Tax and Fee Administration",
-      renewal: "Keep active while selling taxable goods",
-      url: "https://www.cdtfa.ca.gov/services/permits-licenses.htm"
-    },
-    {
-      id: "fbn",
-      name: "Fictitious Business Name filing",
-      priority: "conditional",
-      status: "track",
-      authority: "County Clerk",
-      renewal: "Usually every 5 years",
-      url: sf ? "https://www.sf.gov/renew-change-or-refile-fictitious-business-name-fbn" : "https://www.ca.gov/service/?item=file-a-fictitious-business-name"
-    },
-    {
-      id: "workers-comp",
-      name: "Workers' compensation coverage",
-      priority: "required",
-      status: "track",
-      authority: "California DIR",
-      renewal: "Policy period",
-      url: "https://www.dir.ca.gov/dwc/employer.htm"
-    }
-  ];
+  const sc = city.includes("santa clara");
+  const items = [];
 
-  const restaurant = [
-    {
-      id: "health-permit",
-      name: "Retail food facility health permit",
-      priority: "required",
-      status: "track",
-      authority: sf ? "SF Department of Public Health" : santaClara ? "Santa Clara County Department of Environmental Health" : "County environmental health",
-      renewal: "Before opening and on local renewal schedule",
-      url: sf ? "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location" : santaClara ? "https://deh.santaclaracounty.gov/food" : "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx"
-    },
-    {
-      id: "food-safety-manager",
-      name: "Certified food protection manager",
-      priority: "required",
-      status: "track",
-      authority: "California food safety rules",
-      renewal: "Certificate expiry",
-      url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx"
-    },
-    {
-      id: "food-handler",
-      name: "Food handler cards",
-      priority: "required",
-      status: "track",
-      authority: "California food handler program",
-      renewal: "Per employee/certificate expiry",
-      url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx"
-    },
-    {
-      id: "fire-inspection",
-      name: "Fire inspection and extinguisher service tags",
-      priority: "required",
-      status: "track",
-      authority: "Local fire department",
-      renewal: "Inspection/service schedule",
-      url: sf ? "https://sf-fire.org/" : santaClara ? "https://www.santaclaraca.gov/our-city/departments-a-f/fire-department" : null
-    }
-  ];
+  // === Industry-specific (most important — listed first) ===
+  for (const item of industryDocuments(type, profile, { sf, sc })) {
+    items.push({ ...item, category: "industry" });
+  }
 
-  const storefront = [
-    {
-      id: "signage-awning",
-      name: "Signage, awning or sidewalk-use rules",
-      priority: "conditional",
-      status: "track",
-      authority: sf ? "SF Permit Center / Public Works" : santaClara ? "City of Santa Clara Planning Division" : "Local planning/public works",
-      renewal: "When changing storefront use/signage",
-      url: sf ? "https://www.sf.gov/topics--business" : santaClara ? "https://www.santaclaraca.gov/business-development/development-services/planning-division" : null
-    },
-    {
-      id: "ada-access",
-      name: "ADA accessibility readiness",
-      priority: "required",
-      status: "track",
-      authority: "Federal/state accessibility rules",
-      renewal: "Whenever layout changes",
-      url: sf ? "https://www.sf.gov/improve-ada-accessibility-your-business" : "https://www.ada.gov/"
-    }
-  ];
+  // === Tax & registration (universal) ===
+  items.push({
+    category: "registration",
+    id: "business-license",
+    name: "Local business license / business tax certificate",
+    priority: "required",
+    authority: sf ? "SF Treasurer & Tax Collector" : sc ? "City of Santa Clara Finance" : `${profile.city || "Local city"} business office`,
+    renewal: "Annual",
+    url: sf ? "https://www.sf.gov/register-your-business" : sc ? "https://www.santaclaraca.gov/business-development/business-services/business-tax-certificate" : "https://www.ca.gov/service/?item=register-a-business",
+    why: "Required to legally operate inside city limits. Missing it triggers fines + interest."
+  });
+  items.push({
+    category: "registration",
+    id: "ein",
+    name: "Federal EIN (Employer Identification Number)",
+    priority: "required",
+    authority: "IRS",
+    renewal: "One-time",
+    url: "https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online",
+    why: "Required for payroll, tax filings, and most business banking. Free to obtain."
+  });
+  items.push({
+    category: "registration",
+    id: "boi-fincen",
+    name: "Beneficial Ownership Information (BOI) report",
+    priority: "required",
+    authority: "FinCEN",
+    renewal: "On formation + on ownership changes",
+    url: "https://boiefiling.fincen.gov/",
+    why: "Federal anti-money-laundering rule. Most LLCs and corporations must file. Penalties for missing this."
+  });
+  items.push({
+    category: "registration",
+    id: "seller-permit",
+    name: "California seller's permit (sales tax)",
+    priority: "required",
+    authority: "CDTFA — Department of Tax and Fee Administration",
+    renewal: "Active while selling taxable goods",
+    url: "https://www.cdtfa.ca.gov/services/permits-licenses.htm",
+    why: "Required for any retail sales of tangible goods. Free."
+  });
+  items.push({
+    category: "registration",
+    id: "fbn",
+    name: "Fictitious Business Name (DBA) filing",
+    priority: "conditional",
+    authority: "County Clerk",
+    renewal: "Every 5 years",
+    url: sf ? "https://www.sf.gov/renew-change-or-refile-fictitious-business-name-fbn" : "https://www.ca.gov/service/?item=file-a-fictitious-business-name",
+    why: "Required if you operate under a name different from your legal entity name."
+  });
+  items.push({
+    category: "registration",
+    id: "soi",
+    name: "Statement of Information (LLC/Corp)",
+    priority: "conditional",
+    authority: "California Secretary of State",
+    renewal: "LLC: every 2 years · Corp: annual",
+    url: "https://bizfileonline.sos.ca.gov/",
+    why: "Required filing for registered entities. Late filing triggers $250 penalty + suspension."
+  });
 
-  if (type === "restaurant" || type === "grocery" || type === "pharmacy") return [...common, ...restaurant, ...storefront];
-  return [...common, ...storefront];
+  // === Insurance & coverage ===
+  items.push({
+    category: "insurance",
+    id: "workers-comp",
+    name: "Workers' compensation insurance",
+    priority: "required",
+    authority: "California DIR",
+    renewal: "Policy term",
+    url: "https://www.dir.ca.gov/dwc/employer.htm",
+    why: "Mandatory if you have any employees. Misdemeanor + $10,000+ penalty if missing."
+  });
+  items.push({
+    category: "insurance",
+    id: "general-liability",
+    name: "General liability insurance",
+    priority: "recommended",
+    authority: "Private carrier",
+    renewal: "Policy term",
+    url: "https://www.sba.gov/business-guide/launch-your-business/get-business-insurance",
+    why: "Covers slip-and-fall, customer injury, property damage. Most leases require it."
+  });
+  items.push({
+    category: "insurance",
+    id: "property-insurance",
+    name: "Property / contents insurance",
+    priority: "recommended",
+    authority: "Private carrier",
+    renewal: "Policy term",
+    url: "https://www.sba.gov/business-guide/launch-your-business/get-business-insurance",
+    why: "Covers fire, theft, water damage to inventory and equipment."
+  });
+
+  // === Employer & HR (if employees) ===
+  items.push({
+    category: "employer",
+    id: "edd",
+    name: "California EDD employer registration",
+    priority: "required",
+    authority: "Employment Development Department (EDD)",
+    renewal: "Active while employing staff",
+    url: "https://edd.ca.gov/en/payroll_taxes/Am_I_Required_to_Register_as_an_Employer/",
+    why: "Required as soon as you pay $100+/quarter in wages. Handles state payroll taxes."
+  });
+  items.push({
+    category: "employer",
+    id: "i9",
+    name: "Form I-9 for every employee",
+    priority: "required",
+    authority: "USCIS",
+    renewal: "Within 3 days of hire; keep on file",
+    url: "https://www.uscis.gov/i-9",
+    why: "Required to verify work authorization. ICE can audit; fines up to $2,789 per missing form."
+  });
+  items.push({
+    category: "employer",
+    id: "ca-wage-poster",
+    name: "Required workplace posters (state + federal)",
+    priority: "required",
+    authority: "DIR + DOL",
+    renewal: "Update when laws change",
+    url: "https://www.dir.ca.gov/wpnodb.html",
+    why: "Free posters. Fines $100-$1000 per missing poster. Posted in employee-visible area."
+  });
+  items.push({
+    category: "employer",
+    id: "minimum-wage",
+    name: "Minimum wage compliance log",
+    priority: "required",
+    authority: "California DIR + local city",
+    renewal: "Track when local wage updates (most cities adjust each year)",
+    url: sf ? "https://www.sf.gov/topics/minimum-wage" : "https://www.dir.ca.gov/dlse/faq_minimumwage.htm",
+    why: "Local minimum wages can exceed state. Penalties + back wages on failure."
+  });
+
+  // === Storefront & accessibility ===
+  items.push({
+    category: "storefront",
+    id: "ada-access",
+    name: "ADA accessibility audit",
+    priority: "required",
+    authority: "DOJ + state accessibility rules",
+    renewal: "Re-check whenever layout changes",
+    url: sf ? "https://www.sf.gov/improve-ada-accessibility-your-business" : "https://www.ada.gov/",
+    why: "Drive-by lawsuits target small storefronts. Federal tax credit available for compliance work."
+  });
+  items.push({
+    category: "storefront",
+    id: "casp",
+    name: "CASp (Certified Access Specialist) inspection",
+    priority: "recommended",
+    authority: "California Division of the State Architect",
+    renewal: "When you sign a new lease",
+    url: "https://www.dgs.ca.gov/DSA/Programs/ProgCASp",
+    why: "California-specific shield against ADA suits. Limits damages and gives 120 days to fix issues."
+  });
+  items.push({
+    category: "storefront",
+    id: "signage-permit",
+    name: "Signage / awning permit",
+    priority: "conditional",
+    authority: sf ? "SF Permit Center / Public Works" : sc ? "Santa Clara Planning Division" : "Local planning/public works",
+    renewal: "When changing or adding signage",
+    url: sf ? "https://www.sf.gov/topics--business" : "https://www.dgs.ca.gov/",
+    why: "Most cities require permits for exterior signs > certain size or lit signs."
+  });
+  items.push({
+    category: "storefront",
+    id: "fire-extinguisher",
+    name: "Fire extinguisher servicing tags",
+    priority: "required",
+    authority: "Local fire department + servicing vendor",
+    renewal: "Annual",
+    url: sf ? "https://sf-fire.org/" : "https://osfm.fire.ca.gov/",
+    why: "Inspectors check tags. Out-of-date tag = fail an inspection."
+  });
+
+  // === Records to keep ongoing ===
+  items.push({
+    category: "records",
+    id: "lease",
+    name: "Signed lease + amendments",
+    priority: "required",
+    authority: "Internal",
+    renewal: "Until end of term",
+    url: "https://www.sba.gov/business-guide/grow-your-business/buy-assets-equipment",
+    why: "Original lease, all addenda, security deposit receipts, CASp report (if any). Have ready for any zoning/permit issue."
+  });
+  items.push({
+    category: "records",
+    id: "tax-records",
+    name: "Three years of tax returns + payroll records",
+    priority: "required",
+    authority: "Internal (IRS retention rules)",
+    renewal: "Keep 3-7 years",
+    url: "https://www.irs.gov/businesses/small-businesses-self-employed/how-long-should-i-keep-records",
+    why: "IRS audit window is 3 years (6 years if substantial under-report). Payroll: 4 years."
+  });
+  items.push({
+    category: "records",
+    id: "supplier-contracts",
+    name: "Supplier / vendor contracts",
+    priority: "recommended",
+    authority: "Internal",
+    renewal: "Until contract end",
+    url: "https://www.sba.gov/business-guide/grow-your-business",
+    why: "Useful in disputes (delivery quality, pricing, exclusivity)."
+  });
+  items.push({
+    category: "records",
+    id: "employee-records",
+    name: "Employee records: timesheets, paystubs, W-4s",
+    priority: "required",
+    authority: "Internal (DIR retention rules)",
+    renewal: "Keep 4 years",
+    url: "https://www.dir.ca.gov/dlse/faq_paydays.htm",
+    why: "California requires 4 years of payroll records. Wage-claim audits are common."
+  });
+  items.push({
+    category: "records",
+    id: "inspection-history",
+    name: "Inspection history (health, fire, building)",
+    priority: "recommended",
+    authority: "Internal",
+    renewal: "Keep ongoing",
+    url: "",
+    why: "Helps if you get a sudden re-inspection or sell the business."
+  });
+
+  return items;
+}
+
+function industryDocuments(type, profile, ctx) {
+  const { sf, sc } = ctx || {};
+  const list = {
+    "restaurant": [
+      { id: "health-permit", name: "Retail food facility health permit", priority: "required", authority: sf ? "SF Department of Public Health" : sc ? "Santa Clara County Environmental Health" : "County environmental health", renewal: "Annual", url: sf ? "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location" : sc ? "https://deh.santaclaracounty.gov/food" : "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "Required before any food prep. Fail = same-day closure." },
+      { id: "food-safety-manager", name: "Certified Food Protection Manager", priority: "required", authority: "ANSI-accredited (ServSafe, etc.)", renewal: "5 years", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "California requires one certified manager per facility. ~$125 + 8-hr course." },
+      { id: "food-handler", name: "Food handler cards (per worker)", priority: "required", authority: "California Food Handler Card program", renewal: "3 years per employee", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "$15/employee, 1.5 hrs online. Required within 30 days of hire." },
+      { id: "abc-license", name: "ABC alcohol license (if serving)", priority: "conditional", authority: "California ABC", renewal: "Annual", url: "https://www.abc.ca.gov/licensing/", why: "Type 41 (beer/wine) or Type 47 (full bar). $300-$1,100 + waitlist." },
+      { id: "fire-suppression", name: "Type I hood + fire suppression inspection", priority: "required", authority: "Local fire department", renewal: "Semi-annual", url: sf ? "https://sf-fire.org/" : "https://osfm.fire.ca.gov/", why: "Required for any commercial cooking. Tag must be visible." },
+      { id: "grease-trap", name: "Grease trap pumping log", priority: "required", authority: "Local sanitation district", renewal: "Quarterly typically", url: sf ? "https://sfpuc.org/" : "", why: "Health inspectors check the log. Sewer overflow = big fines." },
+      { id: "music-license", name: "Music licensing (ASCAP/BMI/SESAC)", priority: "conditional", authority: "Performance rights orgs", renewal: "Annual", url: "https://www.ascap.com/help/ascap-licensing", why: "If you play recorded or live music in your business." }
+    ],
+    "coffee shop": [
+      { id: "health-permit", name: "Retail food facility health permit", priority: "required", authority: sf ? "SF Department of Public Health" : "County environmental health", renewal: "Annual", url: sf ? "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location" : "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "Required for any food/beverage prep." },
+      { id: "food-handler", name: "Food handler cards", priority: "required", authority: "California Food Handler program", renewal: "3 years per employee", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "All food-touching staff must have one within 30 days of hire." },
+      { id: "outdoor-seating", name: "Sidewalk café / outdoor seating permit", priority: "conditional", authority: sf ? "SF Public Works" : "Local public works", renewal: "Annual", url: sf ? "https://www.sf.gov/sf-shared-spaces" : "", why: "Required for any tables on public sidewalk." }
+    ],
+    "food stall": [
+      { id: "mff-permit", name: "Mobile Food Facility (MFF) permit", priority: "required", authority: sc ? "Santa Clara County Environmental Health" : sf ? "SFDPH" : "County environmental health", renewal: "Annual", url: sc ? "https://deh.santaclaracounty.gov/food" : sf ? "https://www.sf.gov/" : "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "Required for any mobile food vending. Different categories for prep level." },
+      { id: "commissary", name: "Commissary agreement", priority: "required", authority: "Approved commissary kitchen", renewal: "Service term", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "Required base of operations for cleaning, water, waste disposal." },
+      { id: "food-handler", name: "Food handler cards", priority: "required", authority: "CA Food Handler program", renewal: "3 years", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "All workers." },
+      { id: "vendor-permit", name: "Event/vendor permit (per location)", priority: "conditional", authority: "Event organizer or city", renewal: "Per event", url: "", why: "Required at fairs, markets, festivals, campus events." }
+    ],
+    "grocery": [
+      { id: "health-permit", name: "Retail food market health permit", priority: "required", authority: sf ? "SFDPH" : "County environmental health", renewal: "Annual", url: sf ? "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location" : "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx", why: "Required for any retail food sales." },
+      { id: "weights-measures", name: "Weights & Measures device registration", priority: "required", authority: "County Sealer of Weights & Measures", renewal: "Annual", url: "https://www.cdfa.ca.gov/dms/", why: "Any scale used for sale by weight must be sealed." },
+      { id: "wic", name: "WIC vendor authorization (optional)", priority: "recommended", authority: "California WIC Program", renewal: "3 years", url: "https://www.cdph.ca.gov/Programs/CFH/DWICSN/Pages/AuthorizedFood.aspx", why: "Adds a steady customer base if you stock WIC-eligible items." },
+      { id: "tobacco", name: "Tobacco retailer permit", priority: "conditional", authority: "California CDTFA + local", renewal: "Annual", url: "https://www.cdtfa.ca.gov/services/permits-licenses.htm", why: "Required if selling any tobacco/vape products." }
+    ],
+    "retail": [
+      { id: "resale-cert", name: "Resale certificate (CDTFA)", priority: "required", authority: "CDTFA", renewal: "Active", url: "https://www.cdtfa.ca.gov/formspubs/cdtfa230.pdf", why: "Lets you buy inventory tax-free. Provide to wholesalers." },
+      { id: "alarm-permit", name: "Alarm system permit", priority: "conditional", authority: "Local police department", renewal: "Annual", url: "", why: "Required by most cities for monitored alarms. False-alarm fees if missing." }
+    ],
+    "salon": [
+      { id: "shop-license", name: "Establishment / salon license", priority: "required", authority: "California Board of Barbering and Cosmetology", renewal: "2 years", url: "https://www.barbercosmo.ca.gov/forms_pubs/forms.shtml", why: "Required for the salon premises. Separate from individual licenses." },
+      { id: "cosmetology-license", name: "Individual cosmetology license per stylist", priority: "required", authority: "CA Board of Barbering and Cosmetology", renewal: "2 years per person", url: "https://www.barbercosmo.ca.gov/", why: "Each stylist must hold a valid license. Inspectors verify." },
+      { id: "sanitation", name: "Sanitation/sterilization log + UV-C cabinet", priority: "required", authority: "CA BBC sanitation rules", renewal: "Daily log", url: "https://www.barbercosmo.ca.gov/laws_regs/healthsafety.shtml", why: "Tools must be disinfected per rule. Failure = closure." },
+      { id: "bbp", name: "OSHA Bloodborne Pathogens training", priority: "required", authority: "OSHA / Cal-OSHA", renewal: "Annual", url: "https://www.osha.gov/bloodborne-pathogens", why: "Required for any service that can cause bleeding (waxing, threading, razors)." }
+    ],
+    "barbershop": [
+      { id: "shop-license", name: "Barbershop establishment license", priority: "required", authority: "CA Board of Barbering and Cosmetology", renewal: "2 years", url: "https://www.barbercosmo.ca.gov/forms_pubs/forms.shtml", why: "Required for the shop." },
+      { id: "barber-license", name: "Individual barber license per worker", priority: "required", authority: "CA BBC", renewal: "2 years per barber", url: "https://www.barbercosmo.ca.gov/", why: "Every barber must be licensed." },
+      { id: "sanitation", name: "Sanitation/sterilization log + UV-C cabinet", priority: "required", authority: "CA BBC", renewal: "Daily", url: "https://www.barbercosmo.ca.gov/laws_regs/healthsafety.shtml", why: "All clipper guards, blades, combs disinfected per rule." },
+      { id: "bbp", name: "OSHA Bloodborne Pathogens training", priority: "required", authority: "OSHA / Cal-OSHA", renewal: "Annual", url: "https://www.osha.gov/bloodborne-pathogens", why: "Required because razors and straight razors can break skin." }
+    ],
+    "laundromat": [
+      { id: "water-sewer", name: "Water/sewer use permit + grease/lint trap", priority: "required", authority: sf ? "SFPUC" : "Local water utility", renewal: "Active", url: sf ? "https://sfpuc.org/" : "", why: "Discharge limits enforced; high water use." },
+      { id: "machine-cert", name: "Equipment compliance + tag certifications", priority: "required", authority: "Manufacturer + city building", renewal: "Per inspection cycle", url: "", why: "Commercial dryers must have safety tags; gas-fueled needs separate permit." },
+      { id: "ada-laundry", name: "ADA self-service requirements", priority: "required", authority: "DOJ ADA + state", renewal: "Re-check on layout change", url: "https://www.ada.gov/", why: "Self-service businesses face stricter ADA suit risk. Aisle width, machine height." }
+    ],
+    "pharmacy": [
+      { id: "pharmacy-license", name: "California pharmacy license", priority: "required", authority: "California Board of Pharmacy", renewal: "Annual", url: "https://www.pharmacy.ca.gov/", why: "Required to dispense any prescription. Pharmacist-in-charge designated." },
+      { id: "dea", name: "DEA registration (controlled substances)", priority: "required", authority: "Drug Enforcement Administration", renewal: "3 years", url: "https://www.deadiversion.usdoj.gov/", why: "Required for any Schedule II-V drugs. ~$888." },
+      { id: "controlled-log", name: "Controlled substance dispensing log", priority: "required", authority: "DEA + CA BoP", renewal: "Daily", url: "https://www.deadiversion.usdoj.gov/", why: "DEA can audit. Discrepancies trigger investigation." },
+      { id: "hipaa", name: "HIPAA compliance program", priority: "required", authority: "HHS Office for Civil Rights", renewal: "Annual review", url: "https://www.hhs.gov/hipaa/for-professionals/index.html", why: "Patient health info protection. Breaches = big fines." },
+      { id: "tobacco", name: "Tobacco retailer permit", priority: "conditional", authority: "CA CDTFA + local", renewal: "Annual", url: "https://www.cdtfa.ca.gov/services/permits-licenses.htm", why: "Most pharmacies sell tobacco." }
+    ],
+    "daycare": [
+      { id: "ccld-license", name: "Community Care Licensing Division (CCLD) license", priority: "required", authority: "California Department of Social Services", renewal: "Active + annual fee", url: "https://www.cdss.ca.gov/inforesources/community-care-licensing", why: "Required for any childcare facility. Full inspection cycle." },
+      { id: "background-checks", name: "Live-Scan background checks (every staff member)", priority: "required", authority: "CA CCLD + DOJ", renewal: "Per hire", url: "https://oag.ca.gov/fingerprints", why: "All staff including volunteers must be cleared before contact with kids." },
+      { id: "first-aid-cpr", name: "Pediatric first aid + CPR (every teacher)", priority: "required", authority: "American Red Cross or equivalent", renewal: "2 years per cert", url: "https://www.redcross.org/take-a-class/first-aid", why: "Required ratio of certified staff per CCLD rules." },
+      { id: "immunizations", name: "Child immunization records (per child)", priority: "required", authority: "CDPH Shots for School", renewal: "Per enrollment", url: "https://eziz.org/assets/docs/shotsforschool/CCFRGAR.pdf", why: "California requires proof of immunization for childcare admission." },
+      { id: "fire-evac", name: "Fire evacuation drills + log", priority: "required", authority: "Local fire department + CCLD", renewal: "Monthly drills", url: "", why: "Documented monthly drills required by CCLD." }
+    ],
+    "auto repair": [
+      { id: "bar-license", name: "Bureau of Automotive Repair (BAR) registration", priority: "required", authority: "California BAR", renewal: "Annual", url: "https://www.bar.ca.gov/", why: "Required for any automotive repair shop in CA. BAR # must be on every estimate/invoice." },
+      { id: "smog-license", name: "Smog Check station / inspector license (if applicable)", priority: "conditional", authority: "California BAR", renewal: "Per cert", url: "https://www.bar.ca.gov/business_resources/smog_check_program/index.html", why: "Required to perform smog inspections. Star vs regular station distinction." },
+      { id: "haz-waste", name: "Hazardous waste generator ID + manifest", priority: "required", authority: "California DTSC", renewal: "Active", url: "https://dtsc.ca.gov/hazardous-waste-generators/", why: "Used oil, antifreeze, parts cleaners are hazardous waste. Must track and document disposal." },
+      { id: "epa", name: "EPA Section 609 (refrigerant handling)", priority: "conditional", authority: "EPA", renewal: "One-time per technician", url: "https://www.epa.gov/section608", why: "Required for any technician working with vehicle AC refrigerant." },
+      { id: "tire-fee", name: "Tire fee collection registration", priority: "conditional", authority: "CDTFA", renewal: "Active", url: "https://www.cdtfa.ca.gov/taxes-and-fees/tire-fee.htm", why: "If you sell tires, $1.75/tire fee owed to state." }
+    ],
+    "liquor store": [
+      { id: "abc-type-21", name: "ABC Type 21 license (off-sale general)", priority: "required", authority: "California ABC", renewal: "Annual", url: "https://www.abc.ca.gov/licensing/license-types/", why: "Required for off-sale beer, wine, distilled spirits. License caps + transfer cost is significant." },
+      { id: "tobacco", name: "Tobacco retailer permit", priority: "required", authority: "CDTFA + local", renewal: "Annual", url: "https://www.cdtfa.ca.gov/services/permits-licenses.htm", why: "Most liquor stores sell tobacco. Strict ID verification." },
+      { id: "lottery", name: "California Lottery retailer license", priority: "conditional", authority: "California State Lottery", renewal: "Annual", url: "https://www.calottery.com/retailers", why: "If selling scratchers or draw tickets." },
+      { id: "abc-poster", name: "ABC age-verification posting + training", priority: "required", authority: "California ABC", renewal: "Active", url: "https://www.abc.ca.gov/education/", why: "Stings are common. Failure = license suspension + fines." }
+    ],
+    "default": [
+      { id: "industry-research", name: "Industry-specific licenses & permits", priority: "recommended", authority: "California Department of Consumer Affairs", renewal: "Per industry", url: "https://www.dca.ca.gov/about_us/licensees.shtml", why: "Look up your specific industry to confirm any state-level licensing." }
+    ]
+  };
+  return list[type] || list["default"];
 }
 
 function normalizeType(type) {
