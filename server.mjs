@@ -45,6 +45,7 @@ const DEFAULT_PROFILE = {
 };
 
 const DELEGATED_ACTION_AUDIT = [];
+const DELEGATED_AGENT_INBOX = [];
 
 const DEMO_AGENT_USERS = [
   {
@@ -59,6 +60,8 @@ const DEMO_AGENT_USERS = [
       "storefront.hours.write",
       "marketing.campaign.write",
       "customer.segment.write",
+      "customer.message.write",
+      "customer.credit.write",
       "suppliers.order.write",
       "compliance.task.write"
     ]
@@ -74,6 +77,7 @@ const DEMO_AGENT_USERS = [
     scopes: [
       "marketing.campaign.write",
       "customer.segment.write",
+      "customer.message.write",
       "compliance.task.write",
       "suppliers.order.draft"
     ]
@@ -440,6 +444,25 @@ export async function handleRequest(req, res) {
       return sendJson(res, payload.ok ? 200 : 400, payload);
     }
 
+    if (url.pathname === "/api/agent/inbox") {
+      const user = demoAgentUser(url.searchParams.get("userId") || url.searchParams.get("as") || "owner-ava");
+      return sendJson(res, 200, { ok: true, user, inbox: agentInboxForUser(user) });
+    }
+
+    if (url.pathname === "/api/agent/message") {
+      if (req.method !== "POST") return sendJson(res, 405, { error: "POST only" });
+      const body = await readJsonBody(req);
+      const payload = createDelegatedMessage(body || {});
+      return sendJson(res, payload.ok ? 200 : 400, payload);
+    }
+
+    if (url.pathname === "/api/agent/approve") {
+      if (req.method !== "POST") return sendJson(res, 405, { error: "POST only" });
+      const body = await readJsonBody(req);
+      const payload = await approveDelegatedRequest(body || {});
+      return sendJson(res, payload.ok ? 200 : 400, payload);
+    }
+
     if (url.pathname === "/api/agent/audit") {
       const tenantId = url.searchParams.get("tenantId");
       const audit = tenantId
@@ -628,7 +651,8 @@ function buildAgentActions(body = {}, params = new URLSearchParams()) {
     tenant: { id: user.tenantId, name: user.tenantName },
     integrations: agentIntegrationStatus(),
     actions,
-    audit: DELEGATED_ACTION_AUDIT.filter((event) => event.tenantId === user.tenantId).slice(0, 12)
+    audit: DELEGATED_ACTION_AUDIT.filter((event) => event.tenantId === user.tenantId).slice(0, 12),
+    inbox: agentInboxForUser(user)
   };
 }
 
@@ -656,14 +680,18 @@ async function executeDelegatedAction(body = {}) {
   };
 
   if (policy.decision !== "allowed") {
+    const inboxItem = policy.decision === "needs_approval"
+      ? createApprovalRequest({ user, store, action, policy, auditEvent })
+      : null;
     DELEGATED_ACTION_AUDIT.unshift(auditEvent);
     return {
       ok: true,
       executed: false,
       policy,
       auditEvent,
+      inboxItem,
       message: policy.decision === "needs_approval"
-        ? `${user.name} needs owner approval before Warden can execute this action.`
+        ? `${user.name} sent this to the owner for approval.`
         : `${user.name} is not allowed to execute this action for this tenant.`
     };
   }
@@ -683,6 +711,144 @@ async function executeDelegatedAction(body = {}) {
     auditEvent,
     message: `${action.title} executed as ${user.name} (${user.role}) for ${store.businessName || "this storefront"}.`
   };
+}
+
+function agentInboxForUser(user) {
+  return DELEGATED_AGENT_INBOX
+    .filter((item) => item.tenantId === user.tenantId)
+    .filter((item) => item.toUserId === user.id || item.toRole === user.role || item.fromUserId === user.id)
+    .sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at))
+    .slice(0, 30);
+}
+
+function createApprovalRequest({ user, store, action, policy, auditEvent }) {
+  const now = new Date().toISOString();
+  const duplicate = DELEGATED_AGENT_INBOX.find((item) =>
+    item.type === "approval" &&
+    item.status === "pending" &&
+    item.tenantId === user.tenantId &&
+    item.fromUserId === user.id &&
+    item.action?.id === action.id
+  );
+  if (duplicate) {
+    duplicate.updatedAt = now;
+    duplicate.body = `${user.name} refreshed the approval request for ${action.title}.`;
+    duplicate.auditId = auditEvent.id;
+    return duplicate;
+  }
+
+  const item = {
+    id: `inbox-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    type: "approval",
+    status: "pending",
+    at: now,
+    updatedAt: now,
+    tenantId: user.tenantId,
+    tenantName: user.tenantName,
+    fromUserId: user.id,
+    fromUserName: user.name,
+    fromRole: user.role,
+    toRole: "owner",
+    title: `Approval needed: ${action.title}`,
+    body: `${user.name} can prepare this, but owner permission is required before Warden can execute it.`,
+    action,
+    store,
+    policy,
+    auditId: auditEvent.id,
+    target: action.target
+  };
+  DELEGATED_AGENT_INBOX.unshift(item);
+  return item;
+}
+
+function createDelegatedMessage(body = {}) {
+  const user = demoAgentUser(body.userId || body.user?.id || "associate-mia");
+  const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
+  const action = normalizeDelegatedAction(body.action, store, body.intel);
+  const toRole = body.toRole || (user.role === "associate" ? "manager" : "owner");
+  const now = new Date().toISOString();
+  const item = {
+    id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    type: "message",
+    status: "open",
+    at: now,
+    updatedAt: now,
+    tenantId: user.tenantId,
+    tenantName: user.tenantName,
+    fromUserId: user.id,
+    fromUserName: user.name,
+    fromRole: user.role,
+    toRole,
+    title: `${user.name} needs help: ${action.title}`,
+    body: body.message || `${user.name} was blocked from ${action.title}. Review the evidence and decide whether to request owner approval or handle it as manager.`,
+    action,
+    store,
+    target: action.target
+  };
+  DELEGATED_AGENT_INBOX.unshift(item);
+  DELEGATED_ACTION_AUDIT.unshift({
+    id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    at: now,
+    tenantId: user.tenantId,
+    tenantName: user.tenantName,
+    userId: user.id,
+    userName: user.name,
+    userRole: user.role,
+    storeName: store.businessName || "Unnamed storefront",
+    actionId: action.id,
+    actionTitle: action.title,
+    target: action.target,
+    decision: "messaged",
+    reason: `Escalated to ${roleLabel(toRole)} after a blocked permission check.`,
+    evidence: action.evidence,
+    executed: false
+  });
+  return { ok: true, item, message: `Message sent to ${roleLabel(toRole)}.` };
+}
+
+async function approveDelegatedRequest(body = {}) {
+  const approver = demoAgentUser(body.userId || body.user?.id || "owner-ava");
+  if (approver.role !== "owner") {
+    return { ok: false, error: `${approver.title} cannot approve owner-gated delegated requests.` };
+  }
+  const item = DELEGATED_AGENT_INBOX.find((entry) => entry.id === body.requestId || entry.id === body.id);
+  if (!item) return { ok: false, error: "Approval request not found." };
+  if (item.tenantId !== approver.tenantId) return { ok: false, error: "Approval request belongs to another tenant." };
+  if (item.type !== "approval") return { ok: false, error: "This inbox item is not an approval request." };
+
+  item.status = "approved";
+  item.approvedBy = approver.name;
+  item.approvedByUserId = approver.id;
+  item.updatedAt = new Date().toISOString();
+
+  const result = await executeDelegatedAction({
+    userId: approver.id,
+    store: item.store,
+    action: item.action,
+    intel: body.intel
+  });
+
+  item.status = result.executed ? "executed" : "approval_failed";
+  item.executionAuditId = result.auditEvent?.id || "";
+  item.externalRef = result.entire?.referenceId || "";
+  item.executionMessage = result.message || result.error || "";
+  item.updatedAt = new Date().toISOString();
+
+  return {
+    ...result,
+    ok: result.ok,
+    item,
+    message: result.executed
+      ? `${approver.name} approved and executed ${item.action.title}.`
+      : result.message || "Approval was recorded, but execution did not complete."
+  };
+}
+
+function roleLabel(role) {
+  if (role === "owner") return "owner";
+  if (role === "manager") return "manager";
+  if (role === "associate") return "associate";
+  return String(role || "teammate");
 }
 
 function agentIntegrationStatus() {
@@ -769,6 +935,61 @@ function recommendedDelegatedActions(store, intel) {
       },
       evidence: firstOpportunity?.title || apifyEvidence,
       nextStep: "Create a campaign draft in Entire, tagged to this storefront and user."
+    }),
+    delegatedAction({
+      id: "build-customer-recovery-segment",
+      title: "Build customer recovery segment",
+      target: "Entire.io Customer Segment",
+      category: "customer-recovery",
+      risk: "medium",
+      requiredScopes: ["customer.segment.write", "marketing.campaign.write"],
+      allowedRoles: ["owner", "manager"],
+      summary: `Group customers most likely to come back after ${topTheme} or service-related review signals.`,
+      payload: {
+        segmentName: `${store.businessName || "Store"} recovery audience`,
+        audience: `Recent visitors and lapsed locals near ${city}`,
+        trigger: market.topReviewTags?.length ? market.topReviewTags.map((tag) => tag.title).slice(0, 3) : ["recent demand shift"],
+        offer: `Invite back with a focused ${topTheme} recovery offer`
+      },
+      evidence: market.topReviewTags?.[0]?.title
+        ? `Review theme: ${market.topReviewTags[0].title}`
+        : apifyEvidence,
+      nextStep: "Create the customer segment and attach the live market evidence."
+    }),
+    delegatedAction({
+      id: "send-review-recovery-message",
+      title: "Send review recovery message",
+      target: "Entire.io Customer Message",
+      category: "customer-recovery",
+      risk: "medium",
+      requiredScopes: ["customer.message.write"],
+      allowedRoles: ["owner", "manager"],
+      summary: `Draft and send a customer-safe response for guests affected by the issue Warden found.`,
+      payload: {
+        channel: "email_or_sms",
+        template: `${store.businessName || "We"} noticed the issue and saved a small comeback offer for you.`,
+        guardrail: "No medical, legal, or sensitive claims; only store-owned customer records"
+      },
+      evidence: firstWarning?.title || market.topReviewTags?.[0]?.title || "Customer risk signal",
+      nextStep: "Send through Entire as the signed-in storefront user."
+    }),
+    delegatedAction({
+      id: "issue-recovery-credit",
+      title: "Issue recovery credit",
+      target: "Entire.io Customer Credit",
+      category: "customer-recovery",
+      risk: "high",
+      requiredScopes: ["customer.credit.write"],
+      allowedRoles: ["owner"],
+      approvalRoles: ["manager"],
+      summary: "Offer a tightly capped credit to save high-value repeat customers without giving every employee refund power.",
+      payload: {
+        cap: 150,
+        rule: "Repeat customers only; owner approval required",
+        reason: firstWarning?.title || "Customer retention risk"
+      },
+      evidence: firstWarning?.title || firstOpportunity?.title || "Retention opportunity",
+      nextStep: "Owner approves the credit policy; Entire records the user-scoped credit event."
     }),
     delegatedAction({
       id: "update-extended-hours",

@@ -2295,6 +2295,151 @@
       color: var(--subtle);
       font-size: 12px;
     }
+    .agent-feature-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
+      gap: 10px;
+    }
+    .agent-feature-card {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #12170f;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+    .agent-feature-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .agent-feature-title {
+      font-weight: 780;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.25;
+    }
+    .agent-feature-copy {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.42;
+      margin-top: 2px;
+    }
+    .agent-runbook {
+      display: grid;
+      gap: 6px;
+    }
+    .agent-runbook-row {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 7px;
+      padding: 8px;
+      background: #171c15;
+      min-width: 0;
+    }
+    .agent-runbook-num {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: var(--subtle);
+      font-family: var(--mono);
+      font-size: 11px;
+      background: #10140f;
+    }
+    .agent-runbook-main {
+      min-width: 0;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 720;
+      overflow-wrap: anywhere;
+    }
+    .agent-runbook-sub {
+      color: var(--subtle);
+      font-size: 11px;
+      font-family: var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .agent-mini-stat {
+      font-family: var(--mono);
+      color: var(--subtle);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .agent-receipt {
+      border: 1px solid rgba(54,194,143,.32);
+      border-radius: 8px;
+      background: rgba(54,194,143,.07);
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+    }
+    .agent-receipt-title {
+      color: var(--text);
+      font-weight: 760;
+      font-size: 12px;
+    }
+    .agent-receipt-row {
+      display: grid;
+      grid-template-columns: 118px 1fr;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+    .agent-inbox-list,
+    .agent-replay-list {
+      display: grid;
+      gap: 7px;
+    }
+    .agent-inbox-item,
+    .agent-replay-item {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 7px;
+      background: #11150f;
+      padding: 9px;
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .agent-inbox-item.pending { border-color: rgba(214,160,60,.48); }
+    .agent-inbox-item.executed,
+    .agent-replay-item.executed { border-color: rgba(54,194,143,.38); }
+    .agent-inbox-item.open,
+    .agent-replay-item.messaged { border-color: rgba(74,143,216,.38); }
+    .agent-inbox-meta,
+    .agent-replay-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--subtle);
+      font-size: 10px;
+      font-family: var(--mono);
+    }
+    .agent-inbox-title,
+    .agent-replay-title {
+      color: var(--text);
+      font-weight: 740;
+      line-height: 1.3;
+    }
+    .agent-inbox-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .customer-recovery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+      gap: 10px;
+    }
     .agent-action-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
@@ -2412,6 +2557,10 @@
     }
     @media (max-width: 760px) {
       .agent-select-wrap { min-width: 100%; }
+      .agent-feature-grid { grid-template-columns: 1fr; }
+      .agent-runbook-row { grid-template-columns: 24px 1fr; }
+      .agent-mini-stat { white-space: normal; }
+      .agent-receipt-row { grid-template-columns: 1fr; }
       .agent-audit-row { grid-template-columns: 1fr; }
     }
 
@@ -2685,7 +2834,14 @@
               </label>
             </div>
             <div class="agent-integrations" id="agentIntegrationStrip"></div>
+            <div class="agent-feature-grid">
+              <div class="agent-feature-card" id="agentAutopilotPanel"></div>
+              <div class="agent-feature-card" id="agentInboxPanel"></div>
+            </div>
+            <div id="agentReceiptPanel"></div>
+            <div class="agent-feature-card" id="agentCustomerPanel"></div>
             <div class="agent-action-grid" id="agentActionsPanel"></div>
+            <div class="agent-feature-card" id="agentReplayPanel"></div>
             <div class="agent-audit" id="agentAuditPanel"></div>
           </div>
         </section>

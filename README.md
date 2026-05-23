@@ -18,6 +18,9 @@ Open the **Delegated Agent** section near the top of the dashboard. It demonstra
 - **Scalekit** is the identity and permission boundary: the same action is allowed for the owner, approval-gated for the manager, and blocked for an associate.
 - **Entire.io** is the business system destination: Warden creates campaign, task, order, or CRM-style records as the scoped user.
 - **Audit trail** records every allowed, blocked, or approval-required attempt as `user + tenant + role + action + evidence`.
+- **Peak Day Autopilot** turns the current intelligence into a one-click prep plan: promo, hours, supplier, and compliance actions are executed, approval-gated, or blocked based on the selected user.
+- **Delegation Inbox** supports the 3-tab demo: a manager can request owner approval, an owner can approve and execute, and an associate can message the manager after a blocked permission check.
+- **Customer Recovery Agent** is a second flagship workflow: Warden detects customer risk, builds a recovery segment, drafts outreach, and gates high-risk credits to the owner.
 
 It runs in mock mode out of the box so you can demo immediately. Tomorrow, set `SCALEKIT_*` and `ENTIRE_*` env vars to sponsor credentials and point `SCALEKIT_AGENT_PROXY_URL` / `ENTIRE_API_URL` at the live integration endpoints without changing the UI or agent policy code.
 
@@ -249,6 +252,15 @@ Accepts `{ userId, store, intel }` and returns recommended user-scoped actions w
 
 ### `POST /api/agent/execute`
 Executes or records a delegated action. In mock mode it creates a Scalekit-style connected-account result, an Entire-style business record, and an audit event. In live mode it can call `SCALEKIT_AGENT_PROXY_URL` and `ENTIRE_API_URL`.
+
+### `GET /api/agent/inbox?userId=...`
+Returns approval requests and escalation messages visible to that user, role, and tenant.
+
+### `POST /api/agent/message`
+Accepts `{ userId, store, intel, action, toRole }` and creates a delegated message, used when an associate is blocked and needs a manager to pick up the action.
+
+### `POST /api/agent/approve`
+Accepts `{ userId, requestId }`. Owner approval executes the stored request as the owner and adds the result to the audit trail.
 
 ### `GET /api/agent/audit`
 Returns the in-memory audit trail for the current demo run.

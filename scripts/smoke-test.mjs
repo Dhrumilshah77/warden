@@ -19,11 +19,17 @@ await check("static app shell", async () => {
   assert(html.includes("Warden Helper"), "chatbot popup should be present");
   assert(html.includes("id=\"agentSection\""), "delegated agent console should be present");
   assert(html.includes("id=\"agentUserSelect\""), "delegated user selector should be present");
+  assert(html.includes("id=\"agentAutopilotPanel\""), "peak day autopilot panel should be present");
+  assert(html.includes("id=\"agentCustomerPanel\""), "customer recovery agent panel should be present");
+  assert(html.includes("id=\"agentInboxPanel\""), "delegation inbox should be present");
   assert(!html.includes("Review Later"), "app shell should use Notes, not Review Later");
   const appJs = await (await fetch(`${BASE}/app.js`)).text();
   assert(appJs.includes("Add to notes"), "card save buttons should say Add to notes");
   assert(appJs.includes("openStoreInfoView"), "View stored info should open the right-side store info view");
   assert(appJs.includes("executeAgentAction"), "delegated agent actions should be executable from the UI");
+  assert(appJs.includes("runPeakDayAutopilot"), "peak day autopilot should be wired in the UI");
+  assert(appJs.includes("Customer Recovery Agent"), "customer recovery agent should be rendered in the UI");
+  assert(appJs.includes("messageManagerForAction"), "blocked users should be able to message a manager");
   assert(!appJs.includes("removeStoreBtn"), "app JS should not wire a visible remove store button");
   assert(appJs.includes("buildChatReply"), "chatbot should have store-aware reply logic");
   assert(appJs.includes("warden:chatThreads"), "chatbot should persist per-store memory");
@@ -31,45 +37,52 @@ await check("static app shell", async () => {
 });
 
 await check("delegated action policy changes by user", async () => {
+  const store = {
+    businessName: "Mission Demo",
+    businessType: "restaurant",
+    address: "412 Mission St",
+    city: "San Francisco",
+    state: "CA"
+  };
+  const intelPayload = {
+    marketProvider: "apify",
+    marketPlaces: [{ name: "Nearby Restaurant" }],
+    marketIntelligence: { competitorsAnalyzed: 12, busyHeatmap: { peakDay: "Sat", peakHour: 19 }, topReviewTags: [{ title: "clam chowder" }] },
+    opportunities: [{ title: "Block peaks Sat 7pm", action: "Staff up" }],
+    warnings: [],
+    licenseChecklist: [{ name: "Retail food facility health permit", priority: "required", authority: "SFDPH", url: "https://www.sf.gov/" }]
+  };
   const owner = await postJson("/api/agent/actions", {
     userId: "owner-ava",
-    store: {
-      businessName: "Mission Demo",
-      businessType: "restaurant",
-      address: "412 Mission St",
-      city: "San Francisco",
-      state: "CA"
-    },
-    intel: {
-      marketProvider: "apify",
-      marketPlaces: [{ name: "Nearby Restaurant" }],
-      marketIntelligence: { competitorsAnalyzed: 12, busyHeatmap: { peakDay: "Sat", peakHour: 19 }, topReviewTags: [{ title: "clam chowder" }] },
-      opportunities: [{ title: "Block peaks Sat 7pm", action: "Staff up" }],
-      warnings: [],
-      licenseChecklist: [{ name: "Retail food facility health permit", priority: "required", authority: "SFDPH", url: "https://www.sf.gov/" }]
-    }
+    store,
+    intel: intelPayload
   });
   const associate = await postJson("/api/agent/actions", {
     userId: "associate-mia",
-    store: {
-      businessName: "Mission Demo",
-      businessType: "restaurant",
-      address: "412 Mission St",
-      city: "San Francisco",
-      state: "CA"
-    },
-    intel: {
-      marketProvider: "apify",
-      marketPlaces: [{ name: "Nearby Restaurant" }],
-      marketIntelligence: { competitorsAnalyzed: 12, busyHeatmap: { peakDay: "Sat", peakHour: 19 }, topReviewTags: [{ title: "clam chowder" }] },
-      opportunities: [{ title: "Block peaks Sat 7pm", action: "Staff up" }],
-      warnings: [],
-      licenseChecklist: [{ name: "Retail food facility health permit", priority: "required", authority: "SFDPH", url: "https://www.sf.gov/" }]
-    }
+    store,
+    intel: intelPayload
   });
   assert(owner.actions.some((action) => action.policy.decision === "allowed"), "owner should have at least one allowed delegated action");
   assert(associate.actions.some((action) => action.policy.decision === "blocked"), "associate should be blocked from privileged delegated actions");
+  assert(owner.actions.some((action) => action.category === "customer-recovery"), "customer recovery actions should be included");
   assert(owner.integrations.scalekit && owner.integrations.entire && owner.integrations.apify, "agent response should expose sponsor integration status");
+
+  const manager = await postJson("/api/agent/actions", { userId: "manager-ben", store, intel: intelPayload });
+  const creditAction = manager.actions.find((action) => action.id === "issue-recovery-credit");
+  assert(creditAction?.policy?.decision === "needs_approval", "manager should need owner approval for recovery credits");
+  const approvalRequest = await postJson("/api/agent/execute", { userId: "manager-ben", store, intel: intelPayload, action: creditAction });
+  assert(approvalRequest.executed === false, "manager recovery credit should not execute without owner approval");
+  assert(approvalRequest.inboxItem?.toRole === "owner", "approval request should route to owner inbox");
+  const ownerInbox = await json(`/api/agent/inbox?${new URLSearchParams({ userId: "owner-ava" })}`);
+  assert(ownerInbox.inbox.some((item) => item.id === approvalRequest.inboxItem.id && item.status === "pending"), "owner inbox should show manager approval request");
+  const approval = await postJson("/api/agent/approve", { userId: "owner-ava", requestId: approvalRequest.inboxItem.id });
+  assert(approval.executed === true, "owner approval should execute the pending request");
+
+  const blockedAction = associate.actions.find((action) => action.policy.decision === "blocked");
+  const message = await postJson("/api/agent/message", { userId: "associate-mia", store, intel: intelPayload, action: blockedAction, toRole: "manager" });
+  assert(message.item?.toRole === "manager", "associate escalation should route to manager");
+  const managerInbox = await json(`/api/agent/inbox?${new URLSearchParams({ userId: "manager-ben" })}`);
+  assert(managerInbox.inbox.some((item) => item.id === message.item.id), "manager inbox should show associate message");
 });
 
 await check("custom restock search uses exact supplier links", async () => {

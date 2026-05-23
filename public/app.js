@@ -1127,7 +1127,10 @@ const state = {
   agentUserId: localStorage.getItem("warden:agentUserId") || "owner-ava",
   agentSession: null,
   agentActions: [],
+  agentInbox: [],
+  agentReceipt: null,
   agentLoading: false,
+  agentAutopilotRunning: false,
   reviewItems: loadReviewItems(),
   chatThreads: loadChatThreads(),
   chatOpen: false,
@@ -1144,7 +1147,7 @@ const ids = [
   "storeCount", "storeSearch", "storesList", "addStoreBtn", "detailsStoreBtn", "editStoreBtn",
   "riskScore", "riskBar", "opportunityScore", "opportunityBar",
   "metricsGrid", "addressPill", "cityPill", "updatedText", "bannerStack", "subTabs",
-  "agentSection", "agentMeta", "agentUserSelect", "agentIntegrationStrip", "agentActionsPanel", "agentAuditPanel",
+  "agentSection", "agentMeta", "agentUserSelect", "agentIntegrationStrip", "agentAutopilotPanel", "agentInboxPanel", "agentReceiptPanel", "agentCustomerPanel", "agentActionsPanel", "agentReplayPanel", "agentAuditPanel",
   "storeInfoSection", "storeInfoMeta", "storeInfoPanel", "restockSection", "restockMeta", "restockForm", "restockQuery", "restockSuggestions", "restockResults", "opportunitiesSection", "opportunitiesMeta", "opportunitiesPanel", "warningsSection", "warningsMeta", "warningsPanel", "weatherSection", "weatherPanel",
   "reviewLaterSection", "reviewLaterMeta", "reviewLaterList", "signalsRoot", "checksModal", "sourceHealthList", "closeChecksModalBtn",
   "mapSection", "mapCanvas", "mapProviderChip", "mapProviderLabel", "mapStats",
@@ -1174,6 +1177,9 @@ function boot() {
   renderLanguageChrome();
   refreshAgentSession();
   refreshIntel();
+  window.setInterval(() => {
+    if (document.visibilityState === "visible" && state.agentSession) refreshAgentInbox();
+  }, 4500);
 }
 
 function wireEvents() {
@@ -2369,6 +2375,7 @@ async function refreshAgentActions() {
     if (!response.ok) throw new Error(`Agent actions failed with status ${response.status}`);
     const data = await response.json();
     state.agentActions = data.actions || [];
+    state.agentInbox = data.inbox || state.agentInbox || [];
     state.agentSession = { ...(state.agentSession || {}), ...data, users: state.agentSession?.users || data.users || [] };
   } catch (error) {
     state.agentActions = [];
@@ -2376,6 +2383,20 @@ async function refreshAgentActions() {
   } finally {
     state.agentLoading = false;
     renderAgentConsole();
+  }
+}
+
+async function refreshAgentInbox() {
+  try {
+    const response = await fetch(`/api/agent/inbox?${new URLSearchParams({ userId: state.agentUserId })}`);
+    if (!response.ok) throw new Error(`Agent inbox failed with status ${response.status}`);
+    const data = await response.json();
+    state.agentInbox = data.inbox || [];
+    renderAgentInbox();
+    renderAgentReplay();
+    wireAgentInboxButtons();
+  } catch {
+    state.agentInbox = state.agentInbox || [];
   }
 }
 
@@ -2410,27 +2431,217 @@ function renderAgentConsole() {
 
   const modeText = entries.map(([name, item]) => `${agentIntegrationLabel(name)}: ${item.mode || "mock"}`).join(" · ");
   els.agentMeta.textContent = modeText || "Scalekit + Entire ready";
+  renderAgentAutopilot();
+  renderAgentInbox();
+  renderAgentReceipt();
+  renderCustomerRecovery();
 
   if (state.agentLoading) {
     els.agentActionsPanel.innerHTML = loadingCards(4);
-  } else if (!state.agentActions.length) {
-    els.agentActionsPanel.innerHTML = `<div class="empty">${escapeHtml(session.actionError || session.error || "Agent actions load after the city scan finishes.")}</div>`;
   } else {
-    els.agentActionsPanel.innerHTML = state.agentActions.map(renderAgentActionCard).join("");
+    const coreActions = state.agentActions.filter((action) => action.category !== "customer-recovery");
+    if (!coreActions.length) {
+      els.agentActionsPanel.innerHTML = `<div class="empty">${escapeHtml(session.actionError || session.error || "Agent actions load after the city scan finishes.")}</div>`;
+    } else {
+      els.agentActionsPanel.innerHTML = coreActions.map(renderAgentActionCard).join("");
+    }
+  }
+
+  if (!state.agentLoading && !state.agentActions.length) {
+    els.agentActionsPanel.innerHTML = `<div class="empty">${escapeHtml(session.actionError || session.error || "Agent actions load after the city scan finishes.")}</div>`;
   }
 
   els.agentActionsPanel.querySelectorAll("[data-agent-execute]").forEach((button) => {
     button.addEventListener("click", () => executeAgentAction(button.dataset.agentExecute));
   });
+  els.agentActionsPanel.querySelectorAll("[data-agent-message]").forEach((button) => {
+    button.addEventListener("click", () => messageManagerForAction(button.dataset.agentMessage));
+  });
 
+  wireAgentFeatureButtons();
+  renderAgentReplay();
   renderAgentAudit(session.audit || []);
   queuePageTranslation();
 }
 
+function currentAgentUser() {
+  const users = state.agentSession?.users || [];
+  return users.find((user) => user.id === state.agentUserId) || state.agentSession?.user || state.agentSession?.selectedUser || null;
+}
+
+function renderAgentAutopilot() {
+  if (!els.agentAutopilotPanel) return;
+  const coreActions = state.agentActions.filter((action) => action.category !== "customer-recovery");
+  const allowed = coreActions.filter((action) => action.policy?.decision === "allowed").length;
+  const approvals = coreActions.filter((action) => action.policy?.decision === "needs_approval").length;
+  const blocked = coreActions.filter((action) => action.policy?.decision === "blocked").length;
+  const rows = coreActions.slice(0, 4).map((action, index) => `
+    <div class="agent-runbook-row">
+      <span class="agent-runbook-num">${index + 1}</span>
+      <div>
+        <div class="agent-runbook-main">${escapeHtml(action.title)}</div>
+        <div class="agent-runbook-sub">${escapeHtml(action.target)} · ${escapeHtml((action.policy?.decision || "blocked").replace("_", " "))}</div>
+      </div>
+      <span class="agent-mini-stat">${escapeHtml(action.risk || "medium")}</span>
+    </div>
+  `).join("");
+  els.agentAutopilotPanel.innerHTML = `
+    <div class="agent-feature-head">
+      <div>
+        <div class="agent-feature-title">Peak Day Autopilot</div>
+        <div class="agent-feature-copy">One operating plan from Warden's current demand, supply, hours, and compliance signals.</div>
+      </div>
+      <button class="btn good" data-agent-autopilot ${state.agentAutopilotRunning || !coreActions.length ? "disabled" : ""}>${state.agentAutopilotRunning ? "Running..." : "Prepare tomorrow"}</button>
+    </div>
+    <div class="agent-runbook">${rows || `<div class="empty">Waiting for delegated actions...</div>`}</div>
+    <div class="agent-evidence">Ready: ${allowed} execute · ${approvals} approval · ${blocked} blocked</div>
+  `;
+}
+
+function renderCustomerRecovery() {
+  if (!els.agentCustomerPanel) return;
+  const actions = state.agentActions.filter((action) => action.category === "customer-recovery");
+  const store = selectedStore() || {};
+  const avgTicket = Number(store.avgTicket || 0);
+  const recoveryValue = avgTicket ? Math.round(avgTicket * 18) : 720;
+  const topTheme = state.latestIntel?.marketIntelligence?.topReviewTags?.[0]?.title || "customer risk";
+  els.agentCustomerPanel.innerHTML = `
+    <div class="agent-feature-head">
+      <div>
+        <div class="agent-feature-title">Customer Recovery Agent</div>
+        <div class="agent-feature-copy">Find the people most likely to come back, route the offer through the right user, and record the action in Entire.</div>
+      </div>
+      <span class="agent-mini-stat">~$${escapeHtml(String(recoveryValue))} at stake</span>
+    </div>
+    <div class="agent-evidence">Signal: ${escapeHtml(topTheme)}</div>
+    <div class="customer-recovery-grid">
+      ${actions.length ? actions.map(renderAgentActionCard).join("") : `<div class="empty">Recovery actions load after the city scan finishes.</div>`}
+    </div>
+  `;
+}
+
+function renderAgentInbox() {
+  if (!els.agentInboxPanel) return;
+  const user = currentAgentUser();
+  const items = state.agentInbox || [];
+  const list = items.slice(0, 5).map((item) => {
+    const canApprove = user?.role === "owner" && item.type === "approval" && item.status === "pending";
+    return `
+      <div class="agent-inbox-item ${escapeAttr(item.status || "open")}">
+        <div class="agent-inbox-meta">
+          <span>${escapeHtml(item.type || "item")} · ${escapeHtml(item.status || "open")}</span>
+          <span>${escapeHtml(formatDateTime(item.updatedAt || item.at))}</span>
+        </div>
+        <div class="agent-inbox-title">${escapeHtml(item.title || "Delegated update")}</div>
+        <div>${escapeHtml(item.body || "")}</div>
+        <div class="agent-evidence">${escapeHtml(item.fromUserName || "User")} → ${escapeHtml(item.toRole || "team")} · ${escapeHtml(item.target || "")}</div>
+        ${canApprove ? `<div class="agent-inbox-foot"><button class="btn good" data-agent-approve="${escapeAttr(item.id)}">Approve and execute</button></div>` : ""}
+      </div>
+    `;
+  }).join("");
+  els.agentInboxPanel.innerHTML = `
+    <div class="agent-feature-head">
+      <div>
+        <div class="agent-feature-title">Delegation Inbox</div>
+        <div class="agent-feature-copy">Requests and messages scoped to ${escapeHtml(user?.name || "the selected user")}.</div>
+      </div>
+      <button class="btn" data-agent-refresh-inbox>Refresh</button>
+    </div>
+    <div class="agent-inbox-list">${list || `<div class="empty">No requests for this user yet.</div>`}</div>
+  `;
+}
+
+function renderAgentReceipt() {
+  if (!els.agentReceiptPanel) return;
+  const receipt = state.agentReceipt;
+  if (!receipt) {
+    els.agentReceiptPanel.innerHTML = "";
+    return;
+  }
+  const event = receipt.auditEvent || {};
+  const scopes = receipt.policy?.missingScopes?.length
+    ? `Missing: ${receipt.policy.missingScopes.join(", ")}`
+    : (receipt.policy?.reason || "Policy checked");
+  els.agentReceiptPanel.innerHTML = `
+    <div class="agent-receipt">
+      <div class="agent-feature-head">
+        <div class="agent-receipt-title">${escapeHtml(receipt.executed ? "Execution receipt" : "Policy receipt")}</div>
+        <button class="btn" data-agent-clear-receipt>Close</button>
+      </div>
+      <div class="agent-receipt-row"><span>Actor</span><span>${escapeHtml(event.userName || currentAgentUser()?.name || "Selected user")} · ${escapeHtml(event.userRole || currentAgentUser()?.role || "")}</span></div>
+      <div class="agent-receipt-row"><span>Tenant</span><span>${escapeHtml(event.tenantName || currentAgentUser()?.tenantName || "tenant")}</span></div>
+      <div class="agent-receipt-row"><span>Action</span><span>${escapeHtml(event.actionTitle || receipt.item?.action?.title || "Delegated action")}</span></div>
+      <div class="agent-receipt-row"><span>Policy</span><span>${escapeHtml(receipt.policy?.decision || event.decision || "logged")} · ${escapeHtml(scopes)}</span></div>
+      <div class="agent-receipt-row"><span>Scalekit</span><span>${escapeHtml(receipt.scalekit?.summary || event.scalekit || "Authorization recorded")}</span></div>
+      <div class="agent-receipt-row"><span>Entire</span><span>${escapeHtml(receipt.entire?.summary || event.entire || receipt.item?.externalRef || "Awaiting execution")}</span></div>
+    </div>
+  `;
+}
+
+function renderAgentReplay() {
+  if (!els.agentReplayPanel) return;
+  const auditItems = (state.agentSession?.audit || []).map((event) => ({
+    at: event.at,
+    status: event.decision || "logged",
+    title: `${event.userName || "User"} ${event.executed ? "executed" : "attempted"} ${event.actionTitle || "action"}`,
+    body: event.reason || event.target || ""
+  }));
+  const inboxItems = (state.agentInbox || []).map((item) => ({
+    at: item.updatedAt || item.at,
+    status: item.status || item.type || "open",
+    title: item.title || "Delegated inbox item",
+    body: item.body || ""
+  }));
+  const items = [...auditItems, ...inboxItems]
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+    .slice(0, 6);
+  els.agentReplayPanel.innerHTML = `
+    <div class="agent-feature-head">
+      <div>
+        <div class="agent-feature-title">Audit Replay</div>
+        <div class="agent-feature-copy">A judge-readable timeline of blocked, requested, approved, and executed agent moves.</div>
+      </div>
+      <span class="agent-mini-stat">${items.length} events</span>
+    </div>
+    <div class="agent-replay-list">
+      ${items.length ? items.map((item) => `
+        <div class="agent-replay-item ${escapeAttr(item.status || "logged")}">
+          <div class="agent-replay-meta"><span>${escapeHtml(item.status || "logged")}</span><span>${escapeHtml(formatDateTime(item.at))}</span></div>
+          <div class="agent-replay-title">${escapeHtml(item.title)}</div>
+          <div>${escapeHtml(item.body || "")}</div>
+        </div>
+      `).join("") : `<div class="empty">No replay events yet. Run an action, request approval, or message a manager.</div>`}
+    </div>
+  `;
+}
+
+function wireAgentFeatureButtons() {
+  els.agentAutopilotPanel?.querySelector("[data-agent-autopilot]")?.addEventListener("click", runPeakDayAutopilot);
+  wireAgentInboxButtons();
+  els.agentCustomerPanel?.querySelectorAll("[data-agent-execute]").forEach((button) => {
+    button.addEventListener("click", () => executeAgentAction(button.dataset.agentExecute));
+  });
+  els.agentCustomerPanel?.querySelectorAll("[data-agent-message]").forEach((button) => {
+    button.addEventListener("click", () => messageManagerForAction(button.dataset.agentMessage));
+  });
+  els.agentReceiptPanel?.querySelector("[data-agent-clear-receipt]")?.addEventListener("click", () => {
+    state.agentReceipt = null;
+    renderAgentReceipt();
+  });
+}
+
+function wireAgentInboxButtons() {
+  els.agentInboxPanel?.querySelector("[data-agent-refresh-inbox]")?.addEventListener("click", refreshAgentInbox);
+  els.agentInboxPanel?.querySelectorAll("[data-agent-approve]").forEach((button) => {
+    button.addEventListener("click", () => approveAgentRequest(button.dataset.agentApprove));
+  });
+}
+
 function renderAgentActionCard(action) {
   const decision = action.policy?.decision || "blocked";
-  const canClick = decision === "allowed" || decision === "needs_approval";
-  const buttonText = decision === "allowed" ? "Execute as user" : decision === "needs_approval" ? "Request approval" : "Blocked";
+  const isBlocked = decision === "blocked";
+  const buttonText = decision === "allowed" ? "Execute as user" : decision === "needs_approval" ? "Request approval" : "Message manager";
+  const buttonAttr = isBlocked ? `data-agent-message="${escapeAttr(action.id)}"` : `data-agent-execute="${escapeAttr(action.id)}"`;
   return `
     <article class="agent-action ${escapeAttr(decision)}">
       <div class="agent-action-head">
@@ -2445,13 +2656,40 @@ function renderAgentActionCard(action) {
       <div class="agent-evidence">Evidence: ${escapeHtml(action.evidence || "Warden scan")}</div>
       <div class="agent-action-foot">
         <span class="agent-evidence">Scopes: ${escapeHtml((action.requiredScopes || []).join(", ") || "none")}</span>
-        <button class="btn ${decision === "allowed" ? "good" : ""}" data-agent-execute="${escapeAttr(action.id)}" ${canClick ? "" : "disabled"}>${escapeHtml(buttonText)}</button>
+        <button class="btn ${decision === "allowed" ? "good" : ""}" ${buttonAttr}>${escapeHtml(buttonText)}</button>
       </div>
     </article>
   `;
 }
 
-async function executeAgentAction(actionId) {
+async function runPeakDayAutopilot() {
+  if (state.agentAutopilotRunning) return;
+  const actions = state.agentActions.filter((action) => action.category !== "customer-recovery");
+  if (!actions.length) return;
+  state.agentAutopilotRunning = true;
+  renderAgentAutopilot();
+  const results = [];
+  try {
+    for (const action of actions) {
+      const result = await executeAgentAction(action.id, { silent: true, keepPosition: true });
+      if (result) results.push(result);
+    }
+    const executed = results.filter((result) => result.executed).length;
+    const approvals = results.filter((result) => result.policy?.decision === "needs_approval").length;
+    const blocked = results.filter((result) => result.policy?.decision === "blocked").length;
+    renderBanners([{
+      level: executed ? "opportunity" : approvals ? "warning" : "critical",
+      title: "Peak Day Autopilot finished",
+      body: `${executed} executed, ${approvals} sent for approval, ${blocked} blocked for the selected user.`
+    }]);
+  } finally {
+    state.agentAutopilotRunning = false;
+    await refreshAgentActions();
+    scrollToSection(els.agentSection);
+  }
+}
+
+async function executeAgentAction(actionId, options = {}) {
   const action = state.agentActions.find((item) => item.id === actionId);
   const store = selectedStore();
   if (!action || !store) return;
@@ -2468,15 +2706,70 @@ async function executeAgentAction(actionId) {
     });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || `Agent execute failed with status ${response.status}`);
-    renderBanners([{
-      level: data.executed ? "opportunity" : data.policy?.decision === "needs_approval" ? "warning" : "critical",
-      title: data.executed ? "Delegated action executed" : data.policy?.decision === "needs_approval" ? "Approval required" : "Action blocked",
-      body: data.message || data.policy?.reason || "Agent policy decision recorded."
-    }]);
+    state.agentReceipt = data;
+    if (!options.silent) {
+      renderBanners([{
+        level: data.executed ? "opportunity" : data.policy?.decision === "needs_approval" ? "warning" : "critical",
+        title: data.executed ? "Delegated action executed" : data.policy?.decision === "needs_approval" ? "Approval requested" : "Action blocked",
+        body: data.message || data.policy?.reason || "Agent policy decision recorded."
+      }]);
+    }
+    await refreshAgentActions();
+    if (!options.keepPosition) scrollToSection(els.agentSection);
+    return data;
+  } catch (error) {
+    renderBanners([{ level: "critical", title: "Agent action failed", body: error.message }]);
+    return null;
+  }
+}
+
+async function messageManagerForAction(actionId) {
+  const action = state.agentActions.find((item) => item.id === actionId);
+  const store = selectedStore();
+  if (!action || !store) return;
+  try {
+    const response = await fetch("/api/agent/message", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userId: state.agentUserId,
+        store,
+        intel: compactIntelForAgent(state.latestIntel),
+        action,
+        toRole: "manager"
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || `Agent message failed with status ${response.status}`);
+    renderBanners([{ level: "info", title: "Manager messaged", body: data.message || "Escalation sent." }]);
     await refreshAgentActions();
     scrollToSection(els.agentSection);
   } catch (error) {
-    renderBanners([{ level: "critical", title: "Agent action failed", body: error.message }]);
+    renderBanners([{ level: "critical", title: "Message failed", body: error.message }]);
+  }
+}
+
+async function approveAgentRequest(requestId) {
+  const store = selectedStore();
+  try {
+    const response = await fetch("/api/agent/approve", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userId: state.agentUserId,
+        requestId,
+        store,
+        intel: compactIntelForAgent(state.latestIntel)
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || `Agent approval failed with status ${response.status}`);
+    state.agentReceipt = data;
+    renderBanners([{ level: data.executed ? "opportunity" : "warning", title: "Approval processed", body: data.message || "Request updated." }]);
+    await refreshAgentActions();
+    scrollToSection(els.agentSection);
+  } catch (error) {
+    renderBanners([{ level: "critical", title: "Approval failed", body: error.message }]);
   }
 }
 
