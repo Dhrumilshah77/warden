@@ -119,7 +119,23 @@ await check("specific restock searches avoid random photo fallbacks", async () =
   assert(data.category === "custom", `expected custom category, got ${data.category}`);
   assert(data.options.every((item) => /recliner chair/i.test(item.title || "")), "recliner rows should preserve exact search text");
   assert(!data.options.some((item) => /loremflickr|source\.unsplash/i.test(item.image || "")), "restock rows should not use unreliable random image services");
-  assert(data.options.every((item) => ["generated", "supplier", "apify", "commons"].includes(item.imageSource)), "restock image source should be traceable");
+  assert(data.options.every((item) => ["generated", "supplier", "apify", "commons", "preloaded"].includes(item.imageSource)), "restock image source should be traceable");
+});
+
+await check("generic restock searches use preloaded product images", async () => {
+  for (const q of ["chair", "table", "utensils", "jack", "car parts", "oil", "shoes"]) {
+    const data = await json(`/api/restock?${new URLSearchParams({
+      businessName: "Mission Demo",
+      businessType: q === "jack" || q === "car parts" || q === "oil" ? "auto repair" : "retail",
+      address: "412 Mission St",
+      city: "San Francisco",
+      state: "CA",
+      q
+    })}`);
+    assert(Array.isArray(data.options) && data.options.length > 0, `${q} should return restock rows`);
+    assert(data.options.some((item) => item.imageSource === "preloaded" || item.imageSource === "apify"), `${q} should use preloaded or live product images`);
+    assert(!data.options.some((item) => /loremflickr|source\.unsplash/i.test(item.image || "")), `${q} should not use unreliable random image services`);
+  }
 });
 
 await check("Santa Clara geocodes from address only", async () => {

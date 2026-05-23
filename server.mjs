@@ -206,6 +206,126 @@ const RESTOCK_PROVIDERS = [
   { id: "homedepot", name: "Home Depot", domain: "homedepot.com", color: "#d66f35", url: (q) => `https://www.homedepot.com/s/${encodeURIComponent(q)}` }
 ];
 
+const PRELOADED_PRODUCT_IMAGE_SETS = [
+  {
+    id: "chairs",
+    aliases: ["chair", "chairs", "seating", "stool", "stools", "recliner", "recliner chair", "lounge chair"],
+    images: [
+      {
+        title: "Folding Chair Lifetime",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Folding_Chair_Lifetime.jpg/250px-Folding_Chair_Lifetime.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Folding_Chair_Lifetime.jpg"
+      },
+      {
+        title: "FB14 Lounge Chair",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/FB14-Lounge-Chair_by_Cees_Braakman_for_Pastoe%2C_Utrecht%2C_NL.jpg/250px-FB14-Lounge-Chair_by_Cees_Braakman_for_Pastoe%2C_Utrecht%2C_NL.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:FB14-Lounge-Chair_by_Cees_Braakman_for_Pastoe,_Utrecht,_NL.jpg"
+      },
+      {
+        title: "BKF Chair",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/BKF_Chair.jpg/250px-BKF_Chair.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:BKF_Chair.jpg"
+      }
+    ]
+  },
+  {
+    id: "tables",
+    aliases: ["table", "tables", "desk", "desks", "counter", "counters", "patio table"],
+    images: [
+      {
+        title: "Table banquette",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Table-banquette_by_Annie_Tribel_1968_-_Design_Museum_Brussels_Belgium.jpg/250px-Table-banquette_by_Annie_Tribel_1968_-_Design_Museum_Brussels_Belgium.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Table-banquette_by_Annie_Tribel_1968_-_Design_Museum_Brussels_Belgium.jpg"
+      },
+      {
+        title: "Chef's table products",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Master_Kong_Chef%27s_Table_Products.jpg/250px-Master_Kong_Chef%27s_Table_Products.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Master_Kong_Chef%27s_Table_Products.jpg"
+      }
+    ]
+  },
+  {
+    id: "utensils",
+    aliases: ["utensil", "utensils", "cutlery", "flatware", "spoon", "spoons", "fork", "forks", "knife", "knives"],
+    images: [
+      {
+        title: "Vintage chromesteel cutlery",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Vintage_starker_kid_gold-coloured_chromesteel_cutlery%2C_Blokker_Winschoten_%282018%29_02.jpg/250px-Vintage_starker_kid_gold-coloured_chromesteel_cutlery%2C_Blokker_Winschoten_%282018%29_02.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Vintage_starker_kid_gold-coloured_chromesteel_cutlery,_Blokker_Winschoten_(2018)_02.jpg"
+      },
+      {
+        title: "IKEA Tillagd cutlery",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Tillagd%2C_IKEA_Delft_%282022%29_02.jpg/250px-Tillagd%2C_IKEA_Delft_%282022%29_02.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Tillagd,_IKEA_Delft_(2022)_02.jpg"
+      }
+    ]
+  },
+  {
+    id: "jacks",
+    aliases: ["jack", "jacks", "car jack", "floor jack", "hydraulic jack", "jack stand", "jack stands"],
+    images: [
+      {
+        title: "Hydraulic jack",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Hydraulic_jack.jpg/250px-Hydraulic_jack.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Hydraulic_jack.jpg"
+      },
+      {
+        title: "Sealey hydraulic jack and jack stand",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Sealey_hydraulic_jack_and_jack_stand.jpg/250px-Sealey_hydraulic_jack_and_jack_stand.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Sealey_hydraulic_jack_and_jack_stand.jpg"
+      }
+    ]
+  },
+  {
+    id: "car-parts",
+    aliases: ["car part", "car parts", "auto part", "auto parts", "automotive part", "automotive parts", "battery", "brake", "bumper", "filter"],
+    images: [
+      {
+        title: "Powerstart automotive battery",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Powerstart_Automotive_Battery.jpeg/250px-Powerstart_Automotive_Battery.jpeg",
+        url: "https://commons.wikimedia.org/wiki/File:Powerstart_Automotive_Battery.jpeg"
+      },
+      {
+        title: "Bumper to Bumper Auto Parts",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Bumper_to_Bumper_Auto_Parts%2C_Bristol%2C_Florida.jpg/250px-Bumper_to_Bumper_Auto_Parts%2C_Bristol%2C_Florida.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Bumper_to_Bumper_Auto_Parts,_Bristol,_Florida.jpg"
+      }
+    ]
+  },
+  {
+    id: "oil",
+    aliases: ["oil", "motor oil", "engine oil", "automotive oil", "synthetic oil"],
+    images: [
+      {
+        title: "Motor oil bottles",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Motor_oil_bottles_variousbrands.jpg/250px-Motor_oil_bottles_variousbrands.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Motor_oil_bottles_variousbrands.jpg"
+      },
+      {
+        title: "Pennzoil oil bottles",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Pennzoil_oil_bottles.jpg/250px-Pennzoil_oil_bottles.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Pennzoil_oil_bottles.jpg"
+      }
+    ]
+  },
+  {
+    id: "shoes",
+    aliases: ["shoe", "shoes", "sneaker", "sneakers", "footwear"],
+    images: [
+      {
+        title: "Pair of Camper shoes",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Pair_of_Camper_shoes_%282%29.jpg/250px-Pair_of_Camper_shoes_%282%29.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:Pair_of_Camper_shoes_(2).jpg"
+      },
+      {
+        title: "On Clouds running shoes",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/On_Clouds_running_shoes_with_Swiss_flag.jpg/250px-On_Clouds_running_shoes_with_Swiss_flag.jpg",
+        url: "https://commons.wikimedia.org/wiki/File:On_Clouds_running_shoes_with_Swiss_flag.jpg"
+      }
+    ]
+  }
+];
+
 const RESTOCK_CATALOG = [
   {
     id: "utensils",
@@ -1232,16 +1352,19 @@ async function buildRestockComparison(profile, params) {
   } catch (error) {
     liveProducts = null;
   }
-  let commonsImages = null;
+  const preloadedImages = preloadedProductImages(searchText);
+  let fallbackImages = preloadedImages;
   if (!liveProducts?.products?.some((product) => product?.image)) {
-    try {
-      commonsImages = await fetchCommonsImages(searchText);
-    } catch (error) {
-      commonsImages = null;
+    if (!fallbackImages?.length) {
+      try {
+        fallbackImages = await fetchCommonsImages(searchText);
+      } catch (error) {
+        fallbackImages = null;
+      }
     }
   }
 
-  const options = enrichRestockOptionsWithProductImages(baseOptions, liveProducts?.products, commonsImages);
+  const options = enrichRestockOptionsWithProductImages(baseOptions, liveProducts?.products, fallbackImages);
 
   return {
     ok: true,
@@ -1279,6 +1402,29 @@ function shouldUseCatalogRestockRows(query, category) {
   if (!query || !category) return false;
   const text = String(query).toLowerCase().replace(/\s+/g, " ").trim();
   return category.terms.some((term) => text === term);
+}
+
+function preloadedProductImages(query) {
+  const cleanQuery = String(query || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!cleanQuery) return null;
+  const matchedSet = PRELOADED_PRODUCT_IMAGE_SETS.find((set) =>
+    set.aliases.some((alias) => phraseMatches(cleanQuery, alias))
+  );
+  if (!matchedSet) return null;
+  return matchedSet.images.map((image, index) => ({
+    ...image,
+    source: "Preloaded Wikimedia Commons",
+    sourceType: "preloaded",
+    index,
+    score: 100 - index
+  }));
+}
+
+function phraseMatches(text, phrase) {
+  const cleanPhrase = String(phrase || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!cleanPhrase) return false;
+  const escaped = cleanPhrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\ /g, "\\s+");
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(text);
 }
 
 async function fetchCommonsImages(query) {
@@ -1378,7 +1524,7 @@ function enrichRestockOptionsWithProductImages(options, products, commonsImages)
     return {
       ...option,
       image: product?.image || openImage?.image || option.image,
-      imageSource: product?.image ? "apify" : "commons",
+      imageSource: product?.image ? "apify" : (openImage?.sourceType || "commons"),
       liveProductTitle: product?.title || "",
       liveProductUrl: product?.url || "",
       imageCredit: openImage?.source || "",
