@@ -470,8 +470,25 @@
     .banner-title { font-weight: 720; margin-bottom: 2px; }
     .banner-body { color: var(--muted); }
 
-    .filters { margin-bottom: 15px; }
-    .section-block { margin-top: 18px; scroll-margin-top: 92px; }
+    .section-nav-sticky {
+      position: sticky;
+      top: 0;
+      z-index: 12;
+      margin: 0 -20px 16px;
+      background: #0f130f;
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(0,0,0,.22);
+    }
+    .section-nav-sticky .monitor-head {
+      position: static;
+      margin: 0;
+      padding: 12px 20px 10px;
+      background: #0f130f;
+      border-bottom: 1px solid var(--line-soft);
+      backdrop-filter: none;
+    }
+    .filters { margin: 0; padding: 10px 20px 12px; }
+    .section-block { margin-top: 18px; scroll-margin-top: 176px; }
     .group-head { margin: 0 0 9px; }
     .group-count { color: var(--subtle); font-family: var(--mono); font-size: 10px; }
     .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 10px; }
@@ -2694,26 +2711,28 @@
           </div>
         </section>
 
-        <div class="monitor-head">
-          <div class="row">
-            <div class="pill-row">
-              <span class="pill active" id="addressPill">Location</span>
-              <span class="pill" id="cityPill">City</span>
+        <div class="section-nav-sticky" aria-label="Report navigation">
+          <div class="monitor-head">
+            <div class="row">
+              <div class="pill-row">
+                <span class="pill active" id="addressPill">Location</span>
+                <span class="pill" id="cityPill">City</span>
+              </div>
+              <div class="head-actions">
+                <button class="btn" id="storeNotesBtn">Notes <span class="badge" id="storeNotesCount">0</span></button>
+                <span class="updated" id="updatedText">Waiting</span>
+              </div>
             </div>
-            <div class="head-actions">
-              <button class="btn" id="storeNotesBtn">Notes <span class="badge" id="storeNotesCount">0</span></button>
-              <span class="updated" id="updatedText">Waiting</span>
+          </div>
+
+          <div class="filters">
+            <div class="filter-row" id="subTabs">
+              <button class="filter-btn active" data-filter="all">📊 Overview</button>
             </div>
           </div>
         </div>
 
         <div class="banner-stack" id="bannerStack"></div>
-
-        <div class="filters">
-          <div class="filter-row" id="subTabs">
-            <button class="filter-btn active" data-filter="all">📊 Overview</button>
-          </div>
-        </div>
 
         <section class="section-block compliance-section" id="complianceSection">
           <div class="group-head">
