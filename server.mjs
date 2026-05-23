@@ -564,6 +564,13 @@ export async function handleRequest(req, res) {
       return sendJson(res, payload.ok ? 200 : payload.fallback ? 503 : 500, payload);
     }
 
+    if (url.pathname === "/api/translate") {
+      if (req.method !== "POST") return sendJson(res, 405, { error: "POST only" });
+      const body = await readJsonBody(req);
+      const payload = await handleTranslate(body || {});
+      return sendJson(res, 200, payload);
+    }
+
     if (url.pathname === "/api/apify/run") {
       const actorId = url.searchParams.get("actorId");
       if (!actorId) {
@@ -2134,6 +2141,133 @@ async function callGeminiChat({ model, system, messages }) {
       fallback: true,
       error: `Gemini call failed: ${error.message}`
     };
+  }
+}
+
+const TRANSLATION_TARGETS = {
+  es: "Spanish",
+  zh: "Simplified Chinese",
+  vi: "Vietnamese",
+  fil: "Filipino"
+};
+const TRANSLATION_CACHE = new Map();
+
+async function handleTranslate(body = {}) {
+  const lang = String(body.lang || "").toLowerCase();
+  const targetLanguage = TRANSLATION_TARGETS[lang];
+  if (!targetLanguage) {
+    return { ok: true, lang: "en", provider: "local", translations: {} };
+  }
+
+  const unique = [];
+  const seen = new Set();
+  for (const value of Array.isArray(body.strings) ? body.strings : []) {
+    const text = sanitizeTranslationString(value);
+    if (!shouldTranslateServerSide(text) || seen.has(text)) continue;
+    seen.add(text);
+    unique.push(text);
+    if (unique.length >= 80) break;
+  }
+
+  const translations = {};
+  const missing = [];
+  for (const text of unique) {
+    const cacheKey = `${lang}\u0000${text}`;
+    if (TRANSLATION_CACHE.has(cacheKey)) {
+      translations[text] = TRANSLATION_CACHE.get(cacheKey);
+    } else {
+      missing.push(text);
+    }
+  }
+
+  let provider = "cache";
+  if (missing.length && process.env.GEMINI_API_KEY) {
+    provider = "gemini";
+    const generated = await callGeminiTranslate({ strings: missing, lang, targetLanguage });
+    for (const [source, translated] of Object.entries(generated)) {
+      const clean = sanitizeTranslationString(translated);
+      if (!clean) continue;
+      TRANSLATION_CACHE.set(`${lang}\u0000${source}`, clean);
+      translations[source] = clean;
+    }
+  } else if (missing.length) {
+    provider = "local";
+  }
+
+  return { ok: true, lang, provider, translations };
+}
+
+function sanitizeTranslationString(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function shouldTranslateServerSide(text) {
+  if (!text || text.length < 2 || text.length > 360) return false;
+  if (/^https?:\/\//i.test(text) || /^[\w.-]+@[\w.-]+\.\w+$/.test(text)) return false;
+  if (!/[A-Za-z]/.test(text)) return false;
+  if (/^[\d\s.,:$%/#+\-–—()]+$/.test(text)) return false;
+  if (/^(PDF|AI|API|URL|CSV|OK)$/i.test(text)) return false;
+  return true;
+}
+
+async function callGeminiTranslate({ strings, lang, targetLanguage }) {
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
+  const items = strings.map((text, index) => ({ id: String(index), text }));
+  const system = [
+    `Translate small-business dashboard UI strings into ${targetLanguage}.`,
+    "Return only strict JSON: an object whose keys are item ids and values are translated strings.",
+    "Preserve brand names, business names, people names, addresses, URLs, emails, coupon codes, product names, prices, dates, and numbers.",
+    "Do not add explanations. Keep the same meaning, tone, and rough length."
+  ].join(" ");
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{
+          role: "user",
+          parts: [{ text: JSON.stringify({ lang, targetLanguage, items }) }]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 6000
+        }
+      })
+    });
+    if (!response.ok) return {};
+    const data = await response.json();
+    const text = (data.candidates || [])
+      .flatMap((candidate) => candidate.content?.parts || [])
+      .map((part) => part.text || "")
+      .join("\n")
+      .trim();
+    const parsed = parseJsonObject(text);
+    const translations = {};
+    for (const item of items) {
+      const translated = parsed?.[item.id];
+      if (typeof translated === "string" && translated.trim()) translations[item.text] = translated.trim();
+    }
+    return translations;
+  } catch {
+    return {};
+  }
+}
+
+function parseJsonObject(text) {
+  const clean = String(text || "").trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    const start = clean.indexOf("{");
+    const end = clean.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) return null;
+    try { return JSON.parse(clean.slice(start, end + 1)); } catch { return null; }
   }
 }
 

@@ -1213,9 +1213,204 @@ Object.entries(PAGE_TRANSLATION_CARD_PHRASES).forEach(([lang, phrases]) => {
   PAGE_TRANSLATION_PHRASES[lang] = { ...(PAGE_TRANSLATION_PHRASES[lang] || {}), ...phrases };
 });
 
+const COMMON_TRANSLATION_PHRASES = {
+  es: {
+    "Small business autopilot": "Piloto automático para pequeños negocios",
+    "Nearby Competitors": "Competidores cercanos",
+    "Nearby": "Cercanos",
+    "nearby": "cerca",
+    "Competitors": "Competidores",
+    "Block rating": "Calificación de la zona",
+    "Block": "Zona",
+    "block": "zona",
+    "rating": "calificación",
+    "public reviews tracked": "reseñas públicas analizadas",
+    "reviews tracked": "reseñas analizadas",
+    "public reviews": "reseñas públicas",
+    "tracked": "analizadas",
+    "Peak sales window": "Ventana de ventas pico",
+    "Peak meal window": "Ventana pico de comidas",
+    "Peak": "Pico",
+    "sales": "ventas",
+    "meal": "comida",
+    "window": "ventana",
+    "Best play": "Mejor acción",
+    "play": "acción",
+    "Owner alerts": "Alertas del dueño",
+    "Required docs": "Documentos requeridos",
+    "required docs": "documentos requeridos",
+    "docs": "documentos",
+    "records in checklist": "registros en la lista",
+    "records": "registros",
+    "checklist": "lista",
+    "Block price tier": "Nivel de precio de la zona",
+    "block-wide": "en toda la zona",
+    "Dominant cuisine nearby": "Cocina dominante cercana",
+    "Dominant": "Dominante",
+    "cuisine": "cocina",
+    "Seafood Restaurant": "Restaurante de mariscos",
+    "Seafood": "Mariscos",
+    "Liquor Store": "Licorería",
+    "Store manager": "Gerente de tienda",
+    "manager": "gerente",
+    "associate": "asociado",
+    "customer": "cliente",
+    "customers": "clientes",
+    "requests": "solicitudes",
+    "tasks": "tareas",
+    "Delegated Agent": "Agente delegado",
+    "Delegated": "Delegado",
+    "Show what each person can do": "Muestra lo que cada persona puede hacer",
+    "Owner sees customer actions. Manager and associate see only their own requests and tasks.": "El dueño ve acciones de clientes. El gerente y el asociado solo ven sus propias solicitudes y tareas.",
+    "OPEN ROLE TABS": "ABRIR PESTAÑAS DE ROLES",
+    "is active here": "está activo aquí",
+    "Safety item to review": "Punto de seguridad para revisar",
+    "reports": "informes",
+    "recent": "recientes",
+    "Benchmark": "Referencia",
+    "active": "activo",
+    "here": "aquí",
+    "busy": "ocupado",
+    "of": "de",
+    "Open Store manager view": "Abrir vista de gerente de tienda",
+    "Front counter associate": "Asociado de caja",
+    "Open front counter associate view": "Abrir vista de asociado de caja",
+    "Built with Apify Google Places, review themes, supplier products": "Integrado con Apify Google Places, temas de reseñas y productos de proveedores",
+    "Built with Scalekit Store organizations, owner/manager/associate RBAC, user-scoped Gmail": "Integrado con organizaciones de tienda de Scalekit, permisos owner/manager/associate y Gmail por usuario",
+    "Built with Apify": "Integrado con Apify",
+    "Google Places, review themes, supplier products": "Google Places, temas de reseñas y productos de proveedores",
+    "Built with Scalekit": "Integrado con Scalekit",
+    "store organizations, owner/manager/associate RBAC, user-scoped Gmail": "organizaciones de tienda, permisos owner/manager/associate y Gmail por usuario",
+    "Tomorrow Prep": "Preparación para mañana",
+    "Righthand AI prepares the plan and only finishes actions the Owner is allowed to approve.": "Righthand AI prepara el plan y solo termina las acciones que el dueño puede aprobar.",
+    "Prepare plan": "Preparar plan",
+    "View AI work": "Ver trabajo de IA",
+    "Publish a Sat 7pm promo": "Publicar una promoción para sábado 7pm",
+    "This person has permission to do it.": "Esta persona tiene permiso para hacerlo.",
+    "Ready": "Listo",
+    "Update extended-hours recommendation": "Actualizar recomendación de horario extendido",
+    "Create compliance task": "Crear tarea de cumplimiento",
+    "Retail food facility health permit": "permiso sanitario para establecimiento de comida minorista",
+    "ask Owner": "pedir al dueño",
+    "ask manager": "pedir al gerente",
+    "Inbox": "Bandeja",
+    "Owner sees only requests and tasks meant for them.": "El dueño solo ve solicitudes y tareas destinadas a él.",
+    "Refresh": "Actualizar",
+    "No requests for this user yet.": "Aún no hay solicitudes para este usuario.",
+    "Apify scan": "Escaneo de Apify",
+    "Created a prep list for Sat 7pm: stock bags, prep veggie burrito bowl, confirm staffing.": "Creó una lista para sábado 7pm: reponer bolsas, preparar veggie burrito bowl y confirmar personal.",
+    "Found delivery fees rose faster than pickup sales; created a pickup-first promotion and delivery-fee review task.": "Detectó que las tarifas de delivery subieron más rápido que las ventas de pickup; creó una promoción centrada en pickup y una tarea para revisar tarifas.",
+    "Live Apify scan": "Escaneo en vivo de Apify",
+    "competitors analyzed": "competidores analizados",
+    "relevant competitors": "competidores relevantes",
+    "from Apify": "desde Apify",
+    "Apify found nearby places are about": "Apify detectó que los negocios cercanos están alrededor de",
+    "Apify review analysis shows nearby customers repeatedly mention": "El análisis de reseñas de Apify muestra que clientes cercanos mencionan repetidamente",
+    "review analysis shows": "el análisis de reseñas muestra",
+    "repeatedly mention": "mencionan repetidamente",
+    "outdoor seating": "asientos al aire libre",
+    "bar seating": "asientos de barra",
+    "View Apify evidence": "Ver evidencia de Apify",
+    "View evidence": "Ver evidencia",
+    "analyzed": "analizados",
+    "relevant": "relevantes",
+    "places": "negocios",
+    "found": "detectó",
+    "are": "están",
+    "about": "alrededor de",
+    "at": "a las",
+    "View": "Ver",
+    "evidence": "evidencia"
+  },
+  zh: {
+    "Small business autopilot": "小企业自动驾驶",
+    "Nearby Competitors": "附近竞争对手",
+    "Block rating": "街区评分",
+    "public reviews tracked": "已跟踪公开评价",
+    "Peak sales window": "销售高峰时段",
+    "Peak meal window": "用餐高峰时段",
+    "Best play": "最佳行动",
+    "Owner alerts": "店主提醒",
+    "Required docs": "必备文件",
+    "records in checklist": "清单中的记录",
+    "Block price tier": "街区价格层级",
+    "Dominant cuisine nearby": "附近主流菜系",
+    "Seafood Restaurant": "海鲜餐厅",
+    "Liquor Store": "酒类商店",
+    "Store manager": "门店经理",
+    "Delegated Agent": "委托代理",
+    "Show what each person can do": "显示每个人可以做什么",
+    "Owner sees customer actions. Manager and associate see only their own requests and tasks.": "店主可以看到客户相关操作。经理和店员只看到自己的请求和任务。",
+    "OPEN ROLE TABS": "打开角色标签页",
+    "is active here": "当前在这里操作",
+    "Safety item to review": "需要查看的安全事项",
+    "Benchmark": "参考标杆"
+  },
+  vi: {
+    "Small business autopilot": "Tự động vận hành cho doanh nghiệp nhỏ",
+    "Nearby Competitors": "Đối thủ gần đó",
+    "Block rating": "Điểm khu vực",
+    "public reviews tracked": "đánh giá công khai đã theo dõi",
+    "Peak sales window": "Khung giờ bán cao điểm",
+    "Peak meal window": "Khung giờ ăn cao điểm",
+    "Best play": "Hành động tốt nhất",
+    "Owner alerts": "Cảnh báo cho chủ",
+    "Required docs": "Giấy tờ bắt buộc",
+    "records in checklist": "hồ sơ trong danh sách",
+    "Block price tier": "Mức giá khu vực",
+    "Dominant cuisine nearby": "Ẩm thực nổi bật gần đó",
+    "Seafood Restaurant": "Nhà hàng hải sản",
+    "Liquor Store": "Cửa hàng rượu",
+    "Store manager": "Quản lý cửa hàng",
+    "Delegated Agent": "Tác vụ được ủy quyền",
+    "Show what each person can do": "Hiển thị mỗi người có thể làm gì",
+    "Owner sees customer actions. Manager and associate see only their own requests and tasks.": "Chủ thấy các hành động với khách hàng. Quản lý và nhân viên chỉ thấy yêu cầu và nhiệm vụ của riêng họ.",
+    "OPEN ROLE TABS": "MỞ TAB THEO VAI TRÒ",
+    "is active here": "đang hoạt động tại đây",
+    "Safety item to review": "Mục an toàn cần xem",
+    "Benchmark": "Mốc so sánh"
+  },
+  fil: {
+    "Small business autopilot": "Autopilot para sa maliit na negosyo",
+    "Nearby Competitors": "Kalapit na kakompetensya",
+    "Block rating": "Rating ng lugar",
+    "public reviews tracked": "public reviews na nasubaybayan",
+    "Peak sales window": "Pinakamalakas na oras ng benta",
+    "Peak meal window": "Pinakamalakas na oras ng pagkain",
+    "Best play": "Pinakamainam na aksyon",
+    "Owner alerts": "Mga alerto ng owner",
+    "Required docs": "Mga kailangang dokumento",
+    "records in checklist": "records sa checklist",
+    "Block price tier": "Presyo sa lugar",
+    "Dominant cuisine nearby": "Nangungunang cuisine sa paligid",
+    "Seafood Restaurant": "Seafood restaurant",
+    "Liquor Store": "Tindahan ng alak",
+    "Store manager": "Store manager",
+    "Delegated Agent": "Delegated agent",
+    "Show what each person can do": "Ipakita kung ano ang puwedeng gawin ng bawat tao",
+    "Owner sees customer actions. Manager and associate see only their own requests and tasks.": "Nakikita ng owner ang customer actions. Manager at associate ay sarili lang nilang requests at tasks ang nakikita.",
+    "OPEN ROLE TABS": "BUKSAN ANG ROLE TABS",
+    "is active here": "ang aktibo rito",
+    "Safety item to review": "Safety item na kailangang suriin",
+    "Benchmark": "Benchmark"
+  }
+};
+
+Object.entries(COMMON_TRANSLATION_PHRASES).forEach(([lang, phrases]) => {
+  PAGE_TRANSLATION_PHRASES[lang] = { ...(PAGE_TRANSLATION_PHRASES[lang] || {}), ...phrases };
+});
+
 const originalTextNodes = new WeakMap();
 const originalAttributeValues = new WeakMap();
+const LIVE_TRANSLATION_LANGUAGES = {
+  es: "Spanish",
+  zh: "Chinese",
+  vi: "Vietnamese",
+  fil: "Filipino"
+};
+const liveTranslationCache = new Map();
 let translationFrame = 0;
+let liveTranslationSeq = 0;
 const initialAgentUserId = agentUserIdFromUrl();
 const isAgentUserUrlLocked = Boolean(initialAgentUserId);
 
@@ -1438,11 +1633,15 @@ function queuePageTranslation() {
 
 function translateRenderedPage() {
   const lang = TRANSLATIONS[state.language] ? state.language : "en";
-  translateTextNodes(document.body, lang);
-  translateElementAttributes(lang);
+  const liveJobs = [
+    ...translateTextNodes(document.body, lang),
+    ...translateElementAttributes(lang)
+  ];
+  queueLiveTranslations(liveJobs, lang);
 }
 
 function translateTextNodes(root, lang) {
+  const liveJobs = [];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
@@ -1460,11 +1659,17 @@ function translateTextNodes(root, lang) {
   nodes.forEach((node) => {
     if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
     const original = originalTextNodes.get(node);
-    node.nodeValue = lang === "en" ? original : translateCopy(original, lang);
+    const translated = lang === "en" ? original : translateCopy(original, lang);
+    node.nodeValue = translated;
+    if (shouldLiveTranslate(original, translated, lang)) {
+      liveJobs.push({ kind: "text", node, original });
+    }
   });
+  return liveJobs;
 }
 
 function translateElementAttributes(lang) {
+  const liveJobs = [];
   const attributes = ["placeholder", "aria-label", "title"];
   document.querySelectorAll("[placeholder], [aria-label], [title]").forEach((element) => {
     if (element.closest(".translate-control")) return;
@@ -1476,9 +1681,95 @@ function translateElementAttributes(lang) {
     attributes.forEach((attr) => {
       if (!element.hasAttribute(attr)) return;
       if (!map[attr]) map[attr] = element.getAttribute(attr);
-      element.setAttribute(attr, lang === "en" ? map[attr] : translateCopy(map[attr], lang));
+      const translated = lang === "en" ? map[attr] : translateCopy(map[attr], lang);
+      element.setAttribute(attr, translated);
+      if (shouldLiveTranslate(map[attr], translated, lang)) {
+        liveJobs.push({ kind: "attribute", element, attr, original: map[attr] });
+      }
     });
   });
+  return liveJobs;
+}
+
+function shouldLiveTranslate(original, translated, lang) {
+  if (!LIVE_TRANSLATION_LANGUAGES[lang]) return false;
+  const source = String(original ?? "").trim();
+  if (!source || source.length < 2 || source.length > 360) return false;
+  if (/^https?:\/\//i.test(source) || /^[\w.-]+@[\w.-]+\.\w+$/.test(source)) return false;
+  if (!/[A-Za-z]/.test(source)) return false;
+  if (/^[\d\s.,:$%/#+\-–—()]+$/.test(source)) return false;
+  if (/^(PDF|AI|API|URL|CSV|OK)$/i.test(source)) return false;
+  const local = String(translated ?? "").trim();
+  return !local || local === source || /(\bowner\b|\bmanager\b|\bstaff\b|\bcustomer\b|\bstore\b|\bweather\b|\breview\b|\btraffic\b|\bprofit\b|\bsupplier\b|\bemail\b|\bdraft\b|\baction\b|\bpermit\b|\bwarning\b|\bopportunity\b)/i.test(local);
+}
+
+function queueLiveTranslations(jobs, lang) {
+  liveTranslationSeq += 1;
+  const seq = liveTranslationSeq;
+  if (!LIVE_TRANSLATION_LANGUAGES[lang] || !jobs.length) return;
+
+  const pending = [];
+  const seen = new Set();
+  jobs.forEach((job) => {
+    const source = String(job.original ?? "").trim();
+    const cacheKey = liveTranslationCacheKey(lang, source);
+    if (liveTranslationCache.has(cacheKey)) {
+      applyLiveTranslation(job, liveTranslationCache.get(cacheKey), lang);
+      return;
+    }
+    if (!seen.has(source)) {
+      seen.add(source);
+      pending.push(source);
+    }
+  });
+  if (!pending.length) return;
+
+  translateBatch(pending.slice(0, 80), lang).then((translations) => {
+    if (seq !== liveTranslationSeq || state.language !== lang) return;
+    Object.entries(translations || {}).forEach(([source, translated]) => {
+      if (translated && translated !== source) {
+        liveTranslationCache.set(liveTranslationCacheKey(lang, source), translated);
+      }
+    });
+    jobs.forEach((job) => {
+      const translated = liveTranslationCache.get(liveTranslationCacheKey(lang, String(job.original ?? "").trim()));
+      if (translated) applyLiveTranslation(job, translated, lang);
+    });
+  }).catch(() => {});
+}
+
+async function translateBatch(strings, lang) {
+  const response = await fetch("/api/translate", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ lang, strings })
+  });
+  if (!response.ok) return {};
+  const data = await response.json();
+  return data.translations || {};
+}
+
+function applyLiveTranslation(job, translated, lang) {
+  if (state.language !== lang || !translated) return;
+  if (job.kind === "text") {
+    if (!job.node?.isConnected || originalTextNodes.get(job.node) !== job.original) return;
+    job.node.nodeValue = preserveOuterWhitespace(job.original, translated);
+    return;
+  }
+  if (!job.element?.isConnected) return;
+  const map = originalAttributeValues.get(job.element);
+  if (map?.[job.attr] !== job.original) return;
+  job.element.setAttribute(job.attr, translated);
+}
+
+function liveTranslationCacheKey(lang, source) {
+  return `${lang}::${source}`;
+}
+
+function preserveOuterWhitespace(original, translated) {
+  const leading = String(original ?? "").match(/^\s*/)?.[0] || "";
+  const trailing = String(original ?? "").match(/\s*$/)?.[0] || "";
+  return `${leading}${String(translated ?? "").trim()}${trailing}`;
 }
 
 function translateCopy(value, lang) {
@@ -1500,9 +1791,7 @@ function translateCopy(value, lang) {
     text = text.replace(translationRegex(phrase), phrases[phrase]);
   }
 
-  if (text === original.trim()) {
-    text = text.replace(/[A-Za-z][A-Za-z'/-]*/g, (word) => phrases[word] || phrases[titleCase(word)] || word);
-  }
+  text = text.replace(/[A-Za-z][A-Za-z'/-]*/g, (word) => phrases[word] || phrases[titleCase(word)] || word);
   return `${leading}${text}${trailing}`;
 }
 
@@ -2738,6 +3027,7 @@ function renderAgentAutopilot() {
     <div class="agent-evidence">${allowed} ready · ${approvals} ask owner · ${blocked} ask manager</div>
     ${state.agentAutoLogOpen ? autoLog : ""}
   `;
+  queuePageTranslation();
 }
 
 function renderAgentAutoWorkLog() {
@@ -2805,6 +3095,7 @@ function renderCustomerRecovery() {
       ${actions.length ? actions.slice(0, 2).map(renderAgentActionCard).join("") : `<div class="empty">Recovery actions load after the city scan finishes.</div>`}
     </div>
   `;
+  queuePageTranslation();
 }
 
 function defaultEventEmailContext(signals = {}, finance = {}) {
@@ -2885,6 +3176,7 @@ function renderAgentAutonomy() {
     </div>
     <div class="agent-evidence">Uses Apify evidence and Scalekit Gmail. No purchase, public post, or hour change happens here.</div>
   `;
+  queuePageTranslation();
 }
 
 function ownerActionTitle(title = "") {
@@ -2944,6 +3236,7 @@ function renderAgentInbox() {
     </div>
     <div class="agent-inbox-list">${list || `<div class="empty">No requests for this user yet.</div>`}</div>
   `;
+  queuePageTranslation();
 }
 
 function renderAgentReceipt() {
@@ -2972,6 +3265,7 @@ function renderAgentReceipt() {
       <div class="agent-receipt-row"><span>Saved in</span><span>${escapeHtml(receipt.entire?.summary || event.entire || receipt.item?.externalRef || "Awaiting execution")}</span></div>
     </div>
   `;
+  queuePageTranslation();
 }
 
 function renderAgentReplay() {
@@ -3245,6 +3539,7 @@ function renderAgentAudit(audit) {
       ${event.gmail ? `<div class="agent-audit-row agent-audit-detail"><span>Gmail</span><span>${escapeHtml(event.gmail)}</span><span></span></div>` : ""}
     `).join("") : `<div class="empty">No actions yet. Run one request and every role tab will show the same trail.</div>`}
   `;
+  queuePageTranslation();
 }
 
 function compactIntelForAgent(intel) {

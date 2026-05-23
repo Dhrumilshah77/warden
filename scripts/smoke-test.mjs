@@ -43,6 +43,16 @@ await check("static app shell", async () => {
   assert(!/Review Later|Review later|review later/.test(appJs), "app JS should not expose Review Later wording");
 });
 
+await check("translation endpoint is wired", async () => {
+  const data = await postJson("/api/translate", {
+    lang: "es",
+    strings: ["Owner sees only requests and tasks meant for them."]
+  });
+  assert(data.ok === true, "translation endpoint should return ok=true");
+  assert(data.lang === "es", "translation endpoint should echo supported language");
+  assert(data.translations && typeof data.translations === "object", "translation endpoint should return a translations object");
+});
+
 await check("delegated action policy changes by user", async () => {
   const store = {
     businessName: "Mission Demo",
