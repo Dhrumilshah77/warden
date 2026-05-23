@@ -540,7 +540,6 @@
     .section-block { margin-top: 12px; scroll-margin-top: 176px; }
     .section-nav-sticky,
     #bannerStack,
-    #agentSection,
     #complianceSection,
     #storeInfoSection,
     #opportunitiesSection,
@@ -549,6 +548,20 @@
     #reviewLaterSection,
     #signalsSection {
       display: none !important;
+    }
+    .bottom-split {
+      display: grid;
+      grid-template-columns: minmax(300px, .72fr) minmax(460px, 1.28fr);
+      gap: 12px;
+      align-items: start;
+      margin-top: 12px;
+    }
+    .bottom-split .section-block {
+      margin-top: 0;
+    }
+    .bottom-split .group-head {
+      min-height: 28px;
+      margin-bottom: 7px;
     }
     .group-head { margin: 0 0 9px; }
     .group-count { color: var(--subtle); font-family: var(--mono); font-size: 10px; }
@@ -1578,6 +1591,7 @@
 
     /* === Map section === */
     .map-section { margin-top: 18px; }
+    .bottom-split .map-section { margin-top: 0; }
     .map-shell {
       position: relative;
       border: 2px solid var(--line);
@@ -1660,6 +1674,13 @@
       position: relative;
       isolation: isolate;
       z-index: 1;
+    }
+    .bottom-split .map-shell {
+      padding: 9px;
+      box-shadow: none;
+    }
+    .bottom-split .map-canvas {
+      height: 305px;
     }
     .map-canvas .leaflet-container {
       background: #0a0d0a;
@@ -2317,6 +2338,58 @@
       padding: 14px 16px;
       box-shadow: 4px 4px 0 0 rgba(255,144,232,.22);
     }
+    .bottom-split .agent-console {
+      max-height: 360px;
+      overflow-y: auto;
+      gap: 9px;
+      padding: 11px;
+      border-radius: 8px;
+      box-shadow: none;
+      background: #141914;
+    }
+    .bottom-split .agent-title {
+      font-size: 14px;
+    }
+    .bottom-split .agent-copy,
+    .bottom-split .agent-tab-kicker {
+      display: none;
+    }
+    .bottom-split .agent-control {
+      display: grid;
+      gap: 8px;
+    }
+    .bottom-split .agent-role-tabs {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .bottom-split .agent-role-tab {
+      min-height: 42px;
+      padding: 7px 8px;
+    }
+    .bottom-split .agent-role-name {
+      font-size: 12px;
+    }
+    .bottom-split .agent-role-sub {
+      font-size: 10px;
+    }
+    .bottom-split .agent-built-with {
+      justify-content: flex-start;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .bottom-split .agent-built-with span {
+      padding: 6px 7px;
+    }
+    .bottom-split .agent-feature-grid,
+    .bottom-split #agentAutopilotPanel,
+    .bottom-split #agentInboxPanel,
+    .bottom-split #agentAutonomyPanel,
+    .bottom-split #agentCustomerPanel,
+    .bottom-split #agentActionsPanel,
+    .bottom-split #agentReplayPanel {
+      display: none !important;
+    }
     .agent-control {
       display: flex;
       align-items: center;
@@ -2910,6 +2983,24 @@
       color: var(--muted);
       font-size: 12px;
     }
+    .bottom-split .agent-audit {
+      max-height: 150px;
+      overflow-y: auto;
+      padding-top: 8px;
+      gap: 6px;
+    }
+    .bottom-split .agent-audit-title {
+      font-size: 9px;
+    }
+    .bottom-split .agent-audit-row {
+      grid-template-columns: 72px minmax(0, 1fr) auto;
+      gap: 6px;
+      padding: 6px 7px;
+      font-size: 11px;
+    }
+    .bottom-split .agent-audit-decision {
+      font-size: 9px;
+    }
     .agent-audit-row b { color: var(--text); }
     .agent-audit-detail {
       margin-top: -5px;
@@ -2934,6 +3025,8 @@
       .agent-mini-stat { white-space: normal; }
       .agent-receipt-row { grid-template-columns: 1fr; }
       .agent-audit-row { grid-template-columns: 1fr; }
+      .bottom-split { grid-template-columns: 1fr; }
+      .bottom-split .agent-role-tabs { grid-template-columns: 1fr; }
     }
 
     /* === Compliance & Documents === */
@@ -3144,6 +3237,36 @@
         margin-top: 18px;
         break-inside: avoid;
       }
+      .bottom-split {
+        display: block;
+      }
+      .bottom-split .agent-console {
+        max-height: none;
+        overflow: visible;
+        box-shadow: none;
+      }
+      .bottom-split .agent-copy,
+      .bottom-split .agent-tab-kicker {
+        display: block;
+      }
+      .bottom-split .agent-feature-grid {
+        display: grid !important;
+      }
+      .bottom-split #agentAutopilotPanel,
+      .bottom-split #agentInboxPanel,
+      .bottom-split #agentAutonomyPanel,
+      .bottom-split #agentCustomerPanel,
+      .bottom-split #agentActionsPanel,
+      .bottom-split #agentReplayPanel {
+        display: grid !important;
+      }
+      .bottom-split .agent-audit {
+        max-height: none;
+        overflow: visible;
+      }
+      .bottom-split .map-canvas {
+        height: 300px;
+      }
       .source-link,
       .compliance-evidence {
         display: inline !important;
@@ -3263,52 +3386,54 @@
           </section>
         </section>
 
-        <section class="section-block agent-section" id="agentSection">
-          <div class="group-head">
-            <span class="kicker">Delegated Agent</span>
-            <span class="group-count" id="agentMeta">Scalekit + Entire ready</span>
-          </div>
-            <div class="agent-console">
-              <div class="agent-control">
-                <div>
-                <div class="agent-title">Show what each person can do</div>
-                <div class="agent-copy">Owner sees customer actions. Manager and associate see only their own requests and tasks.</div>
-              </div>
-              <div class="agent-tab-panel">
-                <div class="agent-tab-kicker">Open role tabs</div>
-                <div class="agent-role-tabs" id="agentRoleTabs"></div>
-              </div>
-              <label class="agent-select-wrap hidden" for="agentUserSelect">
-                <span>Acting as</span>
-                <select id="agentUserSelect"></select>
-              </label>
+        <div class="bottom-split">
+          <section class="section-block agent-section" id="agentSection">
+            <div class="group-head">
+              <span class="kicker">Report Trail</span>
+              <span class="group-count" id="agentMeta">Scalekit permissions</span>
             </div>
-            <div class="agent-integrations" id="agentIntegrationStrip"></div>
-            <div class="agent-feature-grid">
-              <div class="agent-feature-card" id="agentAutopilotPanel"></div>
-              <div class="agent-feature-card" id="agentInboxPanel"></div>
+              <div class="agent-console">
+                <div class="agent-control">
+                  <div>
+                  <div class="agent-title">Role and permission boundary</div>
+                  <div class="agent-copy">Owner sees customer actions. Manager and associate see only their own requests and tasks.</div>
+                </div>
+                <div class="agent-tab-panel">
+                  <div class="agent-tab-kicker">Open role tabs</div>
+                  <div class="agent-role-tabs" id="agentRoleTabs"></div>
+                </div>
+                <label class="agent-select-wrap hidden" for="agentUserSelect">
+                  <span>Acting as</span>
+                  <select id="agentUserSelect"></select>
+                </label>
+              </div>
+              <div class="agent-integrations" id="agentIntegrationStrip"></div>
+              <div class="agent-feature-grid">
+                <div class="agent-feature-card" id="agentAutopilotPanel"></div>
+                <div class="agent-feature-card" id="agentInboxPanel"></div>
+              </div>
+              <div id="agentReceiptPanel"></div>
+              <div class="agent-feature-card" id="agentAutonomyPanel"></div>
+              <div class="agent-feature-card" id="agentCustomerPanel"></div>
+              <div class="agent-action-grid" id="agentActionsPanel"></div>
+              <div class="agent-feature-card" id="agentReplayPanel"></div>
+              <div class="agent-audit" id="agentAuditPanel"></div>
             </div>
-            <div id="agentReceiptPanel"></div>
-            <div class="agent-feature-card" id="agentAutonomyPanel"></div>
-            <div class="agent-feature-card" id="agentCustomerPanel"></div>
-            <div class="agent-action-grid" id="agentActionsPanel"></div>
-            <div class="agent-feature-card" id="agentReplayPanel"></div>
-            <div class="agent-audit" id="agentAuditPanel"></div>
-          </div>
-        </section>
+          </section>
 
-        <section class="section-block map-section" id="mapSection">
-          <div class="group-head">
-            <div class="map-toolbar-left">
-              <span class="kicker">City Map</span>
-              <span class="map-provider-chip" id="mapProviderChip"><span class="chip-dot"></span><span id="mapProviderLabel">Loading map...</span></span>
+          <section class="section-block map-section" id="mapSection">
+            <div class="group-head">
+              <div class="map-toolbar-left">
+                <span class="kicker">City Map</span>
+                <span class="map-provider-chip" id="mapProviderChip"><span class="chip-dot"></span><span id="mapProviderLabel">Loading map...</span></span>
+              </div>
+              <div class="map-toolbar-right map-stats" id="mapStats"></div>
             </div>
-            <div class="map-toolbar-right map-stats" id="mapStats"></div>
-          </div>
-          <div class="map-shell">
-            <div class="map-canvas" id="mapCanvas"></div>
-          </div>
-        </section>
+            <div class="map-shell">
+              <div class="map-canvas" id="mapCanvas"></div>
+            </div>
+          </section>
+        </div>
 
         <div class="section-nav-sticky" aria-label="Report navigation">
           <div class="monitor-head">
