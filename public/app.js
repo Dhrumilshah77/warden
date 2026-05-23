@@ -2641,7 +2641,7 @@ function renderAgentConsole() {
   els.agentIntegrationStrip.innerHTML = entries.length ? `
     <div class="agent-built-with">
       <span><b>Built with Apify</b> Google Places, review themes, supplier products</span>
-      <span><b>Built with Scalekit</b> user-scoped Gmail and permission checks</span>
+      <span><b>Built with Scalekit</b> store organizations, owner/manager/associate RBAC, user-scoped Gmail</span>
     </div>
   ` : `<div class="empty">Loading connection status...</div>`;
 

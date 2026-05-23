@@ -338,6 +338,9 @@ SCALEKIT_ENVIRONMENT_URL=
 SCALEKIT_CLIENT_ID=
 SCALEKIT_CLIENT_SECRET=
 SCALEKIT_AGENT_PROXY_URL=
+SCALEKIT_DEMO_OWNER_EMAIL=dhrumildeepakshah@gmail.com
+SCALEKIT_DEMO_SECOND_EMAIL=dhrumil789789@gmail.com
+SCALEKIT_SEND_INVITES=0
 
 ENTIRE_API_KEY=
 ENTIRE_API_URL=
@@ -357,10 +360,23 @@ All keys are optional for local development. Missing Apify → falls back to Ope
 npm run dev           # Start the dev server at :4173
 npm run start         # Same as dev
 npm run smoke         # Regression suite (server must be running)
+npm run check:scalekit # Verify connected accounts for Apify/Gmail/Calendar/Zoom
+npm run sync:scalekit-saas # Create Store 1/2 orgs, owner/manager/associate roles, and demo members
 npm run apify-login   # Authenticate the Apify CLI
 npm run apify-scan "<query>"  # Probe the Google Places Actor
 npm run preload-sf    # Warm cache for all 12 SF storefronts (~8 min cold, instant warm)
 ```
+
+### Scalekit Auth for SaaS demo setup
+
+Run `npm run sync:scalekit-saas` after the `SCALEKIT_*` values are in `.env`. It creates:
+
+- Organizations: `Store 1 - Mission Street` and `Store 2 - Weekend Pop-up`
+- Roles: `owner`, `manager`, `associate`
+- Permissions: store intelligence, agent execution, owner approval, campaign draft/publish, customer send, supplier draft/purchase, teammate task/message, notes, and audit trail
+- Members: owner email as `owner` in both stores; second email as `manager` in Store 1 and `associate` in Store 2
+
+By default `SCALEKIT_SEND_INVITES=0`, so the script provisions the demo users without sending invite emails. Set it to `1` only if you want Scalekit invitation emails for the demo account.
 
 ---
 

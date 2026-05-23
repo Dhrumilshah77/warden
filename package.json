@@ -8,6 +8,7 @@
     "start": "node server.mjs",
     "smoke": "node scripts/smoke-test.mjs",
     "check:scalekit": "node scripts/check-scalekit.mjs",
+    "sync:scalekit-saas": "node scripts/sync-scalekit-saas.mjs",
     "apify-scan": "node scripts/apify-scan.mjs",
     "apify-login": "apify login",
     "preload-sf": "node scripts/preload-sf.mjs"

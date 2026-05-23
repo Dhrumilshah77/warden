@@ -48,6 +48,52 @@ const DELEGATED_ACTION_AUDIT = [];
 const DELEGATED_AGENT_INBOX = [];
 const DEMO_OWNER_EMAIL = process.env.DEMO_OWNER_EMAIL || "dhrumildeepakshah@gmail.com";
 const DEMO_CUSTOMER_EMAIL = process.env.DEMO_CUSTOMER_EMAIL || process.env.WARDEN_GMAIL_DEMO_TO || "dhrumil789789@gmail.com";
+const SCALEKIT_DEMO_STORES = [
+  {
+    id: "righthand-store-1",
+    name: "Store 1 - Mission Street",
+    externalId: "righthand-store-1",
+    address: "412 Mission St, San Francisco, CA"
+  },
+  {
+    id: "righthand-store-2",
+    name: "Store 2 - Weekend Pop-up",
+    externalId: "righthand-store-2",
+    address: "San Francisco, CA"
+  }
+];
+const SCALEKIT_DEMO_PERMISSIONS = {
+  owner: [
+    "store:intel_read",
+    "store:settings_write",
+    "agent:action_execute",
+    "agent:action_approve",
+    "marketing:campaign_draft",
+    "marketing:campaign_publish",
+    "customer:segment_write",
+    "customer:message_send",
+    "supplier:order_draft",
+    "supplier:order_purchase",
+    "team:task_assign",
+    "audit:trail_read"
+  ],
+  manager: [
+    "store:intel_read",
+    "agent:action_execute",
+    "marketing:campaign_draft",
+    "customer:segment_write",
+    "supplier:order_draft",
+    "team:task_assign",
+    "audit:trail_read"
+  ],
+  associate: [
+    "store:intel_read",
+    "agent:action_request",
+    "store:notes_write",
+    "team:message_create"
+  ]
+};
+const DEFAULT_SCALEKIT_STORE = SCALEKIT_DEMO_STORES[0];
 
 const DEMO_AGENT_USERS = [
   {
@@ -56,8 +102,11 @@ const DEMO_AGENT_USERS = [
     email: DEMO_OWNER_EMAIL,
     role: "owner",
     title: "Owner",
-    tenantId: "tenant-mission-ops",
-    tenantName: "Mission Operations Group",
+    tenantId: DEFAULT_SCALEKIT_STORE.externalId,
+    tenantName: DEFAULT_SCALEKIT_STORE.name,
+    scalekitOrganizationExternalId: DEFAULT_SCALEKIT_STORE.externalId,
+    scalekitRole: "owner",
+    scalekitPermissions: SCALEKIT_DEMO_PERMISSIONS.owner,
     scopes: [
       "storefront.hours.write",
       "marketing.campaign.write",
@@ -74,8 +123,11 @@ const DEMO_AGENT_USERS = [
     email: "ben@missionops.local",
     role: "manager",
     title: "Store manager",
-    tenantId: "tenant-mission-ops",
-    tenantName: "Mission Operations Group",
+    tenantId: DEFAULT_SCALEKIT_STORE.externalId,
+    tenantName: DEFAULT_SCALEKIT_STORE.name,
+    scalekitOrganizationExternalId: DEFAULT_SCALEKIT_STORE.externalId,
+    scalekitRole: "manager",
+    scalekitPermissions: SCALEKIT_DEMO_PERMISSIONS.manager,
     scopes: [
       "marketing.campaign.write",
       "customer.segment.write",
@@ -90,8 +142,11 @@ const DEMO_AGENT_USERS = [
     email: "mia@missionops.local",
     role: "associate",
     title: "Front counter associate",
-    tenantId: "tenant-mission-ops",
-    tenantName: "Mission Operations Group",
+    tenantId: DEFAULT_SCALEKIT_STORE.externalId,
+    tenantName: DEFAULT_SCALEKIT_STORE.name,
+    scalekitOrganizationExternalId: DEFAULT_SCALEKIT_STORE.externalId,
+    scalekitRole: "associate",
+    scalekitPermissions: SCALEKIT_DEMO_PERMISSIONS.associate,
     scopes: [
       "notes.write",
       "marketing.campaign.draft"
@@ -647,12 +702,31 @@ function buildAgentSession(params = new URLSearchParams()) {
     selectedUser,
     users: DEMO_AGENT_USERS,
     integrations: agentIntegrationStatus(),
+    scalekitSaas: scalekitSaasModel(selectedUser),
     message: "Apify supplies market evidence, Scalekit gates who the agent can act as, Entire receives the user-scoped business action, and Righthand AI records the audit trail.",
     judgingHooks: [
       "Same recommendation behaves differently for owner, manager, and associate.",
       "Every execution is scoped to tenant, user, role, and action permission.",
       "Blocked actions still create an audit event for accountability."
     ]
+  };
+}
+
+function scalekitSaasModel(user = DEMO_AGENT_USERS[0]) {
+  return {
+    activeOrganizationExternalId: user.scalekitOrganizationExternalId || DEFAULT_SCALEKIT_STORE.externalId,
+    activeRole: user.scalekitRole || user.role,
+    activePermissions: user.scalekitPermissions || [],
+    organizations: SCALEKIT_DEMO_STORES.map((store) => ({
+      id: store.id,
+      displayName: store.name,
+      externalId: store.externalId,
+      address: store.address
+    })),
+    roles: Object.entries(SCALEKIT_DEMO_PERMISSIONS).map(([name, permissions]) => ({
+      name,
+      permissions
+    }))
   };
 }
 
