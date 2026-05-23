@@ -209,6 +209,10 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "Oportunidades",
     "Warnings": "Alertas",
     "Weather & Climate": "Clima",
+    "Reviews": "Reseñas",
+    "Supplies": "Suministros",
+    "Peak Window": "Hora pico",
+    "Permits": "Permisos",
     "Owner Analytics": "Analítica del dueño",
     "Important numbers and AI actions for the next shift.": "Números importantes y acciones de IA para el próximo turno.",
     "Run AI actions": "Ejecutar acciones de IA",
@@ -357,6 +361,10 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "机会",
     "Warnings": "警报",
     "Weather & Climate": "天气与气候",
+    "Reviews": "评价",
+    "Supplies": "用品",
+    "Peak Window": "高峰时段",
+    "Permits": "许可证",
     "Owner Analytics": "店主分析",
     "Important numbers and AI actions for the next shift.": "下一班次的重要数字和 AI 操作。",
     "Run AI actions": "运行 AI 操作",
@@ -505,6 +513,10 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "Cơ hội",
     "Warnings": "Cảnh báo",
     "Weather & Climate": "Thời tiết & khí hậu",
+    "Reviews": "Đánh giá",
+    "Supplies": "Nguồn hàng",
+    "Peak Window": "Khung giờ cao điểm",
+    "Permits": "Giấy phép",
     "Owner Analytics": "Phân tích cho chủ cửa hàng",
     "Important numbers and AI actions for the next shift.": "Số liệu quan trọng và hành động AI cho ca tiếp theo.",
     "Run AI actions": "Chạy hành động AI",
@@ -653,6 +665,10 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "Oportunidad",
     "Warnings": "Babala",
     "Weather & Climate": "Panahon at klima",
+    "Reviews": "Reviews",
+    "Supplies": "Supplies",
+    "Peak Window": "Peak window",
+    "Permits": "Permits",
     "Owner Analytics": "Analytics ng owner",
     "Important numbers and AI actions for the next shift.": "Mahalagang numbers at AI actions para sa susunod na shift.",
     "Run AI actions": "Patakbuhin ang AI actions",
@@ -4292,7 +4308,7 @@ function renderChat() {
       return `
         <button class="helper-pin ${chip.kind || ""}" type="button" data-chat-suggestion="${escapeAttr(chip.text)}">
           <span class="helper-pin-icon">${icon}</span>
-          <span>${escapeHtml(chip.text)}</span>
+          <span>${escapeHtml(chip.label || chip.text)}</span>
         </button>
       `;
     }).join("");
@@ -4445,17 +4461,14 @@ function chatSuggestions(store) {
     : null;
 
   return [
-    { text: "How do I increase profit today?", kind: "intel" },
-    { text: "How do I get more footfall?", kind: "intel" },
-    { text: "How do I reduce waste or loss?", kind: "warn" },
-    { text: "How do I get more Google reviews?", kind: "" },
-    { text: "What should I prep for weather?", kind: "warn" },
-    { text: peak, kind: "intel" },
-    { text: warnQ, kind: "warn" },
-    { text: "Any local news or events near my shop?", kind: "intel" },
-    { text: "Find tortillas and takeout boxes nearby", kind: "" },
-    { text: "What permits or documents matter?", kind: "warn" },
-    { text: "Compare me to top-rated nearby", kind: "intel" }
+    { label: "Opportunities", text: "Show me the best opportunities to increase profit and footfall today.", kind: "intel" },
+    { label: "Warnings", text: warnQ || "Summarize the biggest warnings I should handle today.", kind: "warn" },
+    { label: "Weather", text: "What should I prep for weather today?", kind: "warn" },
+    { label: "Competitors", text: "Compare me to top-rated nearby competitors.", kind: "intel" },
+    { label: "Reviews", text: "How do I get more Google reviews this week?", kind: "" },
+    { label: "Supplies", text: "Find tortillas and takeout boxes nearby.", kind: "" },
+    { label: "Peak Window", text: peak || "What should I prep for the next peak sales window?", kind: "intel" },
+    { label: "Permits", text: "What permits or documents matter for my store?", kind: "warn" }
   ].filter((c) => c.text);
 }
 
