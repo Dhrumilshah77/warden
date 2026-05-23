@@ -1778,7 +1778,7 @@ function renderRestockCard(item) {
         </div>
       </div>
       <div class="restock-product" role="cell">
-        <img class="restock-image" src="${escapeAttr(item.image)}" data-fallback-image="${escapeAttr(item.fallbackImage || item.image)}" alt="${escapeAttr(item.title)}" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallbackImage" />
+        <img class="restock-image" src="${escapeAttr(item.image)}" data-fallback-image="${escapeAttr(item.fallbackImage || item.image)}" alt="${escapeAttr(item.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=this.dataset.fallbackImage" />
         <div>
           <div class="restock-title">${escapeHtml(item.title)}</div>
           <div class="restock-fit">${escapeHtml(item.fit || "Best use varies")}</div>

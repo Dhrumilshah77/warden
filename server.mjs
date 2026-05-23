@@ -1215,8 +1215,8 @@ async function buildRestockComparison(profile, params) {
   const directCategory = matchRestockCategory(query);
   const category = directCategory || defaultRestockCategory(businessType);
   const searchText = query || category.search;
-  const isCustomSearch = Boolean(query && !directCategory);
-  const options = (isCustomSearch
+  const isCustomSearch = Boolean(query && !shouldUseCatalogRestockRows(query, directCategory));
+  const baseOptions = (isCustomSearch
     ? customRestockOptions(searchText, businessType)
     : category.options.map((option) => restockOption(option, category, searchText, businessType)))
       .sort((a, b) => b.score - a.score)
@@ -1230,6 +1230,8 @@ async function buildRestockComparison(profile, params) {
   } catch (error) {
     liveProducts = null;
   }
+
+  const options = enrichRestockOptionsWithLiveProducts(baseOptions, liveProducts?.products);
 
   return {
     ok: true,
@@ -1261,6 +1263,29 @@ async function buildRestockComparison(profile, params) {
       comparison: buildProductComparison(liveProducts.products)
     } : null
   };
+}
+
+function shouldUseCatalogRestockRows(query, category) {
+  if (!query || !category) return false;
+  const text = String(query).toLowerCase().replace(/\s+/g, " ").trim();
+  return category.terms.some((term) => text === term);
+}
+
+function enrichRestockOptionsWithLiveProducts(options, products) {
+  if (!Array.isArray(options) || !Array.isArray(products) || !products.length) return options;
+  const withImages = products.filter((product) => product?.image);
+  if (!withImages.length) return options;
+  return options.map((option, index) => {
+    if (option.imageSource === "supplier") return option;
+    const product = withImages[index % withImages.length];
+    return {
+      ...option,
+      image: product.image,
+      imageSource: "apify",
+      liveProductTitle: product.title || "",
+      liveProductUrl: product.url || ""
+    };
+  });
 }
 
 function buildProductComparison(products) {
@@ -1315,6 +1340,7 @@ function customRestockOptions(query, businessType) {
 function estimatedProductProfile(query, businessType) {
   const text = String(query || "").toLowerCase();
   const restaurant = ["restaurant", "food stall", "coffee shop"].includes(businessType);
+  if (/(recliner|sofa|couch|loveseat|lounge chair)/i.test(text)) return { prefix: "Commercial lounge", commercialLabel: "Business-grade lounge", basePrice: 179, pack: "1 chair", smallPack: "1 chair", bulkPack: "2 chair pack", businessProvider: restaurant ? "webstaurant" : "uline" };
   if (/(table|desk|counter|stand)/i.test(text)) return { prefix: "Commercial", commercialLabel: "Business-grade", basePrice: 89, pack: "1 item", smallPack: "1 item", bulkPack: "2-4 item pack", businessProvider: restaurant ? "webstaurant" : "uline" };
   if (/(chair|stool|seat)/i.test(text)) return { prefix: "Stackable", commercialLabel: "Commercial", basePrice: 49, pack: "2 count", smallPack: "1-2 count", bulkPack: "4 count", businessProvider: restaurant ? "webstaurant" : "uline" };
   if (/(glove|napkin|cup|lid|container|bag|straw|plate|bowl|utensil|fork|spoon|knife)/i.test(text)) return { prefix: "Bulk", commercialLabel: "Foodservice", basePrice: 24, pack: "100-500 count", smallPack: "40-100 count", bulkPack: "500-1000 count", businessProvider: "webstaurant" };
@@ -1334,6 +1360,7 @@ function restockOption(option, category, query, businessType) {
   const supplierQuery = String(option.searchQuery || `${query} ${option.title}`).replace(/\s+/g, " ").trim();
   const fallbackImage = restockImageDataUri(provider, option.title, category.id);
   const extractedImage = option.imageUrl || option.thumbnailUrl || "";
+  const queryImage = restockQueryPhotoUrl(query, provider.id, option.title);
 
   return {
     id: `${provider.id}-${slugify(option.title)}`,
@@ -1354,10 +1381,37 @@ function restockOption(option, category, query, businessType) {
     why: `${provider.name} is a strong compare point for ${option.fit.toLowerCase()}: ${option.salesSignal.toLowerCase()}, ${option.pack}, and ${option.stock.toLowerCase()}.`,
     caution: "Confirm live price, shipping, return terms and exact dimensions before purchase.",
     url: provider.url(supplierQuery),
-    image: extractedImage || fallbackImage,
+    image: extractedImage || queryImage || fallbackImage,
     fallbackImage,
-    imageSource: extractedImage ? "supplier" : "generated"
+    imageSource: extractedImage ? "supplier" : queryImage ? "query-photo" : "generated"
   };
+}
+
+function restockQueryPhotoUrl(query, providerId, title) {
+  const keywords = restockPhotoKeywords(query || title);
+  if (!keywords) return "";
+  const lock = stableImageLock(`${providerId}|${query}|${title}`);
+  return `https://loremflickr.com/180/140/${keywords}?lock=${lock}`;
+}
+
+function restockPhotoKeywords(value) {
+  const stopWords = new Set(["best", "selling", "commercial", "business", "grade", "bulk", "pack", "case", "count", "item", "option"]);
+  const words = String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length > 2 && !stopWords.has(word))
+    .slice(0, 4);
+  return words.map((word) => encodeURIComponent(word)).join(",");
+}
+
+function stableImageLock(value) {
+  let hash = 0;
+  for (const char of String(value || "")) {
+    hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+  }
+  return Math.abs(hash % 9999) + 1;
 }
 
 function restockSummary(query, category, options, profile) {
