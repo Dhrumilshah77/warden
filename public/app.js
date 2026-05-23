@@ -2479,7 +2479,7 @@ function renderAgentConsole() {
   const entries = Object.entries(integrations);
   els.agentIntegrationStrip.innerHTML = entries.length ? `
     <div class="agent-integration-summary">
-      ${escapeHtml(currentUser?.title || "User")} permissions are checked before Warden acts. Work is saved in Entire, and market evidence comes from Apify.
+      ${escapeHtml(currentUser?.title || "User")} permissions are checked before Warden acts. Apify finds the signal; Gmail runs as the connected owner through Scalekit.
     </div>
   ` : `<div class="empty">Loading connection status...</div>`;
 
@@ -2591,7 +2591,7 @@ function renderAgentAutoWorkLog() {
       <div class="autonomy-row">
         <div>
           <div class="autonomy-row-title">${escapeHtml(event.actionTitle || "AI work")}</div>
-          <div class="autonomy-row-copy">${escapeHtml(event.reason || event.evidence || "Completed by Warden")}</div>
+          <div class="autonomy-row-copy">${escapeHtml(event.gmail || event.reason || event.evidence || "Completed by Warden")}</div>
         </div>
         <span class="agent-decision allowed">done</span>
       </div>
@@ -2675,9 +2675,9 @@ function renderAgentAutonomy() {
     <div class="agent-feature-head">
       <div>
         <div class="agent-feature-title">Customer Comeback List</div>
-        <div class="agent-feature-copy">Owner-only list of customers Warden found for a draft comeback email. Nothing is sent until the owner approves.</div>
+        <div class="agent-feature-copy">Owner-only customer memory. Warden can create the Gmail draft as the owner and keep the rest as internal work.</div>
       </div>
-      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Working..." : "Run AI work"}</button>
+      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Working..." : "Run automations"}</button>
     </div>
     <div class="autonomy-summary">
       <div class="autonomy-stat"><strong>${escapeHtml(String(signals.lapsedCount ?? "--"))}</strong><span>people to win back</span></div>
@@ -2686,7 +2686,7 @@ function renderAgentAutonomy() {
       <div class="autonomy-stat"><strong>${escapeHtml(String(finance.cashBufferDays ?? "--"))}</strong><span>cash buffer days</span></div>
     </div>
     <div class="customer-send-list">${sendRows || `<div class="empty">${escapeHtml(plan.error || "Customer list loads after the scan finishes.")}</div>`}</div>
-    <div class="agent-evidence">Also creates safe internal work: ${escapeHtml(safeWork || "manager checklist and supplier draft")}.</div>
+    <div class="agent-evidence">Uses Apify evidence and live Gmail through Scalekit when connected. Also creates safe internal work: ${escapeHtml(safeWork || "manager checklist and supplier draft")}.</div>
   `;
 }
 
@@ -2743,6 +2743,7 @@ function renderAgentReceipt() {
       <div class="agent-receipt-row"><span>Action</span><span>${escapeHtml(event.actionTitle || receipt.item?.action?.title || "Delegated action")}</span></div>
       <div class="agent-receipt-row"><span>Permission</span><span>${escapeHtml(agentDecisionText(receipt.policy?.decision || event.decision))} · ${escapeHtml(scopes)}</span></div>
       <div class="agent-receipt-row"><span>Login check</span><span>${escapeHtml(receipt.scalekit?.summary || event.scalekit || "Authorization recorded")}</span></div>
+      ${event.gmail || receipt.gmail?.summary ? `<div class="agent-receipt-row"><span>Gmail</span><span>${escapeHtml(receipt.gmail?.summary || event.gmail)}</span></div>` : ""}
       <div class="agent-receipt-row"><span>Saved in</span><span>${escapeHtml(receipt.entire?.summary || event.entire || receipt.item?.externalRef || "Awaiting execution")}</span></div>
     </div>
   `;
@@ -2856,19 +2857,22 @@ async function runAutonomousActions() {
       body: JSON.stringify({
         userId: state.agentUserId,
         store,
-        intel: compactIntelForAgent(state.latestIntel)
+        intel: compactIntelForAgent(state.latestIntel),
+        liveConnectors: true
       })
     });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || `Autonomous run failed with status ${response.status}`);
+    const gmailEvent = data.auditEvents?.find((event) => event.gmail);
     state.agentReceipt = {
       executed: true,
       policy: { decision: "auto_safe", reason: `${data.count || 0} low-risk internal actions created automatically.` },
-      auditEvent: data.auditEvents?.[0],
+      auditEvent: gmailEvent || data.auditEvents?.[0],
       scalekit: { summary: "Tenant-scoped autonomous guardrails checked" },
-      entire: { summary: "Entire draft/task/segment records created" }
+      entire: { summary: "Entire draft/task/segment records created" },
+      gmail: gmailEvent?.gmail ? { summary: gmailEvent.gmail } : null
     };
-    renderBanners([{ level: "opportunity", title: "Drafts created", body: data.message || "Warden created owner-only customer drafts and internal tasks." }]);
+    renderBanners([{ level: "opportunity", title: "Automations finished", body: data.message || "Warden created a Gmail draft plus owner-only internal work." }]);
     await refreshAgentAutonomy();
     await refreshAgentActions();
     await refreshAgentTrail();
@@ -3003,6 +3007,7 @@ function renderAgentAudit(audit) {
         <span><b>${escapeHtml(event.userName || "User")}</b> ${escapeHtml(event.executed ? "completed" : "asked for")} ${escapeHtml(event.actionTitle || "action")}</span>
         <span class="agent-audit-decision">${escapeHtml(agentDecisionText(event.decision || "logged"))}</span>
       </div>
+      ${event.gmail ? `<div class="agent-audit-row agent-audit-detail"><span>Gmail</span><span>${escapeHtml(event.gmail)}</span><span></span></div>` : ""}
     `).join("") : `<div class="empty">No actions yet. Run one request and every role tab will show the same trail.</div>`}
   `;
 }
@@ -3021,7 +3026,7 @@ function compactIntelForAgent(intel) {
 }
 
 function agentIntegrationLabel(name) {
-  const labels = { apify: "Apify", scalekit: "Scalekit", entire: "Entire", gemini: "Gemini" };
+  const labels = { apify: "Apify", scalekit: "Scalekit", gmail: "Gmail", entire: "Entire", gemini: "Gemini" };
   return labels[name] || titleCase(name);
 }
 

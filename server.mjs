@@ -765,6 +765,7 @@ async function executeAutonomousActions(body = {}) {
   const user = demoAgentUser(body.userId || body.user?.id || "owner-ava");
   const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
   const plan = buildAutonomousAgentPlan({ userId: user.id, store, intel: body.intel });
+  const liveConnectors = body.liveConnectors === true || body.liveConnectors === "true";
   const now = new Date().toISOString();
   const results = [];
   const auditEvents = [];
@@ -775,6 +776,9 @@ async function executeAutonomousActions(body = {}) {
       summary: `Autonomous safe action scoped to tenant ${user.tenantId}; delegated by ${user.email}`
     };
     const entire = await executeEntireAction({ user, store, action, scalekit });
+    const gmail = liveConnectors
+      ? await executeGmailAutomation({ user, store, action, demoRecipient: body.gmailDemoRecipient || body.demoRecipient })
+      : null;
     const auditEvent = {
       id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
       at: new Date().toISOString(),
@@ -795,11 +799,12 @@ async function executeAutonomousActions(body = {}) {
       executed: true,
       scalekit: scalekit.summary,
       entire: entire.summary,
+      gmail: gmail?.summary,
       externalRef: entire.referenceId
     };
     DELEGATED_ACTION_AUDIT.unshift(auditEvent);
     auditEvents.push(auditEvent);
-    results.push({ action, scalekit, entire, auditEvent });
+    results.push({ action, scalekit, entire, gmail, auditEvent });
 
     if (action.inboxRole) {
       const inboxAction = action.inboxRole === "owner" ? action : redactAutonomousAction(action);
@@ -832,7 +837,10 @@ async function executeAutonomousActions(body = {}) {
     auditEvents,
     inbox: agentInboxForUser(user),
     audit: agentAuditForUser(user, 20),
-    message: `Warden Autopilot safely created ${results.length} internal drafts, tasks, segments, or teammate messages.`
+    liveConnectors,
+    message: liveConnectors
+      ? `Warden Autopilot created ${results.length} automations and used Scalekit Gmail when a live email draft was safe.`
+      : `Warden Autopilot safely created ${results.length} internal drafts, tasks, segments, or teammate messages.`
   };
 }
 
@@ -987,15 +995,16 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
     }),
     autonomousAction({
       id: "auto-send-churn-save-email",
-      title: "Auto-send regular comeback email",
-      target: "Entire.io Email Send",
-      summary: `Sent one quiet win-back email to an opted-in regular who usually buys ${signals.topItem}.`,
-      guardrail: "Opted-in regular only, under $5 offer value, one send per 30 days, no SMS or public post.",
+      title: "Auto-create Gmail comeback draft",
+      target: "Gmail Draft via Scalekit",
+      summary: `Creates a Gmail comeback draft for an opted-in regular who usually buys ${signals.topItem}.`,
+      guardrail: "Opted-in regular only, under $5 offer value, one draft per 30 days, no SMS or public post.",
       evidence: `${customer.email} has not visited for ${customer.lastVisitDaysAgo} days after ${customer.visits90d} recent visits`,
       visibilityRoles: ["owner"],
       inboxRole: "",
       payload: {
         to: customer.email,
+        customerName: customer.name,
         subject: `${store.businessName || "Your store"} saved your usual`,
         body: `We saved your usual ${signals.topItem}. Come by before ${signals.peak} and get a small regular-customer thank you.`,
         offerCap: 5,
@@ -1142,7 +1151,8 @@ function redactAuditEvent(event) {
     reason: redactText(event.reason),
     evidence: redactText(event.evidence),
     scalekit: redactText(event.scalekit),
-    entire: redactText(event.entire)
+    entire: redactText(event.entire),
+    gmail: redactText(event.gmail)
   };
 }
 
@@ -1279,16 +1289,22 @@ function roleLabel(role) {
 function agentIntegrationStatus() {
   const scalekitConfigured = Boolean(process.env.SCALEKIT_ENVIRONMENT_URL && process.env.SCALEKIT_CLIENT_ID && process.env.SCALEKIT_CLIENT_SECRET);
   const entireConfigured = Boolean(process.env.ENTIRE_API_KEY || process.env.ENTIRE_API_URL);
+  const apifyConfigured = Boolean(process.env.APIFY_TOKEN || scalekitConfigured);
   return {
     apify: {
-      configured: Boolean(process.env.APIFY_TOKEN),
-      mode: process.env.APIFY_TOKEN ? "live" : "public-fallback",
+      configured: apifyConfigured,
+      mode: process.env.APIFY_TOKEN ? "live" : scalekitConfigured ? "active-through-scalekit" : "public-fallback",
       role: "Live market and supplier evidence"
     },
     scalekit: {
       configured: scalekitConfigured,
       mode: scalekitConfigured ? (process.env.SCALEKIT_MODE || "live-ready") : "mock",
       role: "Delegated user authorization and permission boundary"
+    },
+    gmail: {
+      configured: scalekitConfigured,
+      mode: scalekitConfigured ? "active-through-scalekit" : "mock",
+      role: "Owner-scoped comeback drafts and customer follow-up"
     },
     entire: {
       configured: entireConfigured,
@@ -1596,6 +1612,166 @@ async function executeEntireAction({ user, store, action, scalekit }) {
       payload: action.payload
     }
   };
+}
+
+async function executeGmailAutomation({ user, store, action, demoRecipient }) {
+  if (action.id !== "auto-send-churn-save-email") return null;
+
+  if (!scalekitConfiguredForTools()) {
+    return {
+      mode: "mock",
+      summary: "Gmail draft skipped because Scalekit API credentials are not configured"
+    };
+  }
+
+  try {
+    const account = await findActiveScalekitAccount({
+      connector: process.env.SCALEKIT_GMAIL_CONNECTOR || "gmail",
+      identifier: process.env.SCALEKIT_GMAIL_IDENTIFIER || process.env.DEMO_OWNER_EMAIL || user.email,
+      providerPattern: /gmail/i
+    });
+    if (!account) {
+      return {
+        mode: "pending",
+        summary: "Gmail connected account is not active yet; internal recovery work was still logged"
+      };
+    }
+
+    const recipient = safeDemoRecipient(action.payload?.to, account.identifier, demoRecipient);
+    const subject = action.payload?.subject || `${store.businessName || "Your store"} saved your usual`;
+    const body = [
+      `Hi ${firstNameFromCustomer(action.payload?.customerName) || "there"},`,
+      action.payload?.body || `We saved your usual item at ${store.businessName || "your local store"}.`,
+      "",
+      `This was created automatically by Warden from the Apify demand scan and customer memory for ${store.businessName || "this storefront"}.`,
+      "Owner review note: send only if this customer opted in and has not received a comeback note in the last 30 days."
+    ].join("\n");
+
+    const response = await createGmailDraftViaScalekit({
+      connectedAccountId: account.id,
+      to: recipient,
+      subject,
+      body
+    });
+
+    return {
+      mode: "live",
+      summary: `Created real Gmail draft as ${account.identifier} using the Scalekit connected account`,
+      connector: account.connector,
+      connectedAccountId: account.id,
+      draftId: response.id,
+      response
+    };
+  } catch (error) {
+    return {
+      mode: "live-ready-fallback",
+      summary: `Gmail automation fallback: ${error.message}`,
+      response: null
+    };
+  }
+}
+
+function scalekitConfiguredForTools() {
+  return Boolean(process.env.SCALEKIT_ENVIRONMENT_URL && process.env.SCALEKIT_CLIENT_ID && process.env.SCALEKIT_CLIENT_SECRET);
+}
+
+function scalekitBaseUrl() {
+  return String(process.env.SCALEKIT_ENVIRONMENT_URL || "").replace(/\/$/, "");
+}
+
+async function scalekitApi(route, options = {}) {
+  const baseUrl = scalekitBaseUrl();
+  const token = await fetchJson(`${baseUrl}/oauth/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: process.env.SCALEKIT_CLIENT_ID,
+      client_secret: process.env.SCALEKIT_CLIENT_SECRET
+    })
+  }, 12000);
+  return fetchJson(`${baseUrl}${route}`, {
+    method: options.method || "GET",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      authorization: `Bearer ${token.access_token}`,
+      ...(options.headers || {})
+    },
+    ...(options.body ? { body: JSON.stringify(options.body) } : {})
+  }, options.timeoutMs || 12000);
+}
+
+async function findActiveScalekitAccount({ connector, identifier, providerPattern }) {
+  const payload = await scalekitApi("/api/v1/connected_accounts?page_size=30");
+  const accounts = connectedAccountsFromPayload(payload);
+  const active = accounts.filter((account) => /active/i.test(String(account.status || "")));
+  const connectorPattern = new RegExp(`^${escapeRegExp(connector)}$`, "i");
+  return active.find((account) =>
+    connectorPattern.test(String(account.connector || account.connection_name || account.connector_name || "")) &&
+    String(account.identifier || "").toLowerCase() === String(identifier || "").toLowerCase()
+  ) || active.find((account) =>
+    connectorPattern.test(String(account.connector || account.connection_name || account.connector_name || ""))
+  ) || active.find((account) =>
+    providerPattern.test(String(account.provider || account.connector || ""))
+  ) || null;
+}
+
+function connectedAccountsFromPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  return payload?.connected_accounts || payload?.data || payload?.items || [];
+}
+
+async function createGmailDraftViaScalekit({ connectedAccountId, to, subject, body }) {
+  const detail = await scalekitApi(`/api/v1/connected_accounts/${encodeURIComponent(connectedAccountId)}`);
+  const accessToken = detail?.connected_account?.authorization_details?.oauth_token?.access_token;
+  if (!accessToken) throw new Error("Scalekit connected account did not return an active Gmail access token");
+  const raw = encodeGmailMime({
+    to,
+    subject,
+    body
+  });
+  return fetchJson("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ message: { raw } })
+  }, 12000);
+}
+
+function safeDemoRecipient(candidate, fallback, requested) {
+  const value = String(requested || process.env.WARDEN_GMAIL_DEMO_TO || candidate || "").trim();
+  if (value && !/@example\.com$/i.test(value)) return value;
+  return fallback || value || "owner@example.com";
+}
+
+function encodeGmailMime({ to, subject, body }) {
+  const cleanTo = cleanEmailHeader(to);
+  const cleanSubject = cleanEmailHeader(subject);
+  const message = [
+    `To: ${cleanTo}`,
+    `Subject: ${cleanSubject}`,
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    body
+  ].join("\r\n");
+  return Buffer.from(message, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function cleanEmailHeader(value) {
+  return String(value || "").replace(/[\r\n]+/g, " ").trim();
+}
+
+function firstNameFromCustomer(name) {
+  return String(name || "").trim().split(/\s+/)[0] || "";
 }
 
 function inferCityFromPayload(address) {
