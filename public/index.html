@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Warden - Storefront intelligence</title>
+  <title>Righthand AI - Storefront intelligence</title>
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
   <script src="/vendor/leaflet/leaflet.js"></script>
   <style>
@@ -969,7 +969,7 @@
       padding-top: 8px;
     }
 
-    /* === Warden Helper === */
+    /* === Righthand AI Helper === */
     .helper-fab {
       position: fixed;
       right: 22px;
@@ -2596,6 +2596,35 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .owner-email-editor {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 7px;
+      background: #11150f;
+      padding: 9px;
+      display: grid;
+      gap: 6px;
+    }
+    .owner-email-editor label {
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 740;
+    }
+    .owner-email-editor textarea {
+      width: 100%;
+      min-height: 72px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #0f130e;
+      color: var(--text);
+      padding: 8px;
+      line-height: 1.35;
+    }
+    .owner-email-editor small {
+      color: var(--subtle);
+      font-size: 11px;
+      line-height: 1.35;
+    }
     .autonomy-stat {
       border: 1px solid rgba(255,255,255,.07);
       border-radius: 7px;
@@ -2995,10 +3024,10 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true">W</div>
+      <div class="brand-mark" aria-hidden="true">R</div>
       <div class="brand-copy">
-        <div class="brand-main">warden<span>.</span></div>
-        <div class="brand-sub">Small business impact console</div>
+        <div class="brand-main">Righthand AI</div>
+        <div class="brand-sub">Small business autopilot</div>
       </div>
     </div>
     <div class="top-actions">
@@ -3191,18 +3220,18 @@
     </main>
   </div>
 
-  <button class="helper-fab" id="chatFab" aria-label="Open Warden Helper">
-    <span class="helper-fab-icon">W</span>
+  <button class="helper-fab" id="chatFab" aria-label="Open Righthand AI Helper">
+    <span class="helper-fab-icon">R</span>
     <span class="helper-fab-label">Helper</span>
     <span class="helper-fab-pulse" aria-hidden="true"></span>
   </button>
-  <section class="helper-panel" id="chatPanel" aria-label="Warden Helper">
+  <section class="helper-panel" id="chatPanel" aria-label="Righthand AI Helper">
     <header class="helper-header">
       <div class="helper-header-row">
         <div class="helper-header-main">
-          <div class="helper-mark">W</div>
+          <div class="helper-mark">R</div>
           <div>
-            <div class="helper-title">Warden <span>Helper</span></div>
+            <div class="helper-title">Righthand AI <span>Helper</span></div>
             <div class="helper-status" id="chatContext"><span class="helper-status-dot"></span>Loading store...</div>
           </div>
         </div>

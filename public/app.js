@@ -61,6 +61,7 @@ const TRANSLATIONS = {
     scan: "Scan",
     scanning: "Scanning...",
     restock: "Restock",
+    agent: "Agent",
     addStore: "+ Add",
     viewInfo: "📋 View stored info",
     editStore: "✏️ Edit store profile",
@@ -86,6 +87,7 @@ const TRANSLATIONS = {
     scan: "Escanear",
     scanning: "Escaneando...",
     restock: "Suministros",
+    agent: "Agente",
     addStore: "+ Agregar",
     viewInfo: "📋 Ver datos",
     editStore: "✏️ Editar tienda",
@@ -111,6 +113,7 @@ const TRANSLATIONS = {
     scan: "扫描",
     scanning: "扫描中...",
     restock: "补货",
+    agent: "代理",
     addStore: "+ 添加",
     viewInfo: "📋 店铺信息",
     editStore: "✏️ 编辑店铺",
@@ -136,6 +139,7 @@ const TRANSLATIONS = {
     scan: "Quét",
     scanning: "Đang quét...",
     restock: "Nhập hàng",
+    agent: "Tác vụ AI",
     addStore: "+ Thêm",
     viewInfo: "📋 Xem thông tin",
     editStore: "✏️ Sửa cửa hàng",
@@ -161,6 +165,7 @@ const TRANSLATIONS = {
     scan: "Scan",
     scanning: "Nag-scan...",
     restock: "Restock",
+    agent: "Agent",
     addStore: "+ Dagdag",
     viewInfo: "📋 Tingnan info",
     editStore: "✏️ I-edit store",
@@ -204,6 +209,30 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "Oportunidades",
     "Warnings": "Alertas",
     "Weather & Climate": "Clima",
+    "Owner Analytics": "Analítica del dueño",
+    "Important numbers and AI actions for the next shift.": "Números importantes y acciones de IA para el próximo turno.",
+    "Run AI actions": "Ejecutar acciones de IA",
+    "Competitors": "Competidores",
+    "Avg rating": "Calificación promedio",
+    "nearby block": "zona cercana",
+    "Peak window": "Hora pico",
+    "Margin": "Margen",
+    "profit": "ganancia",
+    "weekly comeback coupon": "cupón semanal de regreso",
+    "Sends the weekly offer to the approved customer with coupon": "Envía la oferta semanal al cliente aprobado con el cupón",
+    "premium bulk outreach": "mensaje premium para pedidos grandes",
+    "Prepared a premium-customer message for bulk": "Preparó un mensaje para cliente premium sobre pedidos grandes de",
+    "orders and company catering.": "y catering para empresas.",
+    "event inventory request": "solicitud de inventario para evento",
+    "Prepared an editable request for extra goods before": "Preparó una solicitud editable de productos extra antes de",
+    "manager prep checklist": "lista de preparación del gerente",
+    "profit leak fix": "corrección de fuga de margen",
+    "Event request draft": "Borrador de solicitud para evento",
+    "Righthand AI can save this as an editable Gmail draft through Scalekit. No order is placed until the owner sends it.": "Righthand AI puede guardarlo como borrador editable de Gmail con Scalekit. No se hace ningún pedido hasta que el dueño lo envía.",
+    "Uses Apify evidence and Scalekit Gmail. No purchase, public post, or hour change happens here.": "Usa evidencia de Apify y Gmail con Scalekit. Aquí no hay compras, publicaciones públicas ni cambios de horario.",
+    "draft": "borrador",
+    "manager task": "tarea del gerente",
+    "owner task": "tarea del dueño",
     "Store Notes": "Notas de la tienda",
     "Notes": "Notas",
     "Restock": "Reabastecer",
@@ -328,6 +357,30 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "机会",
     "Warnings": "警报",
     "Weather & Climate": "天气与气候",
+    "Owner Analytics": "店主分析",
+    "Important numbers and AI actions for the next shift.": "下一班次的重要数字和 AI 操作。",
+    "Run AI actions": "运行 AI 操作",
+    "Competitors": "竞争者",
+    "Avg rating": "平均评分",
+    "nearby block": "附近街区",
+    "Peak window": "高峰时段",
+    "Margin": "利润率",
+    "profit": "利润",
+    "weekly comeback coupon": "每周回访优惠券",
+    "Sends the weekly offer to the approved customer with coupon": "向已批准客户发送每周优惠券",
+    "premium bulk outreach": "高级批量订单外联",
+    "Prepared a premium-customer message for bulk": "已为高级客户准备批量",
+    "orders and company catering.": "订单和公司餐饮消息。",
+    "event inventory request": "活动库存请求",
+    "Prepared an editable request for extra goods before": "已准备可编辑的补货请求，时间在",
+    "manager prep checklist": "经理准备清单",
+    "profit leak fix": "利润流失修复",
+    "Event request draft": "活动请求草稿",
+    "Righthand AI can save this as an editable Gmail draft through Scalekit. No order is placed until the owner sends it.": "Righthand AI 可通过 Scalekit 保存为可编辑的 Gmail 草稿。店主发送前不会下单。",
+    "Uses Apify evidence and Scalekit Gmail. No purchase, public post, or hour change happens here.": "使用 Apify 证据和 Scalekit Gmail。这里不会购买、公开发布或更改营业时间。",
+    "draft": "草稿",
+    "manager task": "经理任务",
+    "owner task": "店主任务",
     "Store Notes": "店铺笔记",
     "Notes": "笔记",
     "Restock": "补货",
@@ -452,6 +505,30 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "Cơ hội",
     "Warnings": "Cảnh báo",
     "Weather & Climate": "Thời tiết & khí hậu",
+    "Owner Analytics": "Phân tích cho chủ cửa hàng",
+    "Important numbers and AI actions for the next shift.": "Số liệu quan trọng và hành động AI cho ca tiếp theo.",
+    "Run AI actions": "Chạy hành động AI",
+    "Competitors": "Đối thủ",
+    "Avg rating": "Đánh giá trung bình",
+    "nearby block": "khu gần cửa hàng",
+    "Peak window": "Khung giờ cao điểm",
+    "Margin": "Biên lợi nhuận",
+    "profit": "lợi nhuận",
+    "weekly comeback coupon": "mã ưu đãi hằng tuần",
+    "Sends the weekly offer to the approved customer with coupon": "Gửi ưu đãi hằng tuần cho khách đã duyệt với mã",
+    "premium bulk outreach": "tin nhắn đơn hàng lớn cho khách premium",
+    "Prepared a premium-customer message for bulk": "Đã chuẩn bị tin nhắn cho khách premium về đơn số lượng lớn",
+    "orders and company catering.": "và đặt cho công ty.",
+    "event inventory request": "yêu cầu hàng cho sự kiện",
+    "Prepared an editable request for extra goods before": "Đã chuẩn bị yêu cầu có thể sửa về hàng bổ sung trước",
+    "manager prep checklist": "checklist chuẩn bị của quản lý",
+    "profit leak fix": "sửa điểm thất thoát lợi nhuận",
+    "Event request draft": "Bản nháp yêu cầu sự kiện",
+    "Righthand AI can save this as an editable Gmail draft through Scalekit. No order is placed until the owner sends it.": "Righthand AI có thể lưu thành bản nháp Gmail có thể sửa qua Scalekit. Chưa đặt hàng cho đến khi chủ gửi.",
+    "Uses Apify evidence and Scalekit Gmail. No purchase, public post, or hour change happens here.": "Dùng bằng chứng Apify và Gmail qua Scalekit. Không mua hàng, đăng công khai, hay đổi giờ ở đây.",
+    "draft": "bản nháp",
+    "manager task": "việc của quản lý",
+    "owner task": "việc của chủ",
     "Store Notes": "Ghi chú cửa hàng",
     "Notes": "Ghi chú",
     "Restock": "Nhập hàng",
@@ -576,6 +653,30 @@ const PAGE_TRANSLATION_PHRASES = {
     "Opportunities": "Oportunidad",
     "Warnings": "Babala",
     "Weather & Climate": "Panahon at klima",
+    "Owner Analytics": "Analytics ng owner",
+    "Important numbers and AI actions for the next shift.": "Mahalagang numbers at AI actions para sa susunod na shift.",
+    "Run AI actions": "Patakbuhin ang AI actions",
+    "Competitors": "Competitors",
+    "Avg rating": "Average rating",
+    "nearby block": "malapit na block",
+    "Peak window": "Peak window",
+    "Margin": "Margin",
+    "profit": "profit",
+    "weekly comeback coupon": "weekly comeback coupon",
+    "Sends the weekly offer to the approved customer with coupon": "Nagpapadala ng weekly offer sa approved customer gamit ang coupon",
+    "premium bulk outreach": "premium bulk outreach",
+    "Prepared a premium-customer message for bulk": "Gumawa ng message para sa premium customer para sa bulk",
+    "orders and company catering.": "orders at company catering.",
+    "event inventory request": "event inventory request",
+    "Prepared an editable request for extra goods before": "Gumawa ng editable request para sa extra goods bago ang",
+    "manager prep checklist": "manager prep checklist",
+    "profit leak fix": "profit leak fix",
+    "Event request draft": "Event request draft",
+    "Righthand AI can save this as an editable Gmail draft through Scalekit. No order is placed until the owner sends it.": "Maaaring i-save ng Righthand AI ito bilang editable Gmail draft gamit ang Scalekit. Walang order hanggang ipadala ng owner.",
+    "Uses Apify evidence and Scalekit Gmail. No purchase, public post, or hour change happens here.": "Gumagamit ng Apify evidence at Scalekit Gmail. Walang purchase, public post, o hour change dito.",
+    "draft": "draft",
+    "manager task": "manager task",
+    "owner task": "owner task",
     "Store Notes": "Store notes",
     "Notes": "Notes",
     "Restock": "Restock",
@@ -1133,6 +1234,7 @@ const state = {
   agentInbox: [],
   agentReceipt: null,
   agentAutonomy: null,
+  agentEventEmailContext: localStorage.getItem("warden:agentEventEmailContext") || "",
   agentLoading: false,
   agentAutopilotRunning: false,
   agentAutonomyRunning: false,
@@ -1266,7 +1368,17 @@ function handleLanguageChange(event) {
   localStorage.setItem("warden:language", state.language);
   renderLanguageChrome();
   renderFilters(state.latestIntel?.groups || []);
+  renderBanners(state.latestIntel?.banners || []);
+  renderStoreInfo();
   renderRestock();
+  renderOpportunities(state.latestIntel?.opportunities || []);
+  renderWarnings(state.latestIntel?.warnings || []);
+  renderWeather(state.latestIntel?.weatherForecast || []);
+  renderMarketIntelligence(state.latestIntel || {});
+  renderCompliance(state.latestIntel || {});
+  renderReviewLater();
+  renderSignals(state.latestIntel?.groups || []);
+  renderAgentConsole();
   renderChat();
   queuePageTranslation();
 }
@@ -1296,6 +1408,7 @@ function renderLanguageChrome() {
   els.emailBtn.title = t("email");
   els.pdfBtn.title = t("pdf");
   els.restockTopBtn.innerHTML = `<span class="btn-emoji">📦</span>${escapeHtml(t("restock"))}`;
+  els.agentTopBtn.innerHTML = `<span class="btn-emoji">🪪</span>${escapeHtml(t("agent"))}`;
   setLoading(document.body.classList.contains("is-loading"));
   els.addStoreBtn.textContent = t("addStore");
   els.detailsStoreBtn.textContent = t("viewInfo");
@@ -1574,7 +1687,7 @@ function applyIntel(intel) {
 }
 
 function renderBanners(banners) {
-  const list = banners.length ? banners : [{ level: "info", title: "Monitoring", body: "Warden is checking the city for anything that should change staffing, inventory, safety or permits." }];
+  const list = banners.length ? banners : [{ level: "info", title: "Monitoring", body: "Righthand AI is checking the city for anything that should change staffing, inventory, safety or permits." }];
   els.bannerStack.innerHTML = list.slice(0, 4).map((banner) => `
     <div class="banner ${severityClass(banner.level)}">
       <div class="banner-icon">${bannerIcon(banner.level)}</div>
@@ -1673,6 +1786,9 @@ function renderStoreInfo() {
   const market = intel.marketIntelligence || {};
   const places = intel.marketPlaces || [];
   const topPlace = places[0];
+  const topOpportunity = (intel.opportunities || []).find(isDemoRelevantAction);
+  const topWarning = (intel.warnings || []).filter((item) => item.urgency !== "Low").find(isDemoRelevantAction);
+  const requiredDocs = (intel.licenseChecklist || []).filter((item) => item.priority === "required").length;
   const staff = [store.fullTimeStaff && `${store.fullTimeStaff} full-time`, store.partTimeStaff && `${store.partTimeStaff} part-time`].filter(Boolean).join(" / ") || "Not set";
   const peak = market.busyHeatmap?.peakDay
     ? `${market.busyHeatmap.peakDay} ${formatHourLabel(market.busyHeatmap.peakHour)}`
@@ -1681,15 +1797,16 @@ function renderStoreInfo() {
     ? `${market.competitorsAnalyzed || places.length || 0} relevant competitors from Apify`
     : `${places.length || 0} relevant map records`;
   const profileRows = [
-    ["Business name", store.businessName || "Unnamed storefront", locationLine(store), "wide"],
-    ["Business type", `${iconType(store.businessType)} ${labelType(store.businessType)}`, store.cityScopeLabel || `${store.city || "City"} city-wide`, ""],
-    ["Owner", store.ownerName || "Not set", contactLine(store), ""],
-    ["Staff", staff, store.languages ? `Languages: ${store.languages}` : "Add staff counts for better prep tasks", ""],
-    ["Ticket / revenue", store.avgTicket || "Average ticket not set", store.dailyRevenue ? `Typical daily revenue: ${store.dailyRevenue}` : "Used for monthly report estimates", ""],
-    ["Live market read", marketLine, topPlace ? `Top comparison: ${topPlace.name}` : "Refresh scan to load competitors", "wide"],
-    ["Peak window", peak, market.busyHeatmap?.contributing ? `From ${market.busyHeatmap.contributing} nearby popular-times records` : "Used by prep automation", ""],
-    ["Permit notes", store.licenseNotes || "No owner notes yet", `${(store.licenses || []).length} saved license records`, ""],
-    ["Private notes", store.storeNotes || "No private notes yet", "Used by the chatbot and owner actions only", "wide"]
+    ["Store", store.businessName || "Unnamed storefront", locationLine(store), "wide"],
+    ["Business", `${iconType(store.businessType)} ${labelType(store.businessType)}`, store.cityScopeLabel || `${store.city || "City"} city-wide`, ""],
+    ["Team", staff, store.languages ? `Languages: ${store.languages}` : "Used for staffing and prep tasks", ""],
+    ["Money", store.avgTicket || "Average ticket not set", store.dailyRevenue ? `Typical daily revenue: ${store.dailyRevenue}` : "Used for earnings estimates", ""],
+    ["Competition", marketLine, topPlace ? `Watch ${topPlace.name} · ${topPlace.rating ? `${Number(topPlace.rating).toFixed(1)}★` : "nearby"}` : "Refresh scan to load competitors", "wide"],
+    ["Next peak", peak, market.busyHeatmap?.contributing ? `${market.busyHeatmap.contributing} Apify demand records` : "Used by prep automation", ""],
+    ["Owner move", topOpportunity?.title || "Choose one offer after scan", topOpportunity?.action || "Use the opportunity card with the clearest customer impact.", ""],
+    ["Risk to check", topWarning?.title || "No urgent warning", topWarning?.action || "Keep permits, staffing and closing routine current.", ""],
+    ["Documents", requiredDocs ? `${requiredDocs} required now` : "Checklist ready", `${(intel.licenseChecklist || []).length || (store.licenses || []).length} total records`, ""],
+    ["Private notes", store.storeNotes || store.licenseNotes || "No private notes yet", "Owner-only context for Righthand AI actions", "wide"]
   ];
 
   els.storeInfoPanel.innerHTML = profileRows.map(([label, value, note, span]) => `
@@ -1720,7 +1837,7 @@ function renderRestock() {
 
   if (!payload) {
     els.restockResults.innerHTML = `
-      <div class="empty">Search what the store needs to restock. Warden will compare supplier options across Amazon, Walmart, Target, Costco, IKEA, Staples, Uline, WebstaurantStore and Home Depot.</div>
+      <div class="empty">Search what the store needs to restock. Righthand AI compares supplier options, unit cost, demand, pickup, and shipping speed.</div>
     `;
     queuePageTranslation();
     return;
@@ -2142,8 +2259,8 @@ function renderMap(intel) {
     const isApify = provider === "apify";
     els.mapProviderChip.classList.toggle("osm", !isApify);
     els.mapProviderLabel.textContent = isApify
-      ? `Live · Google Places via Apify · ${places.length} pins`
-      : `OpenStreetMap city scan · ${places.length} pins`;
+      ? `Live Apify scan · ${places.length} relevant competitors`
+      : `City scan · ${places.length} relevant competitors`;
   }
   if (els.mapStats) {
     const validPlaces = places.filter((p) => Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lon)));
@@ -2182,12 +2299,12 @@ function renderMarketIntelligence(intel) {
 
   if (els.intelMeta) {
     els.intelMeta.textContent = provider === "apify"
-      ? `Live · ${intelligence?.competitorsAnalyzed || 0} competitors analyzed via Apify`
-      : "Available with Apify · enable APIFY_TOKEN to scan menu, price tier and review themes";
+      ? `Live Apify scan · ${intelligence?.competitorsAnalyzed || 0} competitors analyzed`
+      : "Connect Apify to scan menu, price tier and review themes";
   }
 
   if (!intelligence || !intelligence.competitorsAnalyzed) {
-    els.intelPanel.innerHTML = `<div class="intel-empty">${provider === "apify" ? "Live scan returned no scoreable competitors yet. Try refreshing once the cache repopulates." : "Competitor intelligence unlocks when Apify is enabled. Free public sources don't expose price tiers or review themes."}</div>`;
+    els.intelPanel.innerHTML = `<div class="intel-empty">${provider === "apify" ? "Live scan returned no scoreable competitors yet. Try refreshing once the cache repopulates." : "Competitor intelligence unlocks when Apify is connected."}</div>`;
     return;
   }
 
@@ -2606,8 +2723,8 @@ function renderAgentAutopilot() {
   `).join("");
   const title = user?.role === "associate" ? "My Task Helper" : user?.role === "manager" ? "Manager Prep" : "Tomorrow Prep";
   const copy = user?.role === "owner"
-    ? "Warden prepares the plan and only finishes actions the owner is allowed to approve."
-    : "Warden shows what this teammate can do, ask for, or send to a manager.";
+    ? "Righthand AI prepares the plan and only finishes actions the owner is allowed to approve."
+    : "Righthand AI shows what this teammate can do, ask for, or send to a manager.";
   const autoLog = renderAgentAutoWorkLog();
   els.agentAutopilotPanel.innerHTML = `
     <div class="agent-feature-head">
@@ -2628,7 +2745,7 @@ function renderAgentAutopilot() {
 
 function renderAgentAutoWorkLog() {
   const autoEvents = (state.agentSession?.audit || [])
-    .filter((event) => event.userId === "warden-autopilot" || event.decision === "auto_executed")
+    .filter((event) => event.userId === "warden-autopilot" || event.userName === "Righthand AI Autopilot" || event.decision === "auto_executed")
     .slice(0, 7);
   const planned = (state.agentAutonomy?.actions || []).slice(0, 7);
   const rows = autoEvents.length
@@ -2636,7 +2753,7 @@ function renderAgentAutoWorkLog() {
       <div class="autonomy-row">
         <div>
           <div class="autonomy-row-title">${escapeHtml(event.actionTitle || "AI work")}</div>
-          <div class="autonomy-row-copy">${escapeHtml(event.gmail || event.reason || event.evidence || "Completed by Warden")}</div>
+          <div class="autonomy-row-copy">${escapeHtml(event.gmail || event.reason || event.evidence || "Completed by Righthand AI")}</div>
         </div>
         <span class="agent-decision allowed">done</span>
       </div>
@@ -2693,6 +2810,15 @@ function renderCustomerRecovery() {
   `;
 }
 
+function defaultEventEmailContext(signals = {}, finance = {}) {
+  const store = selectedStore() || {};
+  const peak = signals.peak || "the next local peak window";
+  const topItem = signals.topItem || (normalizeType(store.businessType) === "restaurant" ? "best-selling ingredients and takeout supplies" : "fast-moving inventory");
+  const profit = Number(finance.netProfit || 0);
+  const profitLine = profit ? `Expected monthly profit is tracking near $${formatCount(profit)}, so avoid stockouts before ${peak}.` : `Avoid stockouts before ${peak}.`;
+  return `Please prepare additional ${topItem} for ${peak}. ${profitLine} Keep the message professional and do not place a purchase until the owner approves.`;
+}
+
 function renderAgentAutonomy() {
   if (!els.agentAutonomyPanel) return;
   const user = currentAgentUser();
@@ -2709,15 +2835,18 @@ function renderAgentAutonomy() {
   const market = state.latestIntel?.marketIntelligence || {};
   const places = state.latestIntel?.marketPlaces || [];
   const competitorCount = Number(market.competitorsAnalyzed || places.length || 0);
-  const marketSource = state.latestIntel?.marketProvider === "apify" ? "Apify scan" : state.latestIntel ? "map scan" : "scanning";
+  const marketSource = state.latestIntel?.marketProvider === "apify" ? "Apify scan" : state.latestIntel ? "city scan" : "scanning";
   const peak = signals.peak || (market.busyHeatmap?.peakDay ? `${market.busyHeatmap.peakDay} ${formatHourLabel(market.busyHeatmap.peakHour)}` : "Next peak");
   const approvedEmail = signals.customerEmail || signals.demoCustomerEmail || "approved customer";
   const actionById = new Map(actions.map((action) => [action.id, action]));
   const ownerActions = [
     actionById.get("auto-send-churn-save-email"),
+    actionById.get("auto-premium-bulk-outreach"),
+    actionById.get("auto-event-supplier-request"),
     actionById.get("auto-manager-prep-checklist"),
     actionById.get("auto-profit-leak-fix")
   ].filter(Boolean);
+  const eventContext = state.agentEventEmailContext || defaultEventEmailContext(signals, finance);
   const analytics = [
     { label: "Competitors", value: competitorCount ? formatCount(competitorCount) : "--", detail: competitorCount ? marketSource : "scanning" },
     { label: "Avg rating", value: market.avgRating ? `${Number(market.avgRating).toFixed(1)}★` : "--", detail: market.avgRating ? "nearby block" : "scanning" },
@@ -2745,15 +2874,32 @@ function renderAgentAutonomy() {
       ${ownerActions.map((action) => `
         <div class="owner-action-row">
           <div>
-            <div class="owner-action-title">${escapeHtml(action.title.replace(/^Auto-(build|create|draft|message|send)\s+/i, ""))}</div>
+            <div class="owner-action-title">${escapeHtml(ownerActionTitle(action.title))}</div>
             <div class="owner-action-copy">${escapeHtml(compactSentence(action.summary || action.guardrail || "", 128))}</div>
           </div>
-          <span>${escapeHtml(action.id === "auto-send-churn-save-email" ? approvedEmail : agentDecisionText(action.policy?.decision || "auto_safe"))}</span>
+          <span>${escapeHtml(ownerActionStatus(action, approvedEmail))}</span>
         </div>
       `).join("") || `<div class="empty">${escapeHtml(plan.error || "Actions load after the scan finishes.")}</div>`}
     </div>
+    <div class="owner-email-editor">
+      <label for="agentEventEmailContext">Event request draft</label>
+      <textarea id="agentEventEmailContext" data-agent-event-context>${escapeHtml(eventContext)}</textarea>
+      <small>Righthand AI can save this as an editable Gmail draft through Scalekit. No order is placed until the owner sends it.</small>
+    </div>
     <div class="agent-evidence">Uses Apify evidence and Scalekit Gmail. No purchase, public post, or hour change happens here.</div>
   `;
+}
+
+function ownerActionTitle(title = "") {
+  return String(title || "AI action").replace(/^Auto-(build|create|draft|message|send|prepare)\s+/i, "");
+}
+
+function ownerActionStatus(action, approvedEmail) {
+  if (action.id === "auto-send-churn-save-email") return approvedEmail;
+  if (/Gmail Draft/i.test(action.target || "")) return "draft";
+  if (/Checklist/i.test(action.target || "")) return "manager task";
+  if (/Owner Task|Finance Report/i.test(action.target || "")) return "owner task";
+  return "ready";
 }
 
 function renderAgentInbox() {
@@ -2769,7 +2915,7 @@ function renderAgentInbox() {
     const key = [
       item.type || "item",
       item.status || "open",
-      item.fromUserId || item.fromRole || "warden",
+      item.fromUserId || item.fromRole || "righthand",
       actionKey
     ].join("|");
     if (seen.has(key)) continue;
@@ -2781,7 +2927,7 @@ function renderAgentInbox() {
     return `
       <div class="agent-inbox-item ${escapeAttr(item.status || "open")}">
         <div class="agent-inbox-meta">
-          <span>${escapeHtml(item.fromUserName || "Warden")}</span>
+          <span>${escapeHtml(item.fromUserName || "Righthand AI")}</span>
           <span>${escapeHtml(formatDateTime(item.updatedAt || item.at))}</span>
         </div>
         <div class="agent-inbox-title">${escapeHtml(item.title || "Delegated update")}</div>
@@ -2860,6 +3006,11 @@ function wireAgentFeatureButtons() {
 
 function wireAgentAutonomyButtons() {
   els.agentAutonomyPanel?.querySelector("[data-agent-autonomy-run]")?.addEventListener("click", runAutonomousActions);
+  const contextField = els.agentAutonomyPanel?.querySelector("[data-agent-event-context]");
+  contextField?.addEventListener("input", () => {
+    state.agentEventEmailContext = contextField.value;
+    localStorage.setItem("warden:agentEventEmailContext", state.agentEventEmailContext);
+  });
 }
 
 function wireAgentInboxButtons() {
@@ -2886,7 +3037,7 @@ function renderAgentActionCard(action) {
       <div class="agent-action-copy">${escapeHtml(action.summary || "")}</div>
       <div class="agent-policy-copy">${escapeHtml(agentPolicyLine(action))}</div>
       <div class="agent-action-foot">
-        <span class="agent-evidence">${escapeHtml(action.evidence || "Warden scan")}</span>
+        <span class="agent-evidence">${escapeHtml(action.evidence || "Righthand AI scan")}</span>
         <button class="btn ${decision === "allowed" ? "good" : ""}" ${buttonAttr}>${escapeHtml(buttonText)}</button>
       </div>
     </article>
@@ -2906,7 +3057,7 @@ function agentPolicyLine(action) {
   const decision = action?.policy?.decision;
   if (decision === "allowed") return "This person has permission to do it.";
   if (decision === "needs_approval") return "Prepared, but the owner must approve first.";
-  if (decision === "blocked") return "This person cannot do it, so Warden will message a manager.";
+  if (decision === "blocked") return "This person cannot do it, so Righthand AI will message a manager.";
   return action?.policy?.reason || action?.guardrail || "Permission checked.";
 }
 
@@ -2931,6 +3082,10 @@ async function runAutonomousActions() {
     return;
   }
   state.agentAutonomyRunning = true;
+  const contextField = els.agentAutonomyPanel?.querySelector("[data-agent-event-context]");
+  const automationContext = contextField?.value || state.agentEventEmailContext || "";
+  state.agentEventEmailContext = automationContext;
+  localStorage.setItem("warden:agentEventEmailContext", automationContext);
   renderAgentAutonomy();
   try {
     const response = await fetch("/api/agent/autonomy/run", {
@@ -2940,6 +3095,7 @@ async function runAutonomousActions() {
         userId: state.agentUserId,
         store,
         intel: compactIntelForAgent(state.latestIntel),
+        automationContext,
         liveConnectors: true
       })
     });
@@ -2954,7 +3110,7 @@ async function runAutonomousActions() {
       entire: { summary: "Entire task, segment, and message records created" },
       gmail: gmailEvent?.gmail ? { summary: gmailEvent.gmail } : null
     };
-    renderBanners([{ level: "opportunity", title: "Automations finished", body: data.message || "Warden sent the approved Gmail plus owner-only internal work." }]);
+    renderBanners([{ level: "opportunity", title: "Automations finished", body: data.message || "Righthand AI sent the approved Gmail plus owner-only internal work." }]);
     await refreshAgentAutonomy();
     await refreshAgentActions();
     await refreshAgentTrail();
@@ -3414,7 +3570,7 @@ function renderSignalCard(signal, compact = false) {
       <div class="sig-body">${escapeHtml(compact ? summary : signal.body || "")}</div>
       ${!compact && signal.action ? `<div class="sig-body owner-step"><b>Do this:</b> ${escapeHtml(signal.action)}</div>` : ""}
       ${Array.isArray(signal.pointers) && signal.pointers.length ? `<div class="check-list">${signal.pointers.map((check) => `<span>${escapeHtml(check)}</span>`).join("")}</div>` : ""}
-      <div class="sig-foot"><span>${escapeHtml(signal.source || "evidence")}</span>${evidenceUrl ? `<a class="source-link" href="${escapeAttr(evidenceUrl)}" target="_blank" rel="noreferrer">View evidence</a>` : `<span>Store profile</span>`}</div>
+      <div class="sig-foot"><span>${escapeHtml(signalSponsorLabel(signal.source))}</span>${evidenceUrl ? `<a class="source-link" href="${escapeAttr(evidenceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(signalSponsorLabel(signal.source, true))}</a>` : `<span>Store profile</span>`}</div>
       <div class="evidence-row">${reviewButton(reviewCardFromSignal(signal))}</div>
     </article>
   `;
@@ -4305,7 +4461,7 @@ function removeSelectedStore() {
     renderBanners([{ level: "warning", title: "Keep at least one store", body: "Add another store before removing this one." }]);
     return;
   }
-  if (!confirm(`Remove ${store.businessName || "this store"} from local Warden storage?`)) return;
+  if (!confirm(`Remove ${store.businessName || "this store"} from local Righthand AI storage?`)) return;
   state.stores = state.stores.filter((item) => item.id !== store.id);
   state.reviewItems = state.reviewItems.filter((item) => item.storeId !== store.id);
   delete state.chatThreads[store.id];
@@ -4320,13 +4476,13 @@ function removeSelectedStore() {
 }
 
 function exportPdfReport() {
-  document.title = `${selectedStore().businessName || "Warden"} - Warden report`;
+  document.title = `${selectedStore().businessName || "Righthand AI"} - Righthand AI report`;
   window.print();
 }
 
 function emailReport() {
   const store = selectedStore();
-  const subject = encodeURIComponent(`Warden report - ${store.businessName || "store"}`);
+  const subject = encodeURIComponent(`Righthand AI report - ${store.businessName || "store"}`);
   const body = encodeURIComponent(buildReportText());
   window.location.href = `mailto:?subject=${subject}&body=${body}`;
 }
@@ -4335,7 +4491,7 @@ function buildReportText() {
   const store = selectedStore();
   const intel = state.latestIntel || {};
   const lines = [
-    `Warden report: ${store.businessName || "Store"}`,
+    `Righthand AI report: ${store.businessName || "Store"}`,
     `Location: ${locationLine(store)}`,
     `Monitoring area: ${store.cityScopeLabel || `${store.city || "City"} city-wide`}`,
     `Risk: ${store.risk || "--"} | Opportunity: ${store.opportunity || "--"}`,
@@ -4364,7 +4520,15 @@ function fallbackMetrics(store) {
 
 function sourceAnchor(url, source) {
   const evidenceUrl = readableUrl(url);
-  return evidenceUrl ? `<a class="source-link" href="${escapeAttr(evidenceUrl)}" target="_blank" rel="noreferrer">View evidence${source ? `: ${escapeHtml(source)}` : ""}</a>` : `<span class="small-meta">Based on saved store profile</span>`;
+  if (!evidenceUrl) return `<span class="small-meta">Based on saved store profile</span>`;
+  return `<a class="source-link" href="${escapeAttr(evidenceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(signalSponsorLabel(source, true))}</a>`;
+}
+
+function signalSponsorLabel(source, asLink = false) {
+  const text = String(source || "");
+  const apify = /apify|google places|places/i.test(text);
+  if (asLink) return apify ? "View Apify evidence" : "View evidence";
+  return apify ? "Apify evidence" : "Evidence";
 }
 
 function loadingCards(count) {
@@ -4653,15 +4817,15 @@ function sourceName(key) {
   const names = {
     weather: "Weather",
     air: "Air quality",
-    alerts: "NWS alerts",
-    police: "Police incidents",
-    cases311: "311 cases",
-    marketScan: "OSM market scan",
+    alerts: "Weather alerts",
+    police: "Safety incidents",
+    cases311: "City service cases",
+    marketScan: "Apify market scan",
     citySafety: "City safety",
-    cityInfrastructure: "Infrastructure",
-    cityEconomy: "City economy",
-    news: "Local media",
-    regulatory: "Regulatory",
+    cityInfrastructure: "Access and infrastructure",
+    cityEconomy: "Business demand",
+    news: "Local demand signals",
+    regulatory: "Permit and rule checks",
     localEvents: "Events",
     earthquakes: "Earthquakes",
     eonet: "Natural events",

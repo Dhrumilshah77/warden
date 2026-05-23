@@ -10,7 +10,7 @@ const CACHE_DIR = path.join(__dirname, "cache");
 const PLACES_CACHE_FILE = path.join(CACHE_DIR, "places-cache.json");
 const PRODUCTS_CACHE_FILE = path.join(CACHE_DIR, "products-cache.json");
 const PORT = Number(process.env.PORT || 4173);
-const APP_USER_AGENT = "Warden/0.2 (local storefront intelligence; contact: local)";
+const APP_USER_AGENT = "RighthandAI/0.2 (local storefront intelligence; contact: local)";
 
 // Apify caches must be declared before loadDiskCaches() runs so the loader can
 // populate them. Functions further down the file still use the same identifiers.
@@ -533,7 +533,7 @@ export async function handleRequest(req, res) {
 if (isMainModule()) {
   const server = createServer(handleRequest);
   server.listen(PORT, "127.0.0.1", () => {
-    console.log(`Warden running at http://127.0.0.1:${PORT}`);
+    console.log(`Righthand AI running at http://127.0.0.1:${PORT}`);
   });
 }
 
@@ -647,7 +647,7 @@ function buildAgentSession(params = new URLSearchParams()) {
     selectedUser,
     users: DEMO_AGENT_USERS,
     integrations: agentIntegrationStatus(),
-    message: "Apify supplies market evidence, Scalekit gates who the agent can act as, Entire receives the user-scoped business action, and Warden records the audit trail.",
+    message: "Apify supplies market evidence, Scalekit gates who the agent can act as, Entire receives the user-scoped business action, and Righthand AI records the audit trail.",
     judgingHooks: [
       "Same recommendation behaves differently for owner, manager, and associate.",
       "Every execution is scoped to tenant, user, role, and action permission.",
@@ -736,11 +736,12 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
   const user = demoAgentUser(body.userId || params.get("userId") || "owner-ava");
   const store = storeFromPayload(body.store) || profileFromSearch(params);
   const intel = body.intel || null;
+  const automationContext = body.automationContext || body.emailContext || "";
   const customers = demoCustomersForStore(store);
   const signals = customerMemorySignals(customers, store, intel);
   const finance = demoFinancialSnapshot(store, customers, signals);
   const visibleSignals = user.role === "owner" ? signals : { ...signals, customerEmail: "" };
-  const actions = recommendedAutonomousActions({ user, store, intel, customers, signals, finance })
+  const actions = recommendedAutonomousActions({ user, store, intel, customers, signals, finance, automationContext })
     .filter((action) => !action.visibilityRoles?.length || action.visibilityRoles.includes(user.role))
     .map((action) => user.role === "owner" ? action : redactAutonomousAction(action));
   const recipientGuardrail = user.role === "owner"
@@ -755,9 +756,9 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
     finance: user.role === "owner" ? finance : null,
     actions,
     guardrails: [
-      "Only internal Entire.io tasks, segments, and teammate messages run automatically.",
+      "Only internal Entire.io tasks, segments, teammate messages, and one approved Gmail recipient run automatically.",
       recipientGuardrail,
-      "No public posts, refunds, purchases, real customer sends, or hour changes run without owner approval.",
+      "No public posts, refunds, purchases, broad customer sends, or hour changes run without owner approval.",
       "Every automatic move is logged into the shared tenant report trail."
     ],
     audit: agentAuditForUser(user, 12),
@@ -768,7 +769,12 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
 async function executeAutonomousActions(body = {}) {
   const user = demoAgentUser(body.userId || body.user?.id || "owner-ava");
   const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
-  const plan = buildAutonomousAgentPlan({ userId: user.id, store, intel: body.intel });
+  const plan = buildAutonomousAgentPlan({
+    userId: user.id,
+    store,
+    intel: body.intel,
+    automationContext: body.automationContext || body.emailContext || ""
+  });
   const liveConnectors = body.liveConnectors === true || body.liveConnectors === "true";
   const now = new Date().toISOString();
   const results = [];
@@ -795,7 +801,7 @@ async function executeAutonomousActions(body = {}) {
       tenantId: user.tenantId,
       tenantName: user.tenantName,
       userId: "warden-autopilot",
-      userName: "Warden Autopilot",
+      userName: "Righthand AI Autopilot",
       userRole: "autonomous_agent",
       delegatedByUserId: user.id,
       delegatedByUserName: user.name,
@@ -827,7 +833,7 @@ async function executeAutonomousActions(body = {}) {
         tenantId: user.tenantId,
         tenantName: user.tenantName,
         fromUserId: "warden-autopilot",
-        fromUserName: "Warden Autopilot",
+        fromUserName: "Righthand AI Autopilot",
         fromRole: "autonomous_agent",
         toRole: action.inboxRole,
         title: inboxAction.title,
@@ -852,11 +858,11 @@ async function executeAutonomousActions(body = {}) {
     liveConnectors,
     message: liveConnectors
       ? (gmailSent
-        ? `Warden Autopilot created ${results.length} automations and sent the approved Gmail through Scalekit.`
+        ? `Righthand AI created ${results.length} automations and sent the approved Gmail through Scalekit.`
         : gmailTouched
-          ? `Warden Autopilot created ${results.length} automations and created a Scalekit Gmail message.`
-          : `Warden Autopilot created ${results.length} automations with live connector guardrails.`)
-      : `Warden Autopilot safely created ${results.length} internal records, tasks, segments, or teammate messages.`
+          ? `Righthand AI created ${results.length} automations and prepared Scalekit Gmail messages.`
+          : `Righthand AI created ${results.length} automations with live connector guardrails.`)
+      : `Righthand AI safely created ${results.length} internal records, tasks, segments, or teammate messages.`
   };
 }
 
@@ -879,14 +885,14 @@ function demoCustomersForStore(store) {
     },
     {
       id: "cust-local-lunch",
-      name: "Mission Lunch Buyer",
-      email: "",
-      tags: ["weekday", "pickup"],
+      name: "Mission Office Buyer",
+      email: DEMO_CUSTOMER_EMAIL,
+      tags: ["weekday", "pickup", "premium", "company"],
       lastVisitDaysAgo: 5,
-      visits90d: 7,
-      lifetimeValue: 312,
-      favoriteItems: [regularItem],
-      lastOrder: { item: regularItem, amount: 18.25, channel: "walk-in", at: "5 days ago" },
+      visits90d: 9,
+      lifetimeValue: 1220,
+      favoriteItems: [regularItem, "bulk lunch order"],
+      lastOrder: { item: "bulk lunch order", amount: 186.25, channel: "pickup", at: "5 days ago" },
       risk: "active"
     },
     {
@@ -962,12 +968,37 @@ function moneyNumber(value) {
   return match ? Number(match[0]) : 0;
 }
 
-function recommendedAutonomousActions({ user, store, intel, customers, signals, finance }) {
+function professionalEventRequestBody({ store, signals, finance, automationContext }) {
+  const ownerContext = String(automationContext || "").replace(/\s+/g, " ").trim();
+  const item = signals.storeType.toLowerCase().includes("restaurant")
+    ? "takeout containers, bags, napkins, and best-selling ingredients"
+    : "best-selling inventory and checkout supplies";
+  const contextLine = ownerContext
+    ? `Owner editable context: ${ownerContext}`
+    : `Expected need: additional ${item} before ${signals.peak}.`;
+  return [
+    "Hello,",
+    "",
+    `Please confirm availability, lead time, and bulk pricing for additional goods for ${store.businessName || "our store"}.`,
+    contextLine,
+    `Primary demand item: ${signals.topItem}.`,
+    finance?.margin ? `Current planning target: protect the ${finance.margin}% margin while avoiding stockouts.` : "",
+    "",
+    "Please treat this as a prepared request only. Fulfillment should begin only after owner approval.",
+    "",
+    "Thank you."
+  ].filter(Boolean).join("\n");
+}
+
+function recommendedAutonomousActions({ user, store, intel, customers, signals, finance, automationContext = "" }) {
   const customer = customers[0];
+  const premium = customers.find((item) => item.tags?.includes("premium")) || customers[1] || customer;
   const city = store.city || "your city";
   const apifyEvidence = intel?.marketProvider === "apify"
     ? `Apify market scan plus customer/order records`
-    : `Customer memory plus ${intel?.marketPlaces?.length || 0} local map records`;
+    : `Customer memory plus ${intel?.marketPlaces?.length || 0} local business records`;
+  const couponCode = `${String(store.businessName || "RIGHTHAND").replace(/[^A-Z0-9]/gi, "").slice(0, 4).toUpperCase() || "RH"}10`;
+  const eventRequestBody = professionalEventRequestBody({ store, signals, finance, automationContext });
   return [
     autonomousAction({
       id: "auto-regular-segment",
@@ -1017,23 +1048,66 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
     }),
     autonomousAction({
       id: "auto-send-churn-save-email",
-      title: "Auto-send comeback email",
+      title: "Auto-send weekly comeback coupon",
       target: "Gmail Send via Scalekit",
-      summary: `Sends a comeback note to the approved customer who usually buys ${signals.topItem}.`,
-      guardrail: "Approved customer only, under $5 offer value, one send per run, no SMS or public post.",
+      summary: `Sends the weekly offer to the approved customer with coupon ${couponCode}.`,
+      guardrail: "Approved recipient only, one send per run, no SMS or public post.",
       evidence: `${customer.email} has not visited for ${customer.lastVisitDaysAgo} days after ${customer.visits90d} recent visits`,
       visibilityRoles: ["owner"],
       inboxRole: "",
       payload: {
         to: customer.email,
         customerName: customer.name,
-        subject: `${store.businessName || "Your store"} saved your usual`,
-        body: `We saved your usual ${signals.topItem}. Come by before ${signals.peak} and get a small regular-customer thank you.`,
-        offerCap: 5,
+        subject: `${store.businessName || "Your store"} weekly offer: ${couponCode}`,
+        body: `We saved your usual ${signals.topItem}. Come back this week and show coupon ${couponCode} for an owner-approved thank-you offer.`,
+        couponCode,
+        cadence: "weekly",
         consent: "opted_in",
         frequencyCapDays: 30,
         delivery: "send",
         sentAutomatically: true
+      }
+    }),
+    autonomousAction({
+      id: "auto-premium-bulk-outreach",
+      title: "Auto-prepare premium bulk outreach",
+      target: "Gmail Draft via Scalekit",
+      summary: `Prepared a premium-customer message for bulk ${signals.topItem} orders and company catering.`,
+      guardrail: "Draft only; owner edits pricing, discount and recipient list before sending.",
+      evidence: `${premium.name} has ${premium.visits90d} recent visits and a $${premium.lifetimeValue} lifetime value`,
+      visibilityRoles: ["owner"],
+      inboxRole: "",
+      payload: {
+        to: premium.email || DEMO_CUSTOMER_EMAIL,
+        customerName: premium.name,
+        subject: `${store.businessName || "Your store"} bulk order availability`,
+        body: [
+          `Hi ${firstNameFromCustomer(premium.name) || "there"},`,
+          "",
+          `We can reserve bulk ${signals.topItem} orders for teams, offices, and family events this week.`,
+          "Reply with the approximate headcount and pickup window, and the owner will confirm the best available discount before anything is booked.",
+          "",
+          `Suggested owner code: BULK${couponCode.replace(/\D/g, "") || "10"}`
+        ].join("\n"),
+        delivery: "draft",
+        segment: "premium and company buyers"
+      }
+    }),
+    autonomousAction({
+      id: "auto-event-supplier-request",
+      title: "Auto-prepare event inventory request",
+      target: "Gmail Draft via Scalekit",
+      summary: `Prepared an editable request for extra goods before ${signals.peak}.`,
+      guardrail: "Draft only; supplier request is not sent or purchased until the owner approves.",
+      evidence: `${signals.peak} demand window plus ${signals.topItem} customer history`,
+      visibilityRoles: ["owner"],
+      inboxRole: "manager",
+      payload: {
+        to: DEMO_CUSTOMER_EMAIL,
+        subject: `${store.businessName || "Store"} additional goods request`,
+        body: eventRequestBody,
+        delivery: "draft",
+        editable: true
       }
     }),
     autonomousAction({
@@ -1085,7 +1159,7 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
       evidence: `${signals.peak} demand signal plus ${signals.regularCount} regular-customer demand`,
       inboxRole: "manager",
       payload: {
-        message: `Can someone cover pickup flow before ${signals.peak}? Warden expects ${signals.topItem} demand.`,
+        message: `Can someone cover pickup flow before ${signals.peak}? Righthand AI expects ${signals.topItem} demand.`,
         assigneeRole: "manager",
         scheduleChangeBlocked: true
       }
@@ -1208,7 +1282,7 @@ function createApprovalRequest({ user, store, action, policy, auditEvent }) {
     fromRole: user.role,
     toRole: "owner",
     title: `Approval needed: ${action.title}`,
-    body: `${user.name} can prepare this, but owner permission is required before Warden can execute it.`,
+    body: `${user.name} can prepare this, but owner permission is required before Righthand AI can execute it.`,
     action,
     store,
     policy,
@@ -1390,7 +1464,7 @@ function recommendedDelegatedActions(store, intel) {
       risk: "medium",
       requiredScopes: ["marketing.campaign.write", "customer.segment.write"],
       allowedRoles: ["owner", "manager"],
-      summary: `Use Warden's live demand scan to create a targeted offer for customers near ${city}.`,
+      summary: `Use Righthand AI's live demand scan to create a targeted offer for customers near ${city}.`,
       payload: {
         campaignName: `${store.businessName || "Store"} ${peak} demand offer`,
         audience: `${city} nearby customers`,
@@ -1428,7 +1502,7 @@ function recommendedDelegatedActions(store, intel) {
       risk: "medium",
       requiredScopes: ["customer.message.write"],
       allowedRoles: ["owner", "manager"],
-      summary: `Draft and send a customer-safe response for guests affected by the issue Warden found.`,
+      summary: `Draft and send a customer-safe response for guests affected by the issue Righthand AI found.`,
       payload: {
         channel: "email_or_sms",
         template: `${store.businessName || "We"} noticed the issue and saved a small comeback offer for you.`,
@@ -1638,7 +1712,7 @@ async function executeEntireAction({ user, store, action, scalekit }) {
 }
 
 async function executeGmailAutomation({ user, store, action, demoRecipient, delivery }) {
-  if (action.id !== "auto-send-churn-save-email") return null;
+  if (!/gmail/i.test(action.target || "")) return null;
 
   if (!scalekitConfiguredForTools()) {
     return {
@@ -1661,15 +1735,25 @@ async function executeGmailAutomation({ user, store, action, demoRecipient, deli
     }
 
     const recipient = safeDemoRecipient(action.payload?.to, account.identifier, demoRecipient);
-    const deliveryMode = gmailDeliveryMode(delivery || action.payload?.delivery, recipient);
-    const subject = action.payload?.subject || `${store.businessName || "Your store"} saved your usual`;
-    const body = [
-      `Hi ${firstNameFromCustomer(action.payload?.customerName) || "there"},`,
-      action.payload?.body || `We saved your usual item at ${store.businessName || "your local store"}.`,
-      "",
-      `This was created automatically by Warden from the Apify demand scan and customer memory for ${store.businessName || "this storefront"}.`,
-      "Owner review note: send only if this customer opted in and has not received a comeback note in the last 30 days."
-    ].join("\n");
+    const deliveryMode = gmailDeliveryMode(action.payload?.delivery || delivery, recipient);
+    const subject = action.payload?.subject || `${store.businessName || "Your store"} owner message`;
+    const greeting = `Hi ${firstNameFromCustomer(action.payload?.customerName) || "there"},`;
+    const providedBody = String(action.payload?.body || "").trim();
+    const hasGreeting = /^(hi|hello|dear)\b/i.test(providedBody);
+    const body = providedBody
+      ? [
+          action.payload?.customerName && !hasGreeting ? greeting : "",
+          providedBody,
+          "",
+          `Prepared by Righthand AI from the Apify demand scan and owner-approved customer memory for ${store.businessName || "this storefront"}.`
+        ].filter(Boolean).join("\n")
+      : [
+          greeting,
+          `We saved your usual item at ${store.businessName || "your local store"}.`,
+          "",
+          `Prepared by Righthand AI from the Apify demand scan and owner-approved customer memory for ${store.businessName || "this storefront"}.`,
+          "Owner review note: send only if this recipient opted in and has not received a similar note in the last 30 days."
+        ].join("\n");
 
     const response = await createGmailMessageViaScalekit({
       connectedAccountId: account.id,
@@ -1752,8 +1836,8 @@ function connectedAccountsFromPayload(payload) {
 }
 
 async function createGmailMessageViaScalekit({ connectedAccountId, to, subject, body, deliveryMode = "draft" }) {
-  const detail = await scalekitApi(`/api/v1/connected_accounts/${encodeURIComponent(connectedAccountId)}`);
-  const accessToken = detail?.connected_account?.authorization_details?.oauth_token?.access_token;
+  const detail = await getScalekitConnectedAccountAuth(connectedAccountId);
+  const accessToken = scalekitOAuthAccessToken(detail);
   if (!accessToken) throw new Error("Scalekit connected account did not return an active Gmail access token");
   const raw = encodeGmailMime({
     to,
@@ -1774,6 +1858,36 @@ async function createGmailMessageViaScalekit({ connectedAccountId, to, subject, 
     },
     body: JSON.stringify(payload)
   }, 12000);
+}
+
+async function getScalekitConnectedAccountAuth(connectedAccountId) {
+  const id = encodeURIComponent(connectedAccountId);
+  try {
+    return await scalekitApi(`/api/v1/connected_accounts/auth?id=${id}`);
+  } catch {
+    return scalekitApi(`/api/v1/connected_accounts/${id}`);
+  }
+}
+
+function scalekitOAuthAccessToken(payload) {
+  const account = payload?.connectedAccount || payload?.connected_account || payload?.account || payload;
+  const auth = account?.authorizationDetails || account?.authorization_details || payload?.authorizationDetails || payload?.authorization_details || {};
+  const cases = [
+    auth?.details?.case === "oauthToken" ? auth?.details?.value?.accessToken : "",
+    auth?.details?.case === "oauth_token" ? auth?.details?.value?.access_token : "",
+    auth?.details?.value?.accessToken,
+    auth?.details?.value?.access_token,
+    auth?.oauthToken?.accessToken,
+    auth?.oauth_token?.access_token,
+    auth?.oauth_token?.accessToken,
+    auth?.accessToken,
+    auth?.access_token,
+    account?.oauthToken?.accessToken,
+    account?.oauth_token?.access_token,
+    account?.accessToken,
+    account?.access_token
+  ];
+  return cases.find((value) => typeof value === "string" && value.length > 20) || "";
 }
 
 function safeDemoRecipient(candidate, fallback, requested) {
@@ -1958,7 +2072,7 @@ function buildChatSystemPrompt(store, intel) {
   const storeState = store.state || "CA";
   const storeNeighborhood = (intel?.marketPlaces || []).map((p) => p.neighborhood).filter(Boolean)[0] || "";
 
-  lines.push(`You are Warden, an expert small-business advisor for ${storeName} — a ${storeType} ${storeAddress ? `at ${storeAddress}` : ""} in ${storeCity}, ${storeState}${storeNeighborhood ? ` (${storeNeighborhood} neighborhood)` : ""}.`);
+  lines.push(`You are Righthand AI, an expert small-business advisor for ${storeName} — a ${storeType} ${storeAddress ? `at ${storeAddress}` : ""} in ${storeCity}, ${storeState}${storeNeighborhood ? ` (${storeNeighborhood} neighborhood)` : ""}.`);
   lines.push("");
   lines.push("CRITICAL RULES — FOLLOW EVERY TIME:");
   lines.push(`1. Every answer must be ANCHORED to ${storeName}'s specific location and business type. Reference "${storeCity}" and "${storeType}" naturally. Never give generic boilerplate.`);
@@ -3729,7 +3843,7 @@ async function fetchMarketScan(profile) {
       items: [],
       count: 0,
       error: error.message,
-      message: "OpenStreetMap Overpass scan did not return in time; other city scans still ran."
+      message: "City scan did not return in time; other checks still ran."
     };
   }
 }
@@ -4111,7 +4225,7 @@ function synthesizeSignals(profile, feeds) {
   addHazardSignals(signals, feeds.earthquakes, feeds.eonet);
 
   if (signals.length === 0) {
-    signals.push(seedSignal("system", "info", "City checks unavailable", "Try again later", "The city checks did not return enough information. Refresh before making staffing, inventory or safety decisions.", "Warden"));
+    signals.push(seedSignal("system", "info", "City checks unavailable", "Try again later", "The city checks did not return enough information. Refresh before making staffing, inventory or safety decisions.", "Righthand AI"));
   }
 
   const risk = clamp(24 + signals.filter((s) => s.severity === "critical").length * 18 + signals.filter((s) => s.severity === "warning").length * 9, 8, 98);
@@ -4159,7 +4273,7 @@ function addWeatherSignals(signals, banners, recommendations, weather, alerts) {
       group: "Weather and Climate",
       severity,
       code: "WX",
-      name: "NWS alert",
+      name: "Weather alert",
       headline: alert.event || "Weather alert",
       metric: alert.severity || "Active",
       body: alert.headline || alert.instruction || "Active National Weather Service alert for this point.",
@@ -4292,7 +4406,7 @@ function addSafetySignals(signals, banners, recommendations, police, citySafety,
     headline: "No major safety issue found",
     metric: profile.city || "city-wide",
     body: "No obvious city safety item appeared in the latest check. Keep normal closing routines, lighting checks and cash-handling procedures.",
-    source: citySafety?.sourceUrl ? "Local safety news" : "Warden",
+    source: citySafety?.sourceUrl ? "Local safety news" : "Righthand AI",
     url: citySafety?.sourceUrl || police?.sourceUrl
   }));
 }
@@ -4354,7 +4468,7 @@ function add311Signals(signals, recommendations, cases311, cityInfrastructure, p
       headline: "No major access issue found",
       metric: profile.city || "city-wide",
       body: "No obvious road, utility or access issue appeared in the latest check. Keep normal delivery and curb-pickup plans.",
-      source: cityInfrastructure?.sourceUrl ? "Local infrastructure news" : "Warden",
+      source: cityInfrastructure?.sourceUrl ? "Local infrastructure news" : "Righthand AI",
       url: cityInfrastructure?.sourceUrl || cases311?.sourceUrl
     }));
   }
@@ -4773,6 +4887,42 @@ function buildOpportunities(profile, feeds, signals, maxItems = 14) {
     }
   }
 
+  const marketIntel = feeds.marketScan?.intelligence || null;
+  if (marketIntel?.busyHeatmap?.peakDay) {
+    const peak = `${marketIntel.busyHeatmap.peakDay} ${formatHour12(Number(marketIntel.busyHeatmap.peakHour) || 0)}`;
+    opportunities.push({
+      id: "apify-peak-window-offer",
+      type: "Demand timing",
+      title: `Use the ${peak} peak window`,
+      action: type === "restaurant"
+        ? "Prep the top seller, put one quick combo near checkout, and confirm staff coverage before the rush."
+        : "Move best sellers to the front, staff the rush window, and make one offer easy to understand.",
+      why: `Apify found nearby places are about ${Math.round(marketIntel.busyHeatmap.peakValue || 0)}% busy at ${peak}.`,
+      when: peak,
+      impact: "Higher conversion during the busiest window",
+      checklist: ["Prep top sellers", "Confirm staff", "Stage pickup", "Track redemptions"],
+      source: "Apify",
+      url: feeds.marketScan?.sourceUrl
+    });
+  }
+
+  if (marketIntel?.topReviewTags?.length) {
+    const topThemes = marketIntel.topReviewTags.slice(0, 3).map((tag) => tag.title).filter(Boolean);
+    if (topThemes.length) {
+      opportunities.push({
+        id: "apify-review-theme-offer",
+        type: "Customer demand",
+        title: `Use review themes customers already mention`,
+        action: `Make ${topThemes[0]} visible in signage, menu copy, photos, or the weekly offer.`,
+        why: `Apify review analysis shows nearby customers repeatedly mention ${topThemes.join(", ")}.`,
+        impact: "Better message-market fit",
+        checklist: ["Pick one theme", "Update sign/menu", "Add photo", "Track sales"],
+        source: "Apify",
+        url: feeds.marketScan?.sourceUrl
+      });
+    }
+  }
+
   if (economyArticle) {
     const economyInsight = ownerArticleInsight(economyArticle, profile, "Market and Competition");
     opportunities.push({
@@ -4880,7 +5030,7 @@ function buildOpportunities(profile, feeds, signals, maxItems = 14) {
       why: "No urgent weather, safety, event or local demand change stood out enough to require a major adjustment.",
       impact: "Avoid overreacting",
       checklist: ["Check forecast", "Confirm staffing", "Review permits", "Place normal order"],
-      source: "Warden",
+      source: "Righthand AI",
       url: null
     });
   }
@@ -5001,6 +5151,39 @@ function buildWarnings(profile, feeds, warningSignals, maxItems = 14) {
     url: readableEvidenceUrl(profile, item.url)
   }));
 
+  const marketIntel = feeds.marketScan?.intelligence || null;
+  const topRated = marketIntel?.topRated?.[0];
+  if (topRated && Number(topRated.rating) >= 4.6 && Number(topRated.reviews) >= 200) {
+    warnings.push({
+      id: "apify-top-competitor-benchmark",
+      type: "Market and Competition",
+      title: "Top nearby competitor sets a high bar",
+      urgency: "Medium",
+      why: `${topRated.name} is visible nearby with ${Number(topRated.rating).toFixed(1)} stars and ${formatCompactNumber(topRated.reviews)} reviews. Customers may compare photos, hours, speed, and price before choosing.`,
+      when: "This week",
+      action: "Compare your listing, photos, top offer, and hours against that benchmark; fix one gap today.",
+      pointers: ["Open competitor", "Check photos", "Check hours", "Fix one gap"],
+      source: "Apify",
+      url: feeds.marketScan?.sourceUrl
+    });
+  }
+
+  const negativeFlag = marketIntel?.negativeFlags?.[0];
+  if (negativeFlag) {
+    warnings.push({
+      id: "apify-review-risk-theme",
+      type: "Market and Competition",
+      title: `Review risk theme: ${negativeFlag.title}`,
+      urgency: "Medium",
+      why: `Apify review analysis found ${negativeFlag.title} appearing around nearby businesses. Prevent the same issue before customers mention it about you.`,
+      when: "Before next rush",
+      action: "Brief staff on this issue and add one quick check before the peak window.",
+      pointers: ["Brief staff", "Add checklist item", "Watch reviews"],
+      source: "Apify",
+      url: feeds.marketScan?.sourceUrl
+    });
+  }
+
   if (!warnings.length) {
     warnings.push({
       id: "no-critical-warning",
@@ -5011,7 +5194,7 @@ function buildWarnings(profile, feeds, warningSignals, maxItems = 14) {
       when: "Now",
       action: "Use the weekly forecast and opportunity cards for planning; refresh before major orders or staffing changes.",
       pointers: ["Review weather before ordering perishables", "Check license checklist monthly", "Confirm store records are complete"],
-      source: "Warden synthesis",
+      source: "Righthand AI synthesis",
       url: null
     });
   }
@@ -5020,49 +5203,65 @@ function buildWarnings(profile, feeds, warningSignals, maxItems = 14) {
 }
 
 function buildMetrics(profile, feeds, signals, opportunities, warnings) {
-  const healthy = Object.values(feeds).filter((feed) => feed?.ok).length;
-  const sourceCount = Object.keys(feeds).length;
-  const area = storeAreaLabel(profile);
-  const radiusMi = Math.round((profile.radiusMeters || 0) / 1609 * 10) / 10;
+  const market = feeds.marketScan?.intelligence || {};
+  const places = feeds.marketScan?.items || [];
+  const topRated = market.topRated?.[0] || places
+    .filter((place) => Number(place.rating) > 0)
+    .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0))[0];
+  const competitorCount = Number(market.competitorsAnalyzed || feeds.marketScan?.summary?.competitorCount || places.length || 0);
+  const totalReviews = places.reduce((sum, place) => sum + (Number(place.reviews) || 0), 0);
+  const peak = market.busyHeatmap?.peakDay
+    ? `${market.busyHeatmap.peakDay} ${formatHour12(Number(market.busyHeatmap.peakHour) || 0)}`
+    : "Next 7 days";
+  const docs = licenseChecklistFor(profile);
+  const requiredDocs = docs.filter((item) => item.priority === "required").length;
+  const firstOpportunity = opportunities.find((item) => item.id !== "baseline-growth") || opportunities[0];
+  const actionableWarnings = warnings.filter((item) => item.urgency !== "Low");
   const base = [
     {
-      label: "Monitoring Area",
-      value: profile.cityScopeLabel || `${profile.city || "City"} city-wide`,
-      detail: `${radiusMi} mi scan around ${area}`,
-      tone: "info"
+      label: "Nearby competitors",
+      value: String(competitorCount || "--"),
+      detail: topRated?.name ? `Benchmark: ${topRated.name}` : "Apify scan in progress",
+      tone: competitorCount ? "info" : "warn"
     },
     {
-      label: "City Checks",
-      value: `${healthy}/${sourceCount}`,
-      detail: "Weather, safety, access, permits, market",
-      tone: healthy >= Math.max(5, sourceCount - 2) ? "good" : "warn"
+      label: "Block rating",
+      value: market.avgRating ? `${Number(market.avgRating).toFixed(1)}★` : "--",
+      detail: totalReviews ? `${formatCompactNumber(totalReviews)} public reviews tracked` : "Waiting for review signal",
+      tone: market.avgRating >= 4.4 ? "good" : "info"
     },
     {
-      label: "Actionable Warnings",
-      value: String(warnings.filter((item) => item.urgency !== "Low").length),
-      detail: "Owner decisions to review",
-      tone: warnings.some((item) => item.urgency === "High") ? "risk" : "warn"
-    },
-    {
-      label: "Opportunity Plays",
-      value: String(opportunities.length),
-      detail: "Profit, traffic or conversion plays",
+      label: "Peak sales window",
+      value: peak,
+      detail: market.busyHeatmap?.peakValue ? `~${Math.round(market.busyHeatmap.peakValue)}% busy nearby` : "Use forecast and orders",
       tone: "good"
     },
     {
-      label: "Weather Window",
-      value: `${feeds.weather?.count || 0} days`,
-      detail: "Rain, heat, wind and staffing impact",
-      tone: "info"
+      label: "Best play",
+      value: firstOpportunity?.type || "Growth",
+      detail: firstOpportunity?.title || "Refresh for owner play",
+      tone: "good"
     },
     {
-      label: "City Signals",
-      value: String(signals.length),
-      detail: "Concise owner cards below",
+      label: "Owner alerts",
+      value: String(actionableWarnings.length),
+      detail: actionableWarnings[0]?.title || "No urgent issue right now",
+      tone: actionableWarnings.some((item) => item.urgency === "High") ? "risk" : "warn"
+    },
+    {
+      label: "Required docs",
+      value: String(requiredDocs),
+      detail: `${docs.length} records in checklist`,
       tone: "info"
     }
   ];
   return [...base, ...industrySpecificMetrics(profile, feeds)];
+}
+
+function formatCompactNumber(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "--";
+  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(Math.round(n));
 }
 
 function industrySpecificMetrics(profile, feeds) {
@@ -5274,12 +5473,12 @@ function buildCitations(profile, feeds, synthesis) {
 
 function sourceLabel(key) {
   const labels = {
-    weather: "Open-Meteo weather",
-    air: "Open-Meteo air quality",
-    alerts: "National Weather Service alerts",
-    police: "Official police incident feed",
-    cases311: "Official 311/city case feed",
-    marketScan: "OpenStreetMap city market scan",
+    weather: "Weather",
+    air: "Air quality",
+    alerts: "Weather alerts",
+    police: "Safety incidents",
+    cases311: "City service cases",
+    marketScan: "Apify market scan",
     citySafety: "City safety scan",
     cityInfrastructure: "City infrastructure scan",
     cityEconomy: "City economy scan",

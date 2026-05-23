@@ -1,8 +1,8 @@
-# Warden — AI Storefront Intelligence Console
+# Righthand AI — AI Storefront Intelligence Console
 
-**Built for the All Things Agents hackathon · Powered by Apify + Claude**
+**Built for the All Things Agents hackathon · Powered by Apify + Scalekit**
 
-Warden is a small-business intelligence console that turns the live web into one daily action plan for any storefront owner. It scrapes Google Maps with Apify Actors, mines public city data, runs the results through Claude for natural-language Q&A, and surfaces everything as concrete owner moves: pricing, peak staffing, signature menu items, compliance documents, and supplier comparisons.
+Righthand AI is a small-business intelligence console that turns the live web into one daily action plan for any storefront owner. It scrapes Google Maps with Apify Actors, mines public city data, runs the results through Claude for natural-language Q&A, and surfaces everything as concrete owner moves: pricing, peak staffing, signature menu items, compliance documents, and supplier comparisons.
 
 > **Live demo open the moment you clone:** the disk-backed cache ships with this repo, so all 12 SF storefront profiles render instantly without a single API call.
 
@@ -16,12 +16,12 @@ Open the **Delegated Agent** section near the top of the dashboard. It demonstra
 
 - **Apify** supplies the live evidence behind an action: competitor density, peak demand, review themes, supplier data.
 - **Scalekit** is the identity and permission boundary: the same action is allowed for the owner, approval-gated for the manager, and blocked for an associate.
-- **Entire.io** is the business system destination: Warden creates campaign, task, order, or CRM-style records as the scoped user.
+- **Entire.io** is the business system destination: Righthand AI creates campaign, task, order, or CRM-style records as the scoped user.
 - **Audit trail** records every allowed, blocked, or approval-required attempt as `user + tenant + role + action + evidence`.
 - **Peak Day Autopilot** turns the current intelligence into a one-click prep plan: promo, hours, supplier, and compliance actions are executed, approval-gated, or blocked based on the selected user.
 - **Delegation Inbox** supports the 3-tab demo: open `?agentUser=owner-ava`, `?agentUser=manager-ben`, and `?agentUser=associate-mia` in separate browser tabs; each tab keeps its own user, inbox, and shared tenant report trail.
-- **Customer Recovery Agent** is a second flagship workflow: Warden detects customer risk, builds a recovery segment, prepares outreach, and gates high-risk credits to the owner.
-- **Owner Analytics + AI Work Log** is the owner-only safe-autonomy lane: Warden reads customer/order memory, auto-sends a capped win-back email to the approved recipient, closes a monthly earnings snapshot, creates profit-leak tasks, supplier orders, staff pings, and teammate notes. Manager and associate tabs do not see the customer email list, and nothing is bought, changed publicly, or published without owner approval.
+- **Customer Recovery Agent** is a second flagship workflow: Righthand AI detects customer risk, builds a recovery segment, prepares outreach, and gates high-risk credits to the owner.
+- **Owner Analytics + AI Work Log** is the owner-only safe-autonomy lane: Righthand AI reads customer/order memory, auto-sends a capped win-back email to the approved recipient, closes a monthly earnings snapshot, creates profit-leak tasks, supplier orders, staff pings, and teammate notes. Manager and associate tabs do not see the customer email list, and nothing is bought, changed publicly, or published without owner approval.
 
 It runs locally out of the box with disk-backed Apify data. Set `SCALEKIT_*` and `ENTIRE_*` env vars to sponsor credentials and point `SCALEKIT_AGENT_PROXY_URL` / `ENTIRE_API_URL` at live integration endpoints without changing the UI or agent policy code.
 
@@ -29,7 +29,7 @@ It runs locally out of the box with disk-backed Apify data. Set `SCALEKIT_*` and
 
 ## What it does in one sentence
 
-For any storefront in a US city, Warden answers:
+For any storefront in a US city, Righthand AI answers:
 
 > *"What should I do today, and why?"*
 
@@ -124,7 +124,7 @@ Run once: `npm run preload-sf` warms 12 SF storefront types. Result is committed
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Warden (Node.js)                          │
+│                     Righthand AI (Node.js)                       │
 │                                                                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌────────────────┐  │
 │  │  Public APIs    │  │   Apify Actors   │  │  Anthropic API │  │

@@ -11,12 +11,12 @@ await check("static app shell", async () => {
   const response = await fetch(`${BASE}/`);
   assert(response.status === 200, `expected 200, got ${response.status}`);
   const html = await response.text();
-  assert(html.includes("Warden - Storefront intelligence"), "app shell did not load expected title text");
+  assert(html.includes("Righthand AI - Storefront intelligence"), "app shell did not load expected title text");
   assert(html.includes("id=\"storeNotesBtn\""), "store-specific notes button should be present");
   assert(html.includes("id=\"storeInfoSection\""), "right-side store info view should be present");
   assert(!html.includes("id=\"removeStoreBtn\""), "visible store remove button should not be present");
   assert(html.includes("id=\"chatFab\""), "floating chatbot button should be present");
-  assert(html.includes("Warden Helper"), "chatbot popup should be present");
+  assert(html.includes("Righthand AI Helper"), "chatbot popup should be present");
   assert(html.includes("id=\"agentSection\""), "delegated agent console should be present");
   assert(html.includes("id=\"agentUserSelect\""), "delegated user selector should be present");
   assert(html.includes("id=\"agentRoleTabs\""), "role-specific browser tab launcher should be present");
@@ -196,7 +196,7 @@ await check("Santa Clara geocodes from address only", async () => {
   assertOwnerLanguage(data.warnings, ["title", "why", "action", "urgency"], "warnings");
   assertActionableCards(data);
   assert(Array.isArray(data.weatherForecast) && data.weatherForecast.length === 7, "weekly weather forecast should be present");
-  assert(Array.isArray(data.metrics) && data.metrics.some((item) => item.label === "Monitoring Area"), "semantic metrics should be present");
+  assert(Array.isArray(data.metrics) && data.metrics.some((item) => item.label === "Nearby competitors"), "semantic metrics should be present");
   assert(data.profile.cityScopeLabel?.includes("Santa Clara"), "monitoring scope should be city-wide Santa Clara");
   assert(data.profile.radiusMeters > 3000, "city radius should be computed from the city, not the tiny user radius");
   assert(data.groups.some((group) => group.label === "Compliance and Licensing"), "compliance group should be present");
