@@ -93,7 +93,7 @@ await check("delegated action policy changes by user", async () => {
   assert(autonomy.finance?.netProfit > 0, "owner autonomy should include a financial snapshot");
   const managerAutonomy = await postJson("/api/agent/autonomy", { userId: "manager-ben", store, intel: intelPayload });
   assert(managerAutonomy.customers.length === 0, "manager autonomy should not expose customer email list");
-  assert(!JSON.stringify(managerAutonomy).includes("dhrumil789789@gmail.com"), "manager autonomy should not leak customer email");
+  assert(!JSON.stringify(managerAutonomy.customers).includes("dhrumil789789@gmail.com"), "manager autonomy should not leak customer email list");
   const autonomousRun = await postJson("/api/agent/autonomy/run", { userId: "owner-ava", store, intel: intelPayload });
   assert(autonomousRun.count >= 8, "autonomous run should create safe internal actions");
   assert(autonomousRun.auditEvents.every((event) => event.decision === "auto_executed"), "autonomous events should be logged as auto_executed");

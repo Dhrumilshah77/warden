@@ -154,6 +154,48 @@ const DEMO_AGENT_USERS = [
   }
 ];
 
+const SCALEKIT_RBAC_CACHE = {
+  at: 0,
+  users: null,
+  organizations: null,
+  roles: null,
+  source: "local-demo",
+  error: ""
+};
+const SCALEKIT_RBAC_TTL_MS = 60 * 1000;
+
+const DELEGATED_SCOPE_TO_SCALEKIT_PERMISSION = {
+  "storefront.hours.write": "store:settings_write",
+  "marketing.campaign.write": "marketing:campaign_draft",
+  "marketing.campaign.draft": "marketing:campaign_draft",
+  "customer.segment.write": "customer:segment_write",
+  "customer.message.write": "marketing:campaign_draft",
+  "customer.credit.write": "customer:message_send",
+  "suppliers.order.write": "supplier:order_purchase",
+  "suppliers.order.draft": "supplier:order_draft",
+  "compliance.task.write": "team:task_assign",
+  "notes.write": "store:notes_write",
+  "team.message.create": "team:message_create"
+};
+
+const SCALEKIT_DEMO_USER_BINDINGS = [
+  { id: "owner-ava", role: "owner", title: "Owner", name: "Ava Patel", email: DEMO_OWNER_EMAIL },
+  {
+    id: "manager-ben",
+    role: "manager",
+    title: "Store manager",
+    name: "Ben Lee",
+    email: process.env.SCALEKIT_DEMO_MANAGER_EMAIL || process.env.SCALEKIT_DEMO_SECOND_EMAIL || DEMO_CUSTOMER_EMAIL
+  },
+  {
+    id: "associate-mia",
+    role: "associate",
+    title: "Front counter associate",
+    name: "Mia Garcia",
+    email: process.env.SCALEKIT_DEMO_ASSOCIATE_EMAIL || "dhrumil789789+associate@gmail.com"
+  }
+];
+
 const SOURCE_CATALOG = [
   {
     id: "open-meteo-weather",
@@ -486,12 +528,12 @@ export async function handleRequest(req, res) {
     }
 
     if (url.pathname === "/api/agent/session") {
-      return sendJson(res, 200, buildAgentSession(url.searchParams));
+      return sendJson(res, 200, await buildAgentSession(url.searchParams));
     }
 
     if (url.pathname === "/api/agent/actions") {
       const body = req.method === "POST" ? await readJsonBody(req) : {};
-      return sendJson(res, 200, buildAgentActions(body || {}, url.searchParams));
+      return sendJson(res, 200, await buildAgentActions(body || {}, url.searchParams));
     }
 
     if (url.pathname === "/api/agent/execute") {
@@ -503,7 +545,7 @@ export async function handleRequest(req, res) {
 
     if (url.pathname === "/api/agent/autonomy") {
       const body = req.method === "POST" ? await readJsonBody(req) : {};
-      return sendJson(res, 200, buildAutonomousAgentPlan(body || {}, url.searchParams));
+      return sendJson(res, 200, await buildAutonomousAgentPlan(body || {}, url.searchParams));
     }
 
     if (url.pathname === "/api/agent/autonomy/run") {
@@ -514,7 +556,7 @@ export async function handleRequest(req, res) {
     }
 
     if (url.pathname === "/api/agent/inbox") {
-      const user = demoAgentUser(url.searchParams.get("userId") || url.searchParams.get("as") || "owner-ava");
+      const user = await resolveAgentUser(url.searchParams.get("userId") || url.searchParams.get("as") || "owner-ava");
       return sendJson(res, 200, {
         ok: true,
         user,
@@ -526,7 +568,7 @@ export async function handleRequest(req, res) {
     if (url.pathname === "/api/agent/message") {
       if (req.method !== "POST") return sendJson(res, 405, { error: "POST only" });
       const body = await readJsonBody(req);
-      const payload = createDelegatedMessage(body || {});
+      const payload = await createDelegatedMessage(body || {});
       return sendJson(res, payload.ok ? 200 : 400, payload);
     }
 
@@ -702,14 +744,15 @@ async function readJsonBody(req) {
   });
 }
 
-function buildAgentSession(params = new URLSearchParams()) {
-  const selectedUser = demoAgentUser(params.get("userId") || params.get("as") || "owner-ava");
+async function buildAgentSession(params = new URLSearchParams()) {
+  const users = await resolveAgentUsers();
+  const selectedUser = selectAgentUser(users, params.get("userId") || params.get("as") || "owner-ava");
   return {
     ok: true,
     selectedUser,
-    users: DEMO_AGENT_USERS,
+    users,
     integrations: agentIntegrationStatus(),
-    scalekitSaas: scalekitSaasModel(selectedUser),
+    scalekitSaas: scalekitSaasModel(selectedUser, users),
     message: "Apify supplies market evidence, Scalekit gates who the agent can act as, Entire receives the user-scoped business action, and Righthand AI records the audit trail.",
     judgingHooks: [
       "Same recommendation behaves differently for owner, manager, and associate.",
@@ -719,26 +762,43 @@ function buildAgentSession(params = new URLSearchParams()) {
   };
 }
 
-function scalekitSaasModel(user = DEMO_AGENT_USERS[0]) {
+function scalekitSaasModel(user = DEMO_AGENT_USERS[0], users = DEMO_AGENT_USERS) {
+  const live = SCALEKIT_RBAC_CACHE.source === "scalekit-live";
+  const organizations = (SCALEKIT_RBAC_CACHE.organizations?.length ? SCALEKIT_RBAC_CACHE.organizations : SCALEKIT_DEMO_STORES)
+    .map((store) => ({
+      id: store.id,
+      displayName: store.displayName || store.display_name || store.name,
+      externalId: store.externalId || store.external_id || store.id,
+      address: store.address || store.metadata?.address || ""
+    }));
+  const roleEntries = SCALEKIT_RBAC_CACHE.roles?.length
+    ? SCALEKIT_RBAC_CACHE.roles
+    : Object.entries(SCALEKIT_DEMO_PERMISSIONS).map(([name, permissions]) => ({ name, permissions }));
   return {
+    source: live ? "scalekit-live" : "local-fallback",
+    error: live ? "" : SCALEKIT_RBAC_CACHE.error,
     activeOrganizationExternalId: user.scalekitOrganizationExternalId || DEFAULT_SCALEKIT_STORE.externalId,
     activeRole: user.scalekitRole || user.role,
     activePermissions: user.scalekitPermissions || [],
-    organizations: SCALEKIT_DEMO_STORES.map((store) => ({
-      id: store.id,
-      displayName: store.name,
-      externalId: store.externalId,
-      address: store.address
+    organizations,
+    roles: roleEntries.map((role) => ({
+      name: role.name,
+      displayName: role.displayName || role.display_name || humanizeKey(role.name),
+      permissions: role.permissions || SCALEKIT_DEMO_PERMISSIONS[role.name] || []
     })),
-    roles: Object.entries(SCALEKIT_DEMO_PERMISSIONS).map(([name, permissions]) => ({
-      name,
-      permissions
+    users: users.map((item) => ({
+      id: item.id,
+      email: item.email,
+      role: item.scalekitRole || item.role,
+      organizationExternalId: item.scalekitOrganizationExternalId || item.tenantId,
+      permissionCount: (item.scalekitPermissions || []).length,
+      source: item.scalekitSource || "local-fallback"
     }))
   };
 }
 
-function buildAgentActions(body = {}, params = new URLSearchParams()) {
-  const user = demoAgentUser(body.userId || params.get("userId") || "owner-ava");
+async function buildAgentActions(body = {}, params = new URLSearchParams()) {
+  const user = await resolveAgentUser(body.userId || params.get("userId") || "owner-ava");
   const store = storeFromPayload(body.store) || profileFromSearch(params);
   const intel = body.intel || null;
   const actions = recommendedDelegatedActions(store, intel).map((action) => ({
@@ -757,7 +817,7 @@ function buildAgentActions(body = {}, params = new URLSearchParams()) {
 }
 
 async function executeDelegatedAction(body = {}) {
-  const user = demoAgentUser(body.userId || body.user?.id || "owner-ava");
+  const user = await resolveAgentUser(body.userId || body.user?.id || "owner-ava");
   const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
   const action = normalizeDelegatedAction(body.action, store, body.intel);
   const policy = evaluateDelegatedPolicy(user, action);
@@ -813,8 +873,8 @@ async function executeDelegatedAction(body = {}) {
   };
 }
 
-function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
-  const user = demoAgentUser(body.userId || params.get("userId") || "owner-ava");
+async function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
+  const user = await resolveAgentUser(body.userId || params.get("userId") || "owner-ava");
   const store = storeFromPayload(body.store) || profileFromSearch(params);
   const intel = body.intel || null;
   const automationContext = body.automationContext || body.emailContext || "";
@@ -848,9 +908,9 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
 }
 
 async function executeAutonomousActions(body = {}) {
-  const user = demoAgentUser(body.userId || body.user?.id || "owner-ava");
+  const user = await resolveAgentUser(body.userId || body.user?.id || "owner-ava");
   const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
-  const plan = buildAutonomousAgentPlan({
+  const plan = await buildAutonomousAgentPlan({
     userId: user.id,
     store,
     intel: body.intel,
@@ -863,8 +923,8 @@ async function executeAutonomousActions(body = {}) {
 
   for (const action of plan.actions) {
     const scalekit = {
-      mode: "tenant-guardrail",
-      summary: `Autonomous safe action scoped to tenant ${user.tenantId}; delegated by ${user.email}`
+      mode: user.scalekitSource === "scalekit-live" ? "scalekit-rbac" : "tenant-guardrail",
+      summary: `Autonomous safe action scoped to tenant ${user.tenantId}; delegated by ${user.email}; role=${user.scalekitRole || user.role}; permissions=${(user.scalekitPermissions || []).slice(0, 4).join(", ")}`
     };
     const entire = await executeEntireAction({ user, store, action, scalekit });
     const gmail = liveConnectors
@@ -1374,8 +1434,8 @@ function createApprovalRequest({ user, store, action, policy, auditEvent }) {
   return item;
 }
 
-function createDelegatedMessage(body = {}) {
-  const user = demoAgentUser(body.userId || body.user?.id || "associate-mia");
+async function createDelegatedMessage(body = {}) {
+  const user = await resolveAgentUser(body.userId || body.user?.id || "associate-mia");
   const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
   const action = normalizeDelegatedAction(body.action, store, body.intel);
   const toRole = body.toRole || (user.role === "associate" ? "manager" : "owner");
@@ -1420,7 +1480,7 @@ function createDelegatedMessage(body = {}) {
 }
 
 async function approveDelegatedRequest(body = {}) {
-  const approver = demoAgentUser(body.userId || body.user?.id || "owner-ava");
+  const approver = await resolveAgentUser(body.userId || body.user?.id || "owner-ava");
   if (approver.role !== "owner") {
     return { ok: false, error: `${approver.title} cannot approve owner-gated delegated requests.` };
   }
@@ -1495,6 +1555,233 @@ function agentIntegrationStatus() {
       role: "LLM answer synthesis when Anthropic is not configured"
     }
   };
+}
+
+async function resolveAgentUsers() {
+  if (!scalekitConfiguredForTools()) {
+    SCALEKIT_RBAC_CACHE.source = "local-demo";
+    SCALEKIT_RBAC_CACHE.error = "";
+    return DEMO_AGENT_USERS;
+  }
+  const now = Date.now();
+  if (SCALEKIT_RBAC_CACHE.users && now - SCALEKIT_RBAC_CACHE.at < SCALEKIT_RBAC_TTL_MS) {
+    return SCALEKIT_RBAC_CACHE.users;
+  }
+  try {
+    const live = await loadScalekitRbacUsers();
+    SCALEKIT_RBAC_CACHE.at = now;
+    SCALEKIT_RBAC_CACHE.users = live.users;
+    SCALEKIT_RBAC_CACHE.organizations = live.organizations;
+    SCALEKIT_RBAC_CACHE.roles = live.roles;
+    SCALEKIT_RBAC_CACHE.source = "scalekit-live";
+    SCALEKIT_RBAC_CACHE.error = "";
+    return live.users;
+  } catch (error) {
+    SCALEKIT_RBAC_CACHE.at = now;
+    SCALEKIT_RBAC_CACHE.users = DEMO_AGENT_USERS.map((user) => ({ ...user, scalekitSource: "local-fallback" }));
+    SCALEKIT_RBAC_CACHE.organizations = SCALEKIT_DEMO_STORES;
+    SCALEKIT_RBAC_CACHE.roles = Object.entries(SCALEKIT_DEMO_PERMISSIONS).map(([name, permissions]) => ({ name, permissions }));
+    SCALEKIT_RBAC_CACHE.source = "local-fallback";
+    SCALEKIT_RBAC_CACHE.error = error.message;
+    return SCALEKIT_RBAC_CACHE.users;
+  }
+}
+
+async function resolveAgentUser(userId) {
+  const users = await resolveAgentUsers();
+  return selectAgentUser(users, userId);
+}
+
+function selectAgentUser(users, userId) {
+  return users.find((user) => user.id === userId || user.role === userId || user.scalekitRole === userId || user.email === userId) || users[0] || DEMO_AGENT_USERS[0];
+}
+
+async function loadScalekitRbacUsers() {
+  const defaultOrg = await getScalekitOrganizationByExternalId(DEFAULT_SCALEKIT_STORE.externalId);
+  const organizations = [defaultOrg].filter(Boolean);
+  const roles = await loadScalekitRoles(defaultOrg?.id);
+  const users = [];
+
+  for (const binding of SCALEKIT_DEMO_USER_BINDINGS) {
+    const fallback = demoAgentUser(binding.id);
+    const member = defaultOrg?.id ? await findScalekitOrgUser(defaultOrg.id, binding.email) : null;
+    if (!member?.id) {
+      users.push({ ...fallback, scalekitSource: "local-fallback", scalekitError: `No Scalekit member found for ${binding.email}` });
+      continue;
+    }
+    const roleNames = await loadScalekitUserRoles(defaultOrg.id, member);
+    const permissionNames = await loadScalekitUserPermissions(defaultOrg.id, member, roleNames);
+    const role = normalizeAgentRole(roleNames[0] || binding.role);
+    const demoByRole = demoAgentUser(role);
+    const profile = member.user_profile || member.userProfile || member.profile || {};
+    users.push({
+      ...demoByRole,
+      id: binding.id,
+      name: displayNameFromScalekitMember(member, binding.name),
+      email: emailFromScalekitMember(member, binding.email),
+      role,
+      title: roleTitle(role, binding.title),
+      tenantId: defaultOrg.external_id || defaultOrg.externalId || DEFAULT_SCALEKIT_STORE.externalId,
+      tenantName: defaultOrg.display_name || defaultOrg.displayName || defaultOrg.name || DEFAULT_SCALEKIT_STORE.name,
+      scalekitUserId: member.id,
+      scalekitOrganizationId: defaultOrg.id,
+      scalekitOrganizationExternalId: defaultOrg.external_id || defaultOrg.externalId || DEFAULT_SCALEKIT_STORE.externalId,
+      scalekitRole: role,
+      scalekitRoleNames: roleNames,
+      scalekitPermissions: permissionNames,
+      scalekitSource: "scalekit-live",
+      firstName: profile.first_name || profile.firstName || "",
+      lastName: profile.last_name || profile.lastName || ""
+    });
+  }
+
+  return {
+    users,
+    organizations: organizations.map((org) => ({
+      id: org.id,
+      displayName: org.display_name || org.displayName || org.name,
+      externalId: org.external_id || org.externalId || DEFAULT_SCALEKIT_STORE.externalId,
+      address: org.metadata?.address || DEFAULT_SCALEKIT_STORE.address,
+      metadata: org.metadata || {}
+    })),
+    roles
+  };
+}
+
+async function getScalekitOrganizationByExternalId(externalId) {
+  try {
+    const payload = await scalekitApi(`/api/v1/organizations:external/${encodeURIComponent(externalId)}`);
+    return unwrapPayload("organization", payload) || payload;
+  } catch {
+    return null;
+  }
+}
+
+async function loadScalekitRoles(orgId) {
+  const localRoles = Object.entries(SCALEKIT_DEMO_PERMISSIONS).map(([name, permissions]) => ({ name, permissions }));
+  try {
+    const payload = orgId
+      ? await scalekitApi(`/api/v1/organizations/${encodeURIComponent(orgId)}/roles?include=permissions:all`)
+      : await scalekitApi("/api/v1/roles");
+    const roles = extractPayloadList(payload);
+    return roles.length ? roles.map((role) => ({
+      name: role.name || role.role_name || role.roleName,
+      displayName: role.display_name || role.displayName || humanizeKey(role.name || role.role_name || ""),
+      permissions: permissionNamesFromPayload(role.permissions || role.effective_permissions || role.effectivePermissions)
+    })).filter((role) => role.name) : localRoles;
+  } catch {
+    return localRoles;
+  }
+}
+
+async function findScalekitOrgUser(orgId, query) {
+  try {
+    const payload = await scalekitApi(`/api/v1/organizations/${encodeURIComponent(orgId)}/users:search?${new URLSearchParams({ query, page_size: "10" })}`);
+    return extractPayloadList(payload).find((user) => sameEmail(user, query)) || extractPayloadList(payload)[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadScalekitUserRoles(orgId, member) {
+  const fromMember = userRoleNamesFromPayload(member);
+  try {
+    const payload = await scalekitApi(`/api/v1/organizations/${encodeURIComponent(orgId)}/users/${encodeURIComponent(member.id)}/roles`);
+    const fromEndpoint = extractPayloadList(payload).map(roleNameFromPayload).filter(Boolean);
+    return uniqueLower([...fromEndpoint, ...fromMember]);
+  } catch {
+    return uniqueLower(fromMember);
+  }
+}
+
+async function loadScalekitUserPermissions(orgId, member, roleNames = []) {
+  try {
+    const payload = await scalekitApi(`/api/v1/organizations/${encodeURIComponent(orgId)}/users/${encodeURIComponent(member.id)}/permissions`);
+    const fromEndpoint = permissionNamesFromPayload(extractPayloadList(payload).length ? extractPayloadList(payload) : payload.permissions || payload.data || []);
+    if (fromEndpoint.length) return uniqueLower(fromEndpoint);
+  } catch {
+    // Fall through to permissions inherited from Scalekit roles or local role defaults.
+  }
+  const fromRoles = roleNames.flatMap((role) => SCALEKIT_DEMO_PERMISSIONS[normalizeAgentRole(role)] || []);
+  return uniqueLower(fromRoles);
+}
+
+function unwrapPayload(key, payload) {
+  if (!payload || typeof payload !== "object") return null;
+  return payload[key] || payload[camelKey(key)] || payload.data?.[key] || payload.data?.[camelKey(key)] || null;
+}
+
+function extractPayloadList(payload) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of ["users", "organizations", "roles", "permissions", "items", "data", "results", "role_assignments", "roleAssignments"]) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+  return [];
+}
+
+function userRoleNamesFromPayload(user) {
+  const roles = [
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    ...(Array.isArray(user?.membership?.roles) ? user.membership.roles : []),
+    ...(Array.isArray(user?.memberships) ? user.memberships.flatMap((membership) => membership.roles || []) : [])
+  ];
+  return uniqueLower(roles.map(roleNameFromPayload).filter(Boolean));
+}
+
+function roleNameFromPayload(role) {
+  if (typeof role === "string") return normalizeAgentRole(role);
+  return normalizeAgentRole(role?.name || role?.role_name || role?.roleName || role?.role?.name || role?.role?.role_name || "");
+}
+
+function permissionNamesFromPayload(value) {
+  const list = Array.isArray(value) ? value : extractPayloadList(value);
+  return uniqueLower(list.map((permission) => {
+    if (typeof permission === "string") return permission;
+    return permission?.name || permission?.permission_name || permission?.permissionName || permission?.permission?.name || "";
+  }).filter(Boolean));
+}
+
+function normalizeAgentRole(role) {
+  const text = String(role || "").toLowerCase().trim();
+  if (/owner|admin/.test(text)) return "owner";
+  if (/manager/.test(text)) return "manager";
+  if (/associate|member|staff|front/.test(text)) return "associate";
+  return text || "associate";
+}
+
+function roleTitle(role, fallback = "") {
+  if (role === "owner") return "Owner";
+  if (role === "manager") return "Store manager";
+  if (role === "associate") return "Front counter associate";
+  return fallback || humanizeKey(role);
+}
+
+function displayNameFromScalekitMember(member, fallback) {
+  const profile = member?.user_profile || member?.userProfile || member?.profile || {};
+  return member?.name || profile.name || [profile.first_name || profile.firstName, profile.last_name || profile.lastName].filter(Boolean).join(" ") || fallback;
+}
+
+function emailFromScalekitMember(member, fallback) {
+  return member?.email || member?.primary_email || member?.primaryEmail || member?.user_profile?.email || member?.userProfile?.email || fallback;
+}
+
+function sameEmail(user, email) {
+  return emailFromScalekitMember(user, "").toLowerCase() === String(email || "").toLowerCase();
+}
+
+function uniqueLower(values) {
+  return [...new Set(values.map((value) => String(value || "").toLowerCase().trim()).filter(Boolean))];
+}
+
+function humanizeKey(value) {
+  return String(value || "")
+    .replace(/[_:.-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+}
+
+function camelKey(value) {
+  return String(value || "").replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
 function demoAgentUser(userId) {
@@ -1688,30 +1975,52 @@ function delegatedAction(input) {
 }
 
 function evaluateDelegatedPolicy(user, action) {
-  const missingScopes = (action.requiredScopes || []).filter((scope) => !user.scopes.includes(scope));
+  const requiredPermissions = requiredScalekitPermissionsForAction(action);
+  const grantedPermissions = uniqueLower(user.scalekitPermissions || []);
+  const missingPermissions = requiredPermissions.filter((permission) => !grantedPermissions.includes(permission));
+  const missingScopes = (action.requiredScopes || []).filter((scope) => !hasDelegatedScope(user, scope));
   const roleAllowed = (action.allowedRoles || []).includes(user.role);
   const approvalAllowed = (action.approvalRoles || []).includes(user.role);
-  if (roleAllowed && !missingScopes.length) {
+  if (roleAllowed && !missingScopes.length && !missingPermissions.length) {
     return {
       decision: "allowed",
       tone: "good",
-      reason: `${user.title} has ${action.requiredScopes.join(", ") || "the required scope"} for this tenant.`
+      reason: `${user.title} has the Scalekit ${user.scalekitRole || user.role} role and ${requiredPermissions.join(", ") || "required"} permission for this tenant.`,
+      requiredPermissions,
+      grantedBy: user.scalekitSource || "local-fallback"
     };
   }
   if (approvalAllowed || (user.role === "manager" && action.risk === "high")) {
     return {
       decision: "needs_approval",
       tone: "warn",
-      reason: `${user.title} can prepare this action, but owner approval is required before execution.`,
-      missingScopes
+      reason: `${user.title} can prepare this action, but Scalekit requires owner approval before execution.`,
+      missingScopes,
+      missingPermissions,
+      requiredPermissions,
+      grantedBy: user.scalekitSource || "local-fallback"
     };
   }
   return {
     decision: "blocked",
     tone: "risk",
-    reason: `${user.title} cannot execute ${action.title}; required role is ${action.allowedRoles.join(" or ")}.`,
-    missingScopes
+    reason: `${user.title} cannot execute ${action.title}; Scalekit requires ${action.allowedRoles.join(" or ")} with ${requiredPermissions.join(", ") || "the required permission"}.`,
+    missingScopes,
+    missingPermissions,
+    requiredPermissions,
+    grantedBy: user.scalekitSource || "local-fallback"
   };
+}
+
+function requiredScalekitPermissionsForAction(action) {
+  return uniqueLower((action.requiredPermissions || [])
+    .concat((action.requiredScopes || []).map((scope) => DELEGATED_SCOPE_TO_SCALEKIT_PERMISSION[scope] || scope.replace(/\./g, ":"))));
+}
+
+function hasDelegatedScope(user, scope) {
+  if ((user.scopes || []).includes(scope)) return true;
+  const permission = DELEGATED_SCOPE_TO_SCALEKIT_PERMISSION[scope] || scope.replace(/\./g, ":");
+  return uniqueLower(user.scalekitPermissions || []).includes(permission);
 }
 
 async function executeScalekitDelegation({ user, store, action }) {
@@ -1742,12 +2051,14 @@ async function executeScalekitDelegation({ user, store, action }) {
   }
   return {
     mode: configured ? "connected" : "local-policy",
-    summary: `Authorized ${action.title} as ${user.email} for tenant ${user.tenantId}`,
+    summary: `Authorized ${action.title} as ${user.email} for tenant ${user.tenantId} using ${user.scalekitSource === "scalekit-live" ? "Scalekit org roles and permissions" : "local Scalekit fallback roles"}`,
     connectedAccount: {
       provider: "scalekit",
       userId: user.id,
       tenantId: user.tenantId,
       scopes: action.requiredScopes,
+      roles: user.scalekitRoleNames || [user.scalekitRole || user.role],
+      permissions: requiredScalekitPermissionsForAction(action),
       status: "ACTIVE"
     }
   };

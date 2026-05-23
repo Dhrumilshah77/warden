@@ -12,6 +12,7 @@ const clientId = process.env.SCALEKIT_CLIENT_ID || "";
 const clientSecret = process.env.SCALEKIT_CLIENT_SECRET || "";
 const ownerEmail = process.env.SCALEKIT_DEMO_OWNER_EMAIL || process.env.DEMO_OWNER_EMAIL || "dhrumildeepakshah@gmail.com";
 const secondEmail = process.env.SCALEKIT_DEMO_SECOND_EMAIL || process.env.DEMO_CUSTOMER_EMAIL || process.env.WARDEN_GMAIL_DEMO_TO || "dhrumil789789@gmail.com";
+const associateEmail = process.env.SCALEKIT_DEMO_ASSOCIATE_EMAIL || "dhrumil789789+associate@gmail.com";
 const sendInvitationEmail = process.env.SCALEKIT_SEND_INVITES === "1";
 
 const permissions = [
@@ -129,8 +130,15 @@ try {
       organization: orgResult.organization,
       email: secondEmail,
       externalId: `${organization.external_id}:demo-user`,
-      role: organization.external_id.endsWith("-2") ? "associate" : "manager",
+      role: "manager",
       profile: { first_name: "Demo", last_name: "User" }
+    }, token));
+    memberResults.push(await ensureOrganizationUser({
+      organization: orgResult.organization,
+      email: associateEmail,
+      externalId: `${organization.external_id}:associate`,
+      role: "associate",
+      profile: { first_name: "Mia", last_name: "Garcia" }
     }, token));
   }
 

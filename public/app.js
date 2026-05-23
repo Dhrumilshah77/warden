@@ -3095,10 +3095,14 @@ function renderAgentConsole() {
   const currentUser = currentAgentUser();
   const integrations = session.integrations || {};
   const entries = Object.entries(integrations);
+  const scalekitSource = session.scalekitSaas?.source === "scalekit-live"
+    ? "Live Scalekit org roles"
+    : "Scalekit fallback roles";
+  const permissionCount = currentUser?.scalekitPermissions?.length || session.scalekitSaas?.activePermissions?.length || 0;
   els.agentIntegrationStrip.innerHTML = entries.length ? `
     <div class="agent-built-with">
       <span><b>Built with Apify</b> Google Places, review themes, supplier products</span>
-      <span><b>Built with Scalekit</b> store organizations, owner/manager/associate RBAC, user-scoped Gmail</span>
+      <span><b>Built with Scalekit</b> ${escapeHtml(scalekitSource)} · ${escapeHtml(String(permissionCount))} permissions · user-scoped Gmail</span>
     </div>
   ` : `<div class="empty">Loading connection status...</div>`;
 
