@@ -4960,8 +4960,50 @@ function removeSelectedStore() {
 }
 
 function exportPdfReport() {
-  document.title = `${selectedStore().businessName || "Righthand AI"} - Righthand AI report`;
-  window.print();
+  const previousFilter = state.activeSignalFilter;
+  const previousTitle = document.title;
+  document.title = `${selectedStore().businessName || "Righthand AI"} - Righthand AI detailed report`;
+  renderDetailedPdfReport();
+
+  let restored = false;
+  const restoreAfterPrint = () => {
+    if (restored) return;
+    restored = true;
+    document.title = previousTitle;
+    state.activeSignalFilter = previousFilter;
+    renderDetailedPdfReport(previousFilter);
+    window.removeEventListener("afterprint", restoreAfterPrint);
+  };
+  window.addEventListener("afterprint", restoreAfterPrint, { once: true });
+  requestAnimationFrame(() => window.print());
+}
+
+function renderDetailedPdfReport(filterAfterRender = "all") {
+  const store = selectedStore();
+  const intel = state.latestIntel || {};
+  renderBanners(intel.banners || []);
+
+  state.activeSignalFilter = "Store Info";
+  renderStoreInfo();
+
+  state.activeSignalFilter = "Restock";
+  renderRestock();
+
+  state.activeSignalFilter = "all";
+  renderFilters(intel.groups || []);
+  renderOpportunities(intel.opportunities || []);
+  renderWarnings(intel.warnings || []);
+  renderWeather(intel.weatherForecast || []);
+  renderMarketIntelligence(intel);
+  renderCompliance(intel);
+  renderReviewLater();
+  renderSignals(intel.groups || []);
+  renderMap(intel.generatedAt ? intel : mapBootstrapIntel(store));
+  renderAgentConsole();
+
+  state.activeSignalFilter = filterAfterRender;
+  renderFilters(intel.groups || []);
+  translateRenderedPage();
 }
 
 function emailReport() {

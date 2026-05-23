@@ -3061,9 +3061,54 @@
 
     @media print {
       html, body { height: auto; overflow: visible; background: white; color: #111; }
-      .topbar, .rail, .modal-overlay, .filter-row, .source-link, .helper-panel { display: none !important; }
+      .topbar, .rail, .modal-overlay, .filter-row, .helper-panel { display: none !important; }
       .app-shell { display: block; height: auto; background: white; }
       .monitor { overflow: visible; background: white; color: #111; }
+      .monitor-inner { padding: 0; }
+      .monitor-summary {
+        display: block;
+        min-height: 0;
+        margin-bottom: 18px;
+      }
+      .owner-command-left {
+        display: grid;
+        grid-template-rows: auto auto;
+        gap: 10px;
+      }
+      .owner-brief {
+        max-height: none;
+        overflow: visible;
+      }
+      .section-nav-sticky { display: none !important; }
+      #agentSection,
+      #bannerStack,
+      #complianceSection,
+      #storeInfoSection,
+      #restockSection,
+      #opportunitiesSection,
+      #warningsSection,
+      #weatherSection,
+      #reviewLaterSection,
+      #signalsSection {
+        display: block !important;
+      }
+      .section-block {
+        margin-top: 18px;
+        break-inside: avoid;
+      }
+      .source-link,
+      .compliance-evidence {
+        display: inline !important;
+        color: #0645ad;
+      }
+      .source-link[href]::after,
+      .compliance-evidence[href]::after {
+        content: " (" attr(href) ")";
+        color: #555;
+        font-size: 9px;
+        font-weight: 400;
+        word-break: break-all;
+      }
       .score, .metric-card, .summary-card, .signal-card, .op-card, .warning-card, .weather-card, .review-card, .source-row {
         break-inside: avoid;
         background: white;
