@@ -446,7 +446,12 @@ export async function handleRequest(req, res) {
 
     if (url.pathname === "/api/agent/inbox") {
       const user = demoAgentUser(url.searchParams.get("userId") || url.searchParams.get("as") || "owner-ava");
-      return sendJson(res, 200, { ok: true, user, inbox: agentInboxForUser(user) });
+      return sendJson(res, 200, {
+        ok: true,
+        user,
+        inbox: agentInboxForUser(user),
+        audit: agentAuditForTenant(user.tenantId)
+      });
     }
 
     if (url.pathname === "/api/agent/message") {
@@ -651,7 +656,7 @@ function buildAgentActions(body = {}, params = new URLSearchParams()) {
     tenant: { id: user.tenantId, name: user.tenantName },
     integrations: agentIntegrationStatus(),
     actions,
-    audit: DELEGATED_ACTION_AUDIT.filter((event) => event.tenantId === user.tenantId).slice(0, 12),
+    audit: agentAuditForTenant(user.tenantId, 12),
     inbox: agentInboxForUser(user)
   };
 }
@@ -719,6 +724,12 @@ function agentInboxForUser(user) {
     .filter((item) => item.toUserId === user.id || item.toRole === user.role || item.fromUserId === user.id)
     .sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at))
     .slice(0, 30);
+}
+
+function agentAuditForTenant(tenantId, limit = 30) {
+  return DELEGATED_ACTION_AUDIT
+    .filter((event) => event.tenantId === tenantId)
+    .slice(0, limit);
 }
 
 function createApprovalRequest({ user, store, action, policy, auditEvent }) {

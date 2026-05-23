@@ -2252,6 +2252,57 @@
       padding: 9px 10px;
       min-height: 38px;
     }
+    .agent-select-wrap.hidden {
+      display: none;
+    }
+    .agent-tab-panel {
+      display: grid;
+      gap: 7px;
+      min-width: min(560px, 100%);
+      flex: 1 1 460px;
+    }
+    .agent-tab-kicker {
+      color: var(--subtle);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .agent-role-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .agent-role-tab {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #11150f;
+      color: var(--muted);
+      padding: 9px 10px;
+      display: grid;
+      gap: 2px;
+      min-height: 54px;
+    }
+    .agent-role-tab.active {
+      color: var(--text);
+      border-color: rgba(54,194,143,.5);
+      background: rgba(54,194,143,.08);
+    }
+    .agent-role-name {
+      font-size: 13px;
+      font-weight: 760;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .agent-role-sub {
+      color: var(--subtle);
+      font-size: 11px;
+      font-family: var(--mono);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .agent-integrations {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
@@ -2557,6 +2608,7 @@
     }
     @media (max-width: 760px) {
       .agent-select-wrap { min-width: 100%; }
+      .agent-role-tabs { grid-template-columns: 1fr; }
       .agent-feature-grid { grid-template-columns: 1fr; }
       .agent-runbook-row { grid-template-columns: 24px 1fr; }
       .agent-mini-stat { white-space: normal; }
@@ -2826,9 +2878,13 @@
             <div class="agent-control">
               <div>
                 <div class="agent-title">Act as the right storefront user</div>
-                <div class="agent-copy">Same recommendation, different user, different permission outcome.</div>
+                <div class="agent-copy">Open three browser tabs so each real user keeps their own inbox and report trail.</div>
               </div>
-              <label class="agent-select-wrap" for="agentUserSelect">
+              <div class="agent-tab-panel">
+                <div class="agent-tab-kicker">Open role-specific tabs</div>
+                <div class="agent-role-tabs" id="agentRoleTabs"></div>
+              </div>
+              <label class="agent-select-wrap hidden" for="agentUserSelect">
                 <span>Acting as</span>
                 <select id="agentUserSelect"></select>
               </label>

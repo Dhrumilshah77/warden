@@ -19,7 +19,7 @@ Open the **Delegated Agent** section near the top of the dashboard. It demonstra
 - **Entire.io** is the business system destination: Warden creates campaign, task, order, or CRM-style records as the scoped user.
 - **Audit trail** records every allowed, blocked, or approval-required attempt as `user + tenant + role + action + evidence`.
 - **Peak Day Autopilot** turns the current intelligence into a one-click prep plan: promo, hours, supplier, and compliance actions are executed, approval-gated, or blocked based on the selected user.
-- **Delegation Inbox** supports the 3-tab demo: a manager can request owner approval, an owner can approve and execute, and an associate can message the manager after a blocked permission check.
+- **Delegation Inbox** supports the 3-tab demo: open `?agentUser=owner-ava`, `?agentUser=manager-ben`, and `?agentUser=associate-mia` in separate browser tabs; each tab keeps its own user, inbox, and shared tenant report trail.
 - **Customer Recovery Agent** is a second flagship workflow: Warden detects customer risk, builds a recovery segment, drafts outreach, and gates high-risk credits to the owner.
 
 It runs in mock mode out of the box so you can demo immediately. Tomorrow, set `SCALEKIT_*` and `ENTIRE_*` env vars to sponsor credentials and point `SCALEKIT_AGENT_PROXY_URL` / `ENTIRE_API_URL` at the live integration endpoints without changing the UI or agent policy code.

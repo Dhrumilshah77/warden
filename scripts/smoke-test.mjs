@@ -19,6 +19,7 @@ await check("static app shell", async () => {
   assert(html.includes("Warden Helper"), "chatbot popup should be present");
   assert(html.includes("id=\"agentSection\""), "delegated agent console should be present");
   assert(html.includes("id=\"agentUserSelect\""), "delegated user selector should be present");
+  assert(html.includes("id=\"agentRoleTabs\""), "role-specific browser tab launcher should be present");
   assert(html.includes("id=\"agentAutopilotPanel\""), "peak day autopilot panel should be present");
   assert(html.includes("id=\"agentCustomerPanel\""), "customer recovery agent panel should be present");
   assert(html.includes("id=\"agentInboxPanel\""), "delegation inbox should be present");
@@ -27,6 +28,8 @@ await check("static app shell", async () => {
   assert(appJs.includes("Add to notes"), "card save buttons should say Add to notes");
   assert(appJs.includes("openStoreInfoView"), "View stored info should open the right-side store info view");
   assert(appJs.includes("executeAgentAction"), "delegated agent actions should be executable from the UI");
+  assert(appJs.includes("agentUserIdFromUrl"), "agent identity should be URL-scoped for 3-tab demos");
+  assert(appJs.includes("refreshAgentTrail"), "cross-tab report trail should refresh");
   assert(appJs.includes("runPeakDayAutopilot"), "peak day autopilot should be wired in the UI");
   assert(appJs.includes("Customer Recovery Agent"), "customer recovery agent should be rendered in the UI");
   assert(appJs.includes("messageManagerForAction"), "blocked users should be able to message a manager");
@@ -75,6 +78,7 @@ await check("delegated action policy changes by user", async () => {
   assert(approvalRequest.inboxItem?.toRole === "owner", "approval request should route to owner inbox");
   const ownerInbox = await json(`/api/agent/inbox?${new URLSearchParams({ userId: "owner-ava" })}`);
   assert(ownerInbox.inbox.some((item) => item.id === approvalRequest.inboxItem.id && item.status === "pending"), "owner inbox should show manager approval request");
+  assert(ownerInbox.audit.some((event) => event.userId === "manager-ben" && event.decision === "needs_approval"), "owner tab should receive shared tenant report trail");
   const approval = await postJson("/api/agent/approve", { userId: "owner-ava", requestId: approvalRequest.inboxItem.id });
   assert(approval.executed === true, "owner approval should execute the pending request");
 
@@ -83,6 +87,7 @@ await check("delegated action policy changes by user", async () => {
   assert(message.item?.toRole === "manager", "associate escalation should route to manager");
   const managerInbox = await json(`/api/agent/inbox?${new URLSearchParams({ userId: "manager-ben" })}`);
   assert(managerInbox.inbox.some((item) => item.id === message.item.id), "manager inbox should show associate message");
+  assert(managerInbox.audit.some((event) => event.userId === "associate-mia" && event.decision === "messaged"), "manager tab should receive associate report trail events");
 });
 
 await check("custom restock search uses exact supplier links", async () => {

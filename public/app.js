@@ -1115,6 +1115,8 @@ Object.entries(PAGE_TRANSLATION_CARD_PHRASES).forEach(([lang, phrases]) => {
 const originalTextNodes = new WeakMap();
 const originalAttributeValues = new WeakMap();
 let translationFrame = 0;
+const initialAgentUserId = agentUserIdFromUrl();
+const isAgentUserUrlLocked = Boolean(initialAgentUserId);
 
 const state = {
   stores: loadStores(),
@@ -1124,7 +1126,8 @@ const state = {
   activeSignalFilter: "all",
   modalMode: "add",
   modalSelectedType: "restaurant",
-  agentUserId: localStorage.getItem("warden:agentUserId") || "owner-ava",
+  agentUserId: initialAgentUserId || localStorage.getItem("warden:agentUserId") || "owner-ava",
+  agentUserLocked: isAgentUserUrlLocked,
   agentSession: null,
   agentActions: [],
   agentInbox: [],
@@ -1147,7 +1150,7 @@ const ids = [
   "storeCount", "storeSearch", "storesList", "addStoreBtn", "detailsStoreBtn", "editStoreBtn",
   "riskScore", "riskBar", "opportunityScore", "opportunityBar",
   "metricsGrid", "addressPill", "cityPill", "updatedText", "bannerStack", "subTabs",
-  "agentSection", "agentMeta", "agentUserSelect", "agentIntegrationStrip", "agentAutopilotPanel", "agentInboxPanel", "agentReceiptPanel", "agentCustomerPanel", "agentActionsPanel", "agentReplayPanel", "agentAuditPanel",
+  "agentSection", "agentMeta", "agentUserSelect", "agentRoleTabs", "agentIntegrationStrip", "agentAutopilotPanel", "agentInboxPanel", "agentReceiptPanel", "agentCustomerPanel", "agentActionsPanel", "agentReplayPanel", "agentAuditPanel",
   "storeInfoSection", "storeInfoMeta", "storeInfoPanel", "restockSection", "restockMeta", "restockForm", "restockQuery", "restockSuggestions", "restockResults", "opportunitiesSection", "opportunitiesMeta", "opportunitiesPanel", "warningsSection", "warningsMeta", "warningsPanel", "weatherSection", "weatherPanel",
   "reviewLaterSection", "reviewLaterMeta", "reviewLaterList", "signalsRoot", "checksModal", "sourceHealthList", "closeChecksModalBtn",
   "mapSection", "mapCanvas", "mapProviderChip", "mapProviderLabel", "mapStats",
@@ -1164,6 +1167,18 @@ const els = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]
 
 boot();
 
+function agentUserIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("agentUser") || params.get("userId") || params.get("as") || "";
+}
+
+function agentTabUrl(userId) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("agentUser", userId);
+  url.hash = "agentSection";
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 function boot() {
   if (!selectedStore()) {
     state.selectedId = state.stores[0]?.id || "sf-demo";
@@ -1178,7 +1193,7 @@ function boot() {
   refreshAgentSession();
   refreshIntel();
   window.setInterval(() => {
-    if (document.visibilityState === "visible" && state.agentSession) refreshAgentInbox();
+    if (document.visibilityState === "visible" && state.agentSession) refreshAgentTrail();
   }, 4500);
 }
 
@@ -1198,6 +1213,7 @@ function wireEvents() {
   els.restockTopBtn.addEventListener("click", openRestockView);
   els.agentTopBtn.addEventListener("click", openAgentView);
   els.agentUserSelect.addEventListener("change", () => {
+    if (state.agentUserLocked) return;
     state.agentUserId = els.agentUserSelect.value;
     localStorage.setItem("warden:agentUserId", state.agentUserId);
     refreshAgentActions();
@@ -2387,13 +2403,19 @@ async function refreshAgentActions() {
 }
 
 async function refreshAgentInbox() {
+  return refreshAgentTrail();
+}
+
+async function refreshAgentTrail() {
   try {
     const response = await fetch(`/api/agent/inbox?${new URLSearchParams({ userId: state.agentUserId })}`);
     if (!response.ok) throw new Error(`Agent inbox failed with status ${response.status}`);
     const data = await response.json();
     state.agentInbox = data.inbox || [];
+    if (data.audit) state.agentSession = { ...(state.agentSession || {}), audit: data.audit };
     renderAgentInbox();
     renderAgentReplay();
+    renderAgentAudit(state.agentSession?.audit || []);
     wireAgentInboxButtons();
   } catch {
     state.agentInbox = state.agentInbox || [];
@@ -2413,8 +2435,10 @@ function renderAgentConsole() {
       els.agentUserSelect.value = current;
       state.agentUserId = current;
     }
+    renderAgentRoleTabs(users, current);
   } else {
     els.agentUserSelect.innerHTML = `<option>Loading users...</option>`;
+    if (els.agentRoleTabs) els.agentRoleTabs.innerHTML = `<div class="empty">Loading role tabs...</div>`;
   }
 
   const integrations = session.integrations || {};
@@ -2429,8 +2453,9 @@ function renderAgentConsole() {
     </article>
   `).join("") : `<div class="empty">Loading integration status...</div>`;
 
+  const currentUser = currentAgentUser();
   const modeText = entries.map(([name, item]) => `${agentIntegrationLabel(name)}: ${item.mode || "mock"}`).join(" · ");
-  els.agentMeta.textContent = modeText || "Scalekit + Entire ready";
+  els.agentMeta.textContent = currentUser ? `${currentUser.name} tab · ${modeText || "Scalekit + Entire ready"}` : modeText || "Scalekit + Entire ready";
   renderAgentAutopilot();
   renderAgentInbox();
   renderAgentReceipt();
@@ -2467,6 +2492,20 @@ function renderAgentConsole() {
 function currentAgentUser() {
   const users = state.agentSession?.users || [];
   return users.find((user) => user.id === state.agentUserId) || state.agentSession?.user || state.agentSession?.selectedUser || null;
+}
+
+function renderAgentRoleTabs(users, currentId) {
+  if (!els.agentRoleTabs) return;
+  els.agentRoleTabs.innerHTML = users.map((user) => {
+    const active = user.id === currentId;
+    const label = active ? "This tab" : `Open ${user.title.toLowerCase()} tab`;
+    return `
+      <a class="agent-role-tab ${active ? "active" : ""}" href="${escapeAttr(agentTabUrl(user.id))}" target="_blank" rel="noreferrer" ${active ? `aria-current="page"` : ""}>
+        <span class="agent-role-name">${escapeHtml(user.name)} · ${escapeHtml(user.title)}</span>
+        <span class="agent-role-sub">${escapeHtml(label)}</span>
+      </a>
+    `;
+  }).join("");
 }
 
 function renderAgentAutopilot() {
@@ -2776,14 +2815,14 @@ async function approveAgentRequest(requestId) {
 function renderAgentAudit(audit) {
   const items = audit || [];
   els.agentAuditPanel.innerHTML = `
-    <div class="agent-audit-title">User-scoped audit trail</div>
-    ${items.length ? items.slice(0, 5).map((event) => `
+    <div class="agent-audit-title">Shared tenant report trail</div>
+    ${items.length ? items.slice(0, 8).map((event) => `
       <div class="agent-audit-row">
         <span>${escapeHtml(formatDateTime(event.at))}</span>
         <span><b>${escapeHtml(event.userName || "User")}</b> ${escapeHtml(event.executed ? "executed" : "attempted")} ${escapeHtml(event.actionTitle || "action")} for ${escapeHtml(event.storeName || "store")}</span>
         <span class="agent-audit-decision">${escapeHtml(event.decision || "logged")}</span>
       </div>
-    `).join("") : `<div class="empty">No delegated actions yet. Switch users, execute an allowed action, then watch this fill in.</div>`}
+    `).join("") : `<div class="empty">No delegated actions yet. Open owner, manager, and associate tabs, then run a request to watch this fill in everywhere.</div>`}
   `;
 }
 
