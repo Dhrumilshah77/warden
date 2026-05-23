@@ -1132,8 +1132,10 @@ const state = {
   agentActions: [],
   agentInbox: [],
   agentReceipt: null,
+  agentAutonomy: null,
   agentLoading: false,
   agentAutopilotRunning: false,
+  agentAutonomyRunning: false,
   reviewItems: loadReviewItems(),
   chatThreads: loadChatThreads(),
   chatOpen: false,
@@ -1150,7 +1152,7 @@ const ids = [
   "storeCount", "storeSearch", "storesList", "addStoreBtn", "detailsStoreBtn", "editStoreBtn",
   "riskScore", "riskBar", "opportunityScore", "opportunityBar",
   "metricsGrid", "addressPill", "cityPill", "updatedText", "bannerStack", "subTabs",
-  "agentSection", "agentMeta", "agentUserSelect", "agentRoleTabs", "agentIntegrationStrip", "agentAutopilotPanel", "agentInboxPanel", "agentReceiptPanel", "agentCustomerPanel", "agentActionsPanel", "agentReplayPanel", "agentAuditPanel",
+  "agentSection", "agentMeta", "agentUserSelect", "agentRoleTabs", "agentIntegrationStrip", "agentAutopilotPanel", "agentInboxPanel", "agentReceiptPanel", "agentAutonomyPanel", "agentCustomerPanel", "agentActionsPanel", "agentReplayPanel", "agentAuditPanel",
   "storeInfoSection", "storeInfoMeta", "storeInfoPanel", "restockSection", "restockMeta", "restockForm", "restockQuery", "restockSuggestions", "restockResults", "opportunitiesSection", "opportunitiesMeta", "opportunitiesPanel", "warningsSection", "warningsMeta", "warningsPanel", "weatherSection", "weatherPanel",
   "reviewLaterSection", "reviewLaterMeta", "reviewLaterList", "signalsRoot", "checksModal", "sourceHealthList", "closeChecksModalBtn",
   "mapSection", "mapCanvas", "mapProviderChip", "mapProviderLabel", "mapStats",
@@ -2393,6 +2395,7 @@ async function refreshAgentActions() {
     state.agentActions = data.actions || [];
     state.agentInbox = data.inbox || state.agentInbox || [];
     state.agentSession = { ...(state.agentSession || {}), ...data, users: state.agentSession?.users || data.users || [] };
+    refreshAgentAutonomy();
   } catch (error) {
     state.agentActions = [];
     state.agentSession = { ...(state.agentSession || {}), actionError: error.message };
@@ -2419,6 +2422,29 @@ async function refreshAgentTrail() {
     wireAgentInboxButtons();
   } catch {
     state.agentInbox = state.agentInbox || [];
+  }
+}
+
+async function refreshAgentAutonomy() {
+  const store = selectedStore();
+  if (!store) return;
+  try {
+    const response = await fetch("/api/agent/autonomy", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userId: state.agentUserId,
+        store,
+        intel: compactIntelForAgent(state.latestIntel)
+      })
+    });
+    if (!response.ok) throw new Error(`Autonomy plan failed with status ${response.status}`);
+    state.agentAutonomy = await response.json();
+    renderAgentAutonomy();
+    wireAgentAutonomyButtons();
+  } catch (error) {
+    state.agentAutonomy = { ok: false, error: error.message, actions: [], customers: [] };
+    renderAgentAutonomy();
   }
 }
 
@@ -2459,6 +2485,7 @@ function renderAgentConsole() {
   renderAgentAutopilot();
   renderAgentInbox();
   renderAgentReceipt();
+  renderAgentAutonomy();
   renderCustomerRecovery();
 
   if (state.agentLoading) {
@@ -2559,6 +2586,41 @@ function renderCustomerRecovery() {
   `;
 }
 
+function renderAgentAutonomy() {
+  if (!els.agentAutonomyPanel) return;
+  const plan = state.agentAutonomy || {};
+  const signals = plan.signals || {};
+  const actions = plan.actions || [];
+  const customers = plan.customers || [];
+  const demoCustomer = customers[0];
+  const rows = actions.slice(0, 5).map((action) => `
+    <div class="autonomy-row">
+      <div>
+        <div class="autonomy-row-title">${escapeHtml(action.title)}</div>
+        <div class="autonomy-row-copy">${escapeHtml(action.summary || "")}</div>
+        <div class="agent-evidence">${escapeHtml(action.guardrail || action.policy?.reason || "")}</div>
+      </div>
+      <span class="agent-decision allowed">auto safe</span>
+    </div>
+  `).join("");
+  els.agentAutonomyPanel.innerHTML = `
+    <div class="agent-feature-head">
+      <div>
+        <div class="agent-feature-title">Customer Memory Autopilot</div>
+        <div class="agent-feature-copy">Warden can create internal tasks, drafts, segments, and teammate notes without asking for every low-risk step.</div>
+      </div>
+      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Creating..." : "Run safe actions"}</button>
+    </div>
+    <div class="autonomy-summary">
+      <div class="autonomy-stat"><strong>${escapeHtml(String(signals.regularCount ?? "--"))}</strong><span>regular customers</span></div>
+      <div class="autonomy-stat"><strong>${escapeHtml(String(signals.lapsedCount ?? "--"))}</strong><span>lapsed or at risk</span></div>
+      <div class="autonomy-stat"><strong>$${escapeHtml(String(signals.estimatedRecoveryValue ?? "--"))}</strong><span>estimated recovery value</span></div>
+      <div class="autonomy-stat"><strong>${escapeHtml(signals.topItem || "--")}</strong><span>${escapeHtml(demoCustomer?.email || "demo customer")}</span></div>
+    </div>
+    <div class="autonomy-list">${rows || `<div class="empty">${escapeHtml(plan.error || "Autonomous safe actions load after the scan finishes.")}</div>`}</div>
+  `;
+}
+
 function renderAgentInbox() {
   if (!els.agentInboxPanel) return;
   const user = currentAgentUser();
@@ -2656,6 +2718,7 @@ function renderAgentReplay() {
 
 function wireAgentFeatureButtons() {
   els.agentAutopilotPanel?.querySelector("[data-agent-autopilot]")?.addEventListener("click", runPeakDayAutopilot);
+  wireAgentAutonomyButtons();
   wireAgentInboxButtons();
   els.agentCustomerPanel?.querySelectorAll("[data-agent-execute]").forEach((button) => {
     button.addEventListener("click", () => executeAgentAction(button.dataset.agentExecute));
@@ -2667,6 +2730,10 @@ function wireAgentFeatureButtons() {
     state.agentReceipt = null;
     renderAgentReceipt();
   });
+}
+
+function wireAgentAutonomyButtons() {
+  els.agentAutonomyPanel?.querySelector("[data-agent-autonomy-run]")?.addEventListener("click", runAutonomousActions);
 }
 
 function wireAgentInboxButtons() {
@@ -2699,6 +2766,45 @@ function renderAgentActionCard(action) {
       </div>
     </article>
   `;
+}
+
+async function runAutonomousActions() {
+  if (state.agentAutonomyRunning) return;
+  const store = selectedStore();
+  if (!store) return;
+  state.agentAutonomyRunning = true;
+  renderAgentAutonomy();
+  try {
+    const response = await fetch("/api/agent/autonomy/run", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userId: state.agentUserId,
+        store,
+        intel: compactIntelForAgent(state.latestIntel)
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || `Autonomous run failed with status ${response.status}`);
+    state.agentReceipt = {
+      executed: true,
+      policy: { decision: "auto_safe", reason: `${data.count || 0} low-risk internal actions created automatically.` },
+      auditEvent: data.auditEvents?.[0],
+      scalekit: { summary: "Tenant-scoped autonomous guardrails checked" },
+      entire: { summary: "Entire draft/task/segment records created" }
+    };
+    renderBanners([{ level: "opportunity", title: "Autonomous safe actions created", body: data.message || "Warden created internal drafts and tasks without public side effects." }]);
+    await refreshAgentAutonomy();
+    await refreshAgentActions();
+    await refreshAgentTrail();
+    scrollToSection(els.agentSection);
+  } catch (error) {
+    renderBanners([{ level: "critical", title: "Autonomous run failed", body: error.message }]);
+  } finally {
+    state.agentAutonomyRunning = false;
+    renderAgentAutonomy();
+    wireAgentAutonomyButtons();
+  }
 }
 
 async function runPeakDayAutopilot() {

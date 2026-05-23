@@ -21,6 +21,7 @@ Open the **Delegated Agent** section near the top of the dashboard. It demonstra
 - **Peak Day Autopilot** turns the current intelligence into a one-click prep plan: promo, hours, supplier, and compliance actions are executed, approval-gated, or blocked based on the selected user.
 - **Delegation Inbox** supports the 3-tab demo: open `?agentUser=owner-ava`, `?agentUser=manager-ben`, and `?agentUser=associate-mia` in separate browser tabs; each tab keeps its own user, inbox, and shared tenant report trail.
 - **Customer Recovery Agent** is a second flagship workflow: Warden detects customer risk, builds a recovery segment, drafts outreach, and gates high-risk credits to the owner.
+- **Customer Memory Autopilot** is the safe-autonomy lane: Warden reads demo customer/order memory and automatically creates internal Entire.io tasks, campaign drafts, customer segments, supplier-order drafts, and teammate notes. It never sends customer messages, spends money, changes public profiles, or publishes without owner approval.
 
 It runs in mock mode out of the box so you can demo immediately. Tomorrow, set `SCALEKIT_*` and `ENTIRE_*` env vars to sponsor credentials and point `SCALEKIT_AGENT_PROXY_URL` / `ENTIRE_API_URL` at the live integration endpoints without changing the UI or agent policy code.
 
@@ -252,6 +253,12 @@ Accepts `{ userId, store, intel }` and returns recommended user-scoped actions w
 
 ### `POST /api/agent/execute`
 Executes or records a delegated action. In mock mode it creates a Scalekit-style connected-account result, an Entire-style business record, and an audit event. In live mode it can call `SCALEKIT_AGENT_PROXY_URL` and `ENTIRE_API_URL`.
+
+### `POST /api/agent/autonomy`
+Returns the safe-autonomy plan from demo customer/order memory: regular customers, lapsed customers, top items, estimated recovery value, and low-risk actions the agent may create automatically.
+
+### `POST /api/agent/autonomy/run`
+Creates the safe-autonomy actions as internal Entire.io drafts/tasks/segments/messages and records `auto_executed` events in the tenant report trail. No public/customer/purchase side effects happen here.
 
 ### `GET /api/agent/inbox?userId=...`
 Returns approval requests and escalation messages visible to that user, role, and tenant.

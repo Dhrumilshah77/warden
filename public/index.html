@@ -2491,6 +2491,56 @@
       grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
       gap: 10px;
     }
+    .autonomy-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+      gap: 8px;
+    }
+    .autonomy-stat {
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 7px;
+      background: #171c15;
+      padding: 8px;
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+    .autonomy-stat strong {
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.1;
+    }
+    .autonomy-stat span {
+      color: var(--subtle);
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+    .autonomy-list {
+      display: grid;
+      gap: 7px;
+    }
+    .autonomy-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+      border: 1px solid rgba(54,194,143,.22);
+      border-radius: 7px;
+      background: rgba(54,194,143,.05);
+      padding: 9px;
+      min-width: 0;
+    }
+    .autonomy-row-title {
+      color: var(--text);
+      font-weight: 740;
+      line-height: 1.3;
+    }
+    .autonomy-row-copy {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      margin-top: 2px;
+    }
     .agent-action-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
@@ -2895,6 +2945,7 @@
               <div class="agent-feature-card" id="agentInboxPanel"></div>
             </div>
             <div id="agentReceiptPanel"></div>
+            <div class="agent-feature-card" id="agentAutonomyPanel"></div>
             <div class="agent-feature-card" id="agentCustomerPanel"></div>
             <div class="agent-action-grid" id="agentActionsPanel"></div>
             <div class="agent-feature-card" id="agentReplayPanel"></div>

@@ -28,6 +28,14 @@
       "dest": "/api/agent/execute.mjs"
     },
     {
+      "src": "/api/agent/autonomy",
+      "dest": "/api/agent/autonomy.mjs"
+    },
+    {
+      "src": "/api/agent/autonomy/run",
+      "dest": "/api/agent/autonomy.mjs"
+    },
+    {
       "src": "/api/agent/inbox",
       "dest": "/api/agent/inbox.mjs"
     },

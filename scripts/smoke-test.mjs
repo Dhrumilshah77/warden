@@ -21,6 +21,7 @@ await check("static app shell", async () => {
   assert(html.includes("id=\"agentUserSelect\""), "delegated user selector should be present");
   assert(html.includes("id=\"agentRoleTabs\""), "role-specific browser tab launcher should be present");
   assert(html.includes("id=\"agentAutopilotPanel\""), "peak day autopilot panel should be present");
+  assert(html.includes("id=\"agentAutonomyPanel\""), "customer memory autonomy panel should be present");
   assert(html.includes("id=\"agentCustomerPanel\""), "customer recovery agent panel should be present");
   assert(html.includes("id=\"agentInboxPanel\""), "delegation inbox should be present");
   assert(!html.includes("Review Later"), "app shell should use Notes, not Review Later");
@@ -31,6 +32,8 @@ await check("static app shell", async () => {
   assert(appJs.includes("agentUserIdFromUrl"), "agent identity should be URL-scoped for 3-tab demos");
   assert(appJs.includes("refreshAgentTrail"), "cross-tab report trail should refresh");
   assert(appJs.includes("runPeakDayAutopilot"), "peak day autopilot should be wired in the UI");
+  assert(appJs.includes("runAutonomousActions"), "safe autonomous actions should be executable from the UI");
+  assert(appJs.includes("Customer Memory Autopilot"), "customer memory autopilot should be rendered in the UI");
   assert(appJs.includes("Customer Recovery Agent"), "customer recovery agent should be rendered in the UI");
   assert(appJs.includes("messageManagerForAction"), "blocked users should be able to message a manager");
   assert(!appJs.includes("removeStoreBtn"), "app JS should not wire a visible remove store button");
@@ -69,6 +72,14 @@ await check("delegated action policy changes by user", async () => {
   assert(associate.actions.some((action) => action.policy.decision === "blocked"), "associate should be blocked from privileged delegated actions");
   assert(owner.actions.some((action) => action.category === "customer-recovery"), "customer recovery actions should be included");
   assert(owner.integrations.scalekit && owner.integrations.entire && owner.integrations.apify, "agent response should expose sponsor integration status");
+
+  const autonomy = await postJson("/api/agent/autonomy", { userId: "owner-ava", store, intel: intelPayload });
+  assert(autonomy.customers.some((customer) => customer.tags.includes("regular")), "autonomy plan should include demo regular customers");
+  assert(autonomy.actions.length >= 5, "autonomy plan should recommend multiple safe actions");
+  assert(autonomy.actions.every((action) => action.policy?.decision === "auto_safe"), "autonomy actions should be marked auto-safe");
+  const autonomousRun = await postJson("/api/agent/autonomy/run", { userId: "owner-ava", store, intel: intelPayload });
+  assert(autonomousRun.count >= 5, "autonomous run should create safe internal actions");
+  assert(autonomousRun.auditEvents.every((event) => event.decision === "auto_executed"), "autonomous events should be logged as auto_executed");
 
   const manager = await postJson("/api/agent/actions", { userId: "manager-ben", store, intel: intelPayload });
   const creditAction = manager.actions.find((action) => action.id === "issue-recovery-credit");

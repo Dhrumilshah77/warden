@@ -51,7 +51,7 @@ const DEMO_AGENT_USERS = [
   {
     id: "owner-ava",
     name: "Ava Patel",
-    email: "ava@missiondemo.com",
+    email: process.env.DEMO_OWNER_EMAIL || "ava@missiondemo.com",
     role: "owner",
     title: "Owner",
     tenantId: "tenant-mission-demo",
@@ -96,6 +96,8 @@ const DEMO_AGENT_USERS = [
     ]
   }
 ];
+
+const DEMO_CUSTOMER_EMAIL = process.env.DEMO_CUSTOMER_EMAIL || "regular.customer@example.com";
 
 const SOURCE_CATALOG = [
   {
@@ -444,6 +446,18 @@ export async function handleRequest(req, res) {
       return sendJson(res, payload.ok ? 200 : 400, payload);
     }
 
+    if (url.pathname === "/api/agent/autonomy") {
+      const body = req.method === "POST" ? await readJsonBody(req) : {};
+      return sendJson(res, 200, buildAutonomousAgentPlan(body || {}, url.searchParams));
+    }
+
+    if (url.pathname === "/api/agent/autonomy/run") {
+      if (req.method !== "POST") return sendJson(res, 405, { error: "POST only" });
+      const body = await readJsonBody(req);
+      const payload = await executeAutonomousActions(body || {});
+      return sendJson(res, payload.ok ? 200 : 400, payload);
+    }
+
     if (url.pathname === "/api/agent/inbox") {
       const user = demoAgentUser(url.searchParams.get("userId") || url.searchParams.get("as") || "owner-ava");
       return sendJson(res, 200, {
@@ -715,6 +729,274 @@ async function executeDelegatedAction(body = {}) {
     entire,
     auditEvent,
     message: `${action.title} executed as ${user.name} (${user.role}) for ${store.businessName || "this storefront"}.`
+  };
+}
+
+function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
+  const user = demoAgentUser(body.userId || params.get("userId") || "owner-ava");
+  const store = storeFromPayload(body.store) || profileFromSearch(params);
+  const intel = body.intel || null;
+  const customers = demoCustomersForStore(store);
+  const signals = customerMemorySignals(customers, store, intel);
+  const actions = recommendedAutonomousActions({ user, store, intel, customers, signals });
+  return {
+    ok: true,
+    user,
+    tenant: { id: user.tenantId, name: user.tenantName },
+    customers,
+    signals,
+    actions,
+    guardrails: [
+      "Only internal Entire.io tasks, drafts, segments, and teammate messages run automatically.",
+      "No public posts, refunds, purchases, customer sends, or hour changes run without owner approval.",
+      "Every automatic move is logged into the shared tenant report trail."
+    ],
+    audit: agentAuditForTenant(user.tenantId, 12),
+    inbox: agentInboxForUser(user)
+  };
+}
+
+async function executeAutonomousActions(body = {}) {
+  const user = demoAgentUser(body.userId || body.user?.id || "owner-ava");
+  const store = storeFromPayload(body.store) || DEFAULT_PROFILE;
+  const plan = buildAutonomousAgentPlan({ userId: user.id, store, intel: body.intel });
+  const now = new Date().toISOString();
+  const results = [];
+  const auditEvents = [];
+
+  for (const action of plan.actions) {
+    const scalekit = {
+      mode: "tenant-guardrail",
+      summary: `Autonomous safe action scoped to tenant ${user.tenantId}; delegated by ${user.email}`
+    };
+    const entire = await executeEntireAction({ user, store, action, scalekit });
+    const auditEvent = {
+      id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      at: new Date().toISOString(),
+      tenantId: user.tenantId,
+      tenantName: user.tenantName,
+      userId: "warden-autopilot",
+      userName: "Warden Autopilot",
+      userRole: "autonomous_agent",
+      delegatedByUserId: user.id,
+      delegatedByUserName: user.name,
+      storeName: store.businessName || "Unnamed storefront",
+      actionId: action.id,
+      actionTitle: action.title,
+      target: action.target,
+      decision: "auto_executed",
+      reason: action.guardrail,
+      evidence: action.evidence,
+      executed: true,
+      scalekit: scalekit.summary,
+      entire: entire.summary,
+      externalRef: entire.referenceId
+    };
+    DELEGATED_ACTION_AUDIT.unshift(auditEvent);
+    auditEvents.push(auditEvent);
+    results.push({ action, scalekit, entire, auditEvent });
+
+    if (action.inboxRole) {
+      DELEGATED_AGENT_INBOX.unshift({
+        id: `auto-msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        type: "autonomous_message",
+        status: "open",
+        at: now,
+        updatedAt: now,
+        tenantId: user.tenantId,
+        tenantName: user.tenantName,
+        fromUserId: "warden-autopilot",
+        fromUserName: "Warden Autopilot",
+        fromRole: "autonomous_agent",
+        toRole: action.inboxRole,
+        title: action.title,
+        body: `${action.summary} Evidence: ${action.evidence}`,
+        action,
+        store,
+        target: action.target
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    executed: true,
+    count: results.length,
+    results,
+    auditEvents,
+    inbox: agentInboxForUser(user),
+    audit: agentAuditForTenant(user.tenantId, 20),
+    message: `Warden Autopilot safely created ${results.length} internal drafts, tasks, segments, or teammate messages.`
+  };
+}
+
+function demoCustomersForStore(store) {
+  const type = labelForType(store.businessType || "retail").toLowerCase();
+  const regularItem = type.includes("restaurant") ? "veggie burrito bowl" : type.includes("coffee") ? "oat latte" : "weekly essentials";
+  const addOn = type.includes("restaurant") ? "extra salsa" : type.includes("coffee") ? "banana bread" : "same-day pickup";
+  return [
+    {
+      id: "cust-demo-regular",
+      name: "Dhrumil Demo Regular",
+      email: DEMO_CUSTOMER_EMAIL,
+      tags: ["regular", "high-intent", "demo-customer"],
+      lastVisitDaysAgo: 18,
+      visits90d: 11,
+      lifetimeValue: 684,
+      favoriteItems: [regularItem, addOn],
+      lastOrder: { item: regularItem, amount: 24.5, channel: "pickup", at: "18 days ago" },
+      risk: "lapsed regular"
+    },
+    {
+      id: "cust-local-lunch",
+      name: "Mission Lunch Buyer",
+      email: "lunch.buyer@example.com",
+      tags: ["weekday", "pickup"],
+      lastVisitDaysAgo: 5,
+      visits90d: 7,
+      lifetimeValue: 312,
+      favoriteItems: [regularItem],
+      lastOrder: { item: regularItem, amount: 18.25, channel: "walk-in", at: "5 days ago" },
+      risk: "active"
+    },
+    {
+      id: "cust-family-pack",
+      name: "Weekend Family Order",
+      email: "family.order@example.com",
+      tags: ["weekend", "larger basket"],
+      lastVisitDaysAgo: 31,
+      visits90d: 4,
+      lifetimeValue: 428,
+      favoriteItems: [regularItem, "family pack"],
+      lastOrder: { item: "family pack", amount: 58.75, channel: "delivery", at: "31 days ago" },
+      risk: "at risk"
+    }
+  ];
+}
+
+function customerMemorySignals(customers, store, intel) {
+  const regulars = customers.filter((customer) => customer.tags.includes("regular") || customer.visits90d >= 7);
+  const lapsed = customers.filter((customer) => customer.lastVisitDaysAgo >= 14);
+  const favoriteCounts = new Map();
+  for (const customer of customers) {
+    for (const item of customer.favoriteItems || []) {
+      favoriteCounts.set(item, (favoriteCounts.get(item) || 0) + 1);
+    }
+  }
+  const topItem = [...favoriteCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "best seller";
+  const market = intel?.marketIntelligence || {};
+  const peak = market.busyHeatmap?.peakDay
+    ? `${market.busyHeatmap.peakDay} ${formatHour12(market.busyHeatmap.peakHour)}`
+    : "the next peak window";
+  return {
+    regularCount: regulars.length,
+    lapsedCount: lapsed.length,
+    topItem,
+    peak,
+    demoCustomerEmail: DEMO_CUSTOMER_EMAIL,
+    estimatedRecoveryValue: Math.round(lapsed.reduce((sum, customer) => sum + (customer.lifetimeValue || 0), 0) * 0.18),
+    storeType: labelForType(store.businessType || "retail")
+  };
+}
+
+function recommendedAutonomousActions({ user, store, intel, customers, signals }) {
+  const customer = customers[0];
+  const city = store.city || "your city";
+  const apifyEvidence = intel?.marketProvider === "apify"
+    ? `Apify market scan plus ${customers.length} demo customer records`
+    : `Customer memory plus ${intel?.marketPlaces?.length || 0} local map records`;
+  return [
+    autonomousAction({
+      id: "auto-regular-segment",
+      title: "Auto-build regular-customer recovery segment",
+      target: "Entire.io Customer Segment Draft",
+      summary: `Grouped ${signals.lapsedCount} lapsed regulars around ${signals.topItem}; no message was sent.`,
+      guardrail: "Segment draft only; no customer contact and no public action.",
+      evidence: `${customer.email} last ordered ${customer.lastOrder.item} ${customer.lastOrder.at}`,
+      inboxRole: "",
+      payload: {
+        segmentName: `${store.businessName || "Store"} lapsed regulars`,
+        customerIds: customers.filter((item) => item.lastVisitDaysAgo >= 14).map((item) => item.id),
+        demoCustomerEmail: customer.email,
+        reason: `Recover regulars before ${signals.peak}`
+      }
+    }),
+    autonomousAction({
+      id: "auto-manager-prep-checklist",
+      title: "Auto-create manager prep checklist",
+      target: "Entire.io Task Checklist",
+      summary: `Created a prep list for ${signals.peak}: stock bags, prep ${signals.topItem}, confirm staffing.`,
+      guardrail: "Internal checklist only; manager can edit or dismiss it.",
+      evidence: apifyEvidence,
+      inboxRole: "manager",
+      payload: {
+        checklist: ["Stock bags", `Prep ${signals.topItem}`, "Confirm staffing", "Check sidewalk signage"],
+        due: signals.peak,
+        assigneeRole: "manager"
+      }
+    }),
+    autonomousAction({
+      id: "auto-customer-comeback-draft",
+      title: "Auto-draft regular comeback campaign",
+      target: "Entire.io Campaign Draft",
+      summary: `Drafted a comeback note for regulars who buy ${signals.topItem}; owner still approves sending.`,
+      guardrail: "Campaign draft only; no email, SMS, coupon, or publish action.",
+      evidence: `${signals.regularCount} regular customers in demo memory`,
+      inboxRole: "",
+      payload: {
+        draftTo: customer.email,
+        subject: `${store.businessName || "Your store"} saved your usual`,
+        body: `Draft only: invite ${customer.name} back for ${signals.topItem} before ${signals.peak}.`,
+        ownerApprovalRequired: true
+      }
+    }),
+    autonomousAction({
+      id: "auto-supplier-draft-from-orders",
+      title: "Auto-draft supplier restock from regular orders",
+      target: "Entire.io Vendor Order Draft",
+      summary: `Drafted reorder quantities tied to regular-customer favorites and the next peak window.`,
+      guardrail: "Supplier order draft only; no purchase, payment, or vendor submission.",
+      evidence: `${customer.name} and other regulars repeatedly order ${signals.topItem}`,
+      inboxRole: "manager",
+      payload: {
+        item: signals.storeType.toLowerCase().includes("restaurant") ? "takeout bags and containers" : "top-selling shelf stock",
+        reason: `Protect ${signals.topItem} demand in ${city}`,
+        purchaseBlockedUntilOwnerApproves: true
+      }
+    }),
+    autonomousAction({
+      id: "auto-sidewalk-signage-note",
+      title: "Auto-message associate with safe ops note",
+      target: "Entire.io Internal Message",
+      summary: `Sent an internal note for sidewalk signage and pickup flow before ${signals.peak}.`,
+      guardrail: "Internal teammate note only; no public profile, customer send, or schedule change.",
+      evidence: intel?.weatherForecast?.[0]?.precipitationSum ? "Weather risk plus customer pickup history" : "Peak demand plus customer pickup history",
+      inboxRole: "associate",
+      payload: {
+        message: `Before ${signals.peak}, keep signage weather-safe and make pickup for ${signals.topItem} easy.`,
+        assigneeRole: "associate"
+      }
+    })
+  ];
+}
+
+function autonomousAction(input) {
+  return {
+    id: input.id,
+    title: input.title,
+    target: input.target,
+    category: "safe-autonomy",
+    risk: "low",
+    summary: input.summary,
+    guardrail: input.guardrail,
+    evidence: input.evidence,
+    inboxRole: input.inboxRole,
+    payload: input.payload || {},
+    policy: {
+      decision: "auto_safe",
+      tone: "good",
+      reason: input.guardrail
+    }
   };
 }
 
