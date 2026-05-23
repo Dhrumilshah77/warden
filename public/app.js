@@ -1400,6 +1400,141 @@ Object.entries(COMMON_TRANSLATION_PHRASES).forEach(([lang, phrases]) => {
   PAGE_TRANSLATION_PHRASES[lang] = { ...(PAGE_TRANSLATION_PHRASES[lang] || {}), ...phrases };
 });
 
+const OWNER_CHAT_TRANSLATION_PHRASES = {
+  es: {
+    "Righthand AI Helper": "Asistente Righthand AI",
+    "Grounded in this location": "Basado en esta ubicación",
+    "Loading local scan": "Cargando análisis local",
+    "ASK RIGHTHAND": "PREGUNTA A RIGHTHAND",
+    "How do I increase profit today?": "¿Cómo aumento la ganancia hoy?",
+    "How do I get more footfall?": "¿Cómo atraigo más clientes?",
+    "How do I reduce waste or loss?": "¿Cómo reduzco desperdicio o pérdidas?",
+    "How do I get more Google reviews?": "¿Cómo consigo más reseñas en Google?",
+    "What should I prep for weather?": "¿Qué preparo por el clima?",
+    "What threats can hurt me today?": "¿Qué riesgos me pueden afectar hoy?",
+    "Any local news or events near my shop?": "¿Hay noticias o eventos cerca de mi tienda?",
+    "Find tortillas and takeout boxes nearby": "Buscar tortillas y cajas para llevar cerca",
+    "What permits or documents matter?": "¿Qué permisos o documentos importan?",
+    "Compare me to top-rated nearby": "Compárame con los mejores cercanos",
+    "How do I sell more during": "¿Cómo vendo más durante",
+    "Increase profit": "Aumentar ganancia",
+    "Increase footfall": "Aumentar clientes",
+    "Decrease loss": "Reducir pérdidas",
+    "Get more reviews": "Conseguir más reseñas",
+    "Pick one high-margin offer": "Elige una oferta de alto margen",
+    "Ask the assistant for a one-day offer and stock plan.": "Pide al asistente una oferta de un día y un plan de inventario.",
+    "Make your best item obvious": "Haz visible tu mejor producto",
+    "Use signage, photos, and a clear combo before the rush.": "Usa letreros, fotos y un combo claro antes de la hora pico.",
+    "Watch staffing, stock, and weather": "Vigila personal, inventario y clima",
+    "Ask for the biggest loss risk before changing prep or labor.": "Pregunta por el mayor riesgo de pérdida antes de cambiar preparación o personal.",
+    "Ask every happy customer same day": "Pide reseña a cada cliente satisfecho el mismo día",
+    "Use speed and service as the prompt: “If that helped, could you mention it in a review?”": "Usa rapidez y servicio como frase: “Si eso le ayudó, ¿podría mencionarlo en una reseña?”",
+    "Prepare before": "Prepárate antes de",
+    "Nearby demand reaches about": "La demanda cercana llega a alrededor de",
+    "busy.": "de ocupación.",
+    "Thinking": "Pensando",
+    "Send": "Enviar",
+    "GROUNDED ANSWER": "RESPUESTA BASADA EN DATOS",
+    "POWERED BY APIFY": "CON DATOS DE APIFY",
+    "I am focused on": "Estoy enfocado en",
+    "Ask me about warnings, opportunities, weather, competitors, permits, notes, or what to do next.": "Pregúntame sobre alertas, oportunidades, clima, competidores, permisos, notas o el siguiente paso.",
+    "I hear the pressure.": "Entiendo la presión.",
+    "here is the practical answer:": "esta es la respuesta práctica:",
+    "My profit answer: focus on": "Mi respuesta de ganancia: enfócate en",
+    "one fast high-margin offer before": "una oferta rápida de alto margen antes de",
+    "do not discount the whole menu.": "no descuentas todo el menú.",
+    "Discount only the item that brings people in, then upsell the add-on.": "Descuenta solo el producto que atrae clientes y luego ofrece el extra."
+  },
+  zh: {
+    "Righthand AI Helper": "Righthand AI 助手",
+    "Grounded in this location": "基于此位置",
+    "Loading local scan": "正在加载本地扫描",
+    "ASK RIGHTHAND": "询问 RIGHTHAND",
+    "How do I increase profit today?": "今天如何提高利润？",
+    "How do I get more footfall?": "如何带来更多客流？",
+    "How do I reduce waste or loss?": "如何减少浪费或损失？",
+    "How do I get more Google reviews?": "如何获得更多 Google 评价？",
+    "What should I prep for weather?": "天气方面要准备什么？",
+    "What threats can hurt me today?": "今天有哪些风险会影响我？",
+    "Any local news or events near my shop?": "店附近有新闻或活动吗？",
+    "Find tortillas and takeout boxes nearby": "查找附近玉米饼和外卖盒",
+    "What permits or documents matter?": "哪些许可证或文件重要？",
+    "Compare me to top-rated nearby": "与附近高评分商家比较",
+    "Increase profit": "提高利润",
+    "Increase footfall": "增加客流",
+    "Decrease loss": "减少损失",
+    "Get more reviews": "获得更多评价",
+    "Pick one high-margin offer": "选择一个高利润优惠",
+    "Make your best item obvious": "突出最畅销商品",
+    "Watch staffing, stock, and weather": "关注人员、库存和天气",
+    "Ask every happy customer same day": "当天向满意顾客索要评价",
+    "Thinking": "正在思考",
+    "Send": "发送",
+    "GROUNDED ANSWER": "基于数据的回答",
+    "POWERED BY APIFY": "由 APIFY 数据支持"
+  },
+  vi: {
+    "Righthand AI Helper": "Trợ lý Righthand AI",
+    "Grounded in this location": "Dựa trên vị trí này",
+    "Loading local scan": "Đang tải quét địa phương",
+    "ASK RIGHTHAND": "HỎI RIGHTHAND",
+    "How do I increase profit today?": "Làm sao tăng lợi nhuận hôm nay?",
+    "How do I get more footfall?": "Làm sao kéo thêm khách ghé?",
+    "How do I reduce waste or loss?": "Làm sao giảm lãng phí hoặc thất thoát?",
+    "How do I get more Google reviews?": "Làm sao có thêm đánh giá Google?",
+    "What should I prep for weather?": "Cần chuẩn bị gì theo thời tiết?",
+    "What threats can hurt me today?": "Rủi ro nào có thể ảnh hưởng hôm nay?",
+    "Any local news or events near my shop?": "Có tin tức hoặc sự kiện gần cửa hàng không?",
+    "Find tortillas and takeout boxes nearby": "Tìm tortillas và hộp mang đi gần đây",
+    "What permits or documents matter?": "Giấy phép hoặc hồ sơ nào quan trọng?",
+    "Compare me to top-rated nearby": "So sánh với nơi được đánh giá cao gần đây",
+    "Increase profit": "Tăng lợi nhuận",
+    "Increase footfall": "Tăng khách ghé",
+    "Decrease loss": "Giảm thất thoát",
+    "Get more reviews": "Tăng đánh giá",
+    "Pick one high-margin offer": "Chọn một ưu đãi biên lợi nhuận cao",
+    "Make your best item obvious": "Làm nổi bật món bán tốt nhất",
+    "Watch staffing, stock, and weather": "Theo dõi nhân sự, tồn kho và thời tiết",
+    "Ask every happy customer same day": "Hỏi đánh giá từ khách hài lòng ngay trong ngày",
+    "Thinking": "Đang nghĩ",
+    "Send": "Gửi",
+    "GROUNDED ANSWER": "TRẢ LỜI DỰA TRÊN DỮ LIỆU",
+    "POWERED BY APIFY": "DỮ LIỆU TỪ APIFY"
+  },
+  fil: {
+    "Righthand AI Helper": "Righthand AI Helper",
+    "Grounded in this location": "Nakabatay sa lokasyong ito",
+    "Loading local scan": "Nilo-load ang local scan",
+    "ASK RIGHTHAND": "MAGTANONG SA RIGHTHAND",
+    "How do I increase profit today?": "Paano tataas ang kita ngayon?",
+    "How do I get more footfall?": "Paano dadami ang customer na papasok?",
+    "How do I reduce waste or loss?": "Paano babawasan ang waste o lugi?",
+    "How do I get more Google reviews?": "Paano makakakuha ng mas maraming Google reviews?",
+    "What should I prep for weather?": "Ano ang ihahanda para sa panahon?",
+    "What threats can hurt me today?": "Anong panganib ang puwedeng makaapekto ngayon?",
+    "Any local news or events near my shop?": "May balita o event ba malapit sa shop?",
+    "Find tortillas and takeout boxes nearby": "Maghanap ng tortillas at takeout boxes nearby",
+    "What permits or documents matter?": "Aling permits o documents ang mahalaga?",
+    "Compare me to top-rated nearby": "Ikumpara ako sa top-rated nearby",
+    "Increase profit": "Taasan ang kita",
+    "Increase footfall": "Dagdagan ang footfall",
+    "Decrease loss": "Bawasan ang lugi",
+    "Get more reviews": "Dagdagan ang reviews",
+    "Pick one high-margin offer": "Pumili ng isang high-margin offer",
+    "Make your best item obvious": "Gawing malinaw ang best item mo",
+    "Watch staffing, stock, and weather": "Bantayan ang staffing, stock at panahon",
+    "Ask every happy customer same day": "Humingi ng review sa masayang customer sa araw ding iyon",
+    "Thinking": "Nag-iisip",
+    "Send": "Ipadala",
+    "GROUNDED ANSWER": "SAGOT NA MAY EBIDENSYA",
+    "POWERED BY APIFY": "MAY DATOS MULA APIFY"
+  }
+};
+
+Object.entries(OWNER_CHAT_TRANSLATION_PHRASES).forEach(([lang, phrases]) => {
+  PAGE_TRANSLATION_PHRASES[lang] = { ...(PAGE_TRANSLATION_PHRASES[lang] || {}), ...phrases };
+});
+
 const originalTextNodes = new WeakMap();
 const originalAttributeValues = new WeakMap();
 const LIVE_TRANSLATION_LANGUAGES = {
@@ -1436,7 +1571,7 @@ const state = {
   agentAutoLogOpen: false,
   reviewItems: loadReviewItems(),
   chatThreads: loadChatThreads(),
-  chatOpen: false,
+  chatOpen: true,
   map: null,
   mapLayers: { store: null, places: null, radius: null },
   restockResults: null,
@@ -1520,8 +1655,8 @@ function wireEvents() {
   });
   els.restockForm.addEventListener("submit", handleRestockSubmit);
   els.languageSelect.addEventListener("change", handleLanguageChange);
-  els.chatFab.addEventListener("click", openChat);
-  els.chatCloseBtn.addEventListener("click", closeChat);
+  els.chatFab?.addEventListener("click", openChat);
+  els.chatCloseBtn?.addEventListener("click", closeChat);
   els.chatForm.addEventListener("submit", handleChatSubmit);
   els.chatInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -1874,16 +2009,52 @@ function mapBootstrapIntel(store) {
 }
 
 function renderMetrics(metrics) {
-  els.metricsGrid.innerHTML = metrics.map((item) => `
-    <article class="metric-card ${severityClass(item.tone)}">
-      <div class="metric-head">
-        <span class="metric-icon" aria-hidden="true">${escapeHtml(metricIcon(item.label, item.tone))}</span>
-        <div class="metric-label">${escapeHtml(item.label)}</div>
+  const store = selectedStore();
+  const intel = state.latestIntel || {};
+  const market = intel.marketIntelligence || {};
+  const warnings = (intel.warnings || []).filter((item) => item.urgency !== "Low");
+  const opportunities = intel.opportunities || [];
+  const peak = market.busyHeatmap?.peakDay
+    ? `${market.busyHeatmap.peakDay} ${formatHourLabel(market.busyHeatmap.peakHour)}`
+    : "next rush";
+  const reviewTheme = market.topReviewTags?.[0]?.title || "speed and service";
+  const fallback = Array.isArray(metrics) ? metrics : [];
+  const rows = [
+    {
+      label: "Increase profit",
+      main: opportunities[0]?.title || fallback.find((item) => /opportunity|best/i.test(item.label))?.value || "Pick one high-margin offer",
+      detail: opportunities[0]?.action || "Ask the assistant for a one-day offer and stock plan.",
+      tone: "good"
+    },
+    {
+      label: "Increase footfall",
+      main: peak === "next rush" ? "Make your best item obvious" : `Prepare before ${peak}`,
+      detail: market.busyHeatmap?.peakValue ? `Nearby demand reaches about ${Math.round(market.busyHeatmap.peakValue)}% busy.` : "Use signage, photos, and a clear combo before the rush.",
+      tone: "good"
+    },
+    {
+      label: "Decrease loss",
+      main: warnings[0]?.title || "Watch staffing, stock, and weather",
+      detail: warnings[0]?.action || "Ask for the biggest loss risk before changing prep or labor.",
+      tone: warnings[0] ? "risk" : "warn"
+    },
+    {
+      label: "Get more reviews",
+      main: market.avgRating ? `Nearby average is ${Number(market.avgRating).toFixed(1)} stars` : "Ask every happy customer same day",
+      detail: `Use ${reviewTheme} as the prompt: “If that helped, could you mention it in a review?”`,
+      tone: "warn"
+    }
+  ];
+  els.metricsGrid.innerHTML = rows.map((item) => `
+    <article class="owner-brief-row ${severityClass(item.tone)}">
+      <div class="owner-brief-label">${escapeHtml(item.label)}</div>
+      <div>
+        <div class="owner-brief-main">${escapeHtml(item.main)}</div>
+        <div class="owner-brief-detail">${escapeHtml(item.detail || "")}</div>
       </div>
-      <div class="metric-value">${escapeHtml(item.value)}</div>
-      <div class="metric-detail">${escapeHtml(item.detail || "")}</div>
     </article>
   `).join("");
+  queuePageTranslation();
 }
 
 async function refreshIntel() {
@@ -4065,16 +4236,18 @@ function openChat() {
 }
 
 function closeChat() {
-  state.chatOpen = false;
+  state.chatOpen = true;
   renderChat();
+  els.chatInput?.focus();
 }
 
 function renderChat() {
   const store = selectedStore();
   if (!store || !els.chatPanel) return;
-  els.chatPanel.classList.toggle("open", state.chatOpen);
+  state.chatOpen = true;
+  els.chatPanel.classList.add("open", "embedded");
 
-  const liveOk = state.latestIntel ? "Live · grounded in city scan" : "Loading scan…";
+  const liveOk = state.latestIntel ? "Grounded in this location" : "Loading local scan";
   els.chatContext.innerHTML = `<span class="helper-status-dot"></span>${escapeHtml(store.businessName || "Store")} · ${escapeHtml(labelType(store.businessType))} · ${escapeHtml(store.city || "no city set")} <span style="opacity:.55;margin-left:6px">${escapeHtml(liveOk)}</span>`;
 
   const thread = chatThreadForStore(store.id);
@@ -4093,13 +4266,14 @@ function renderChat() {
     ].filter(Boolean).join(" ");
     let badge = "";
     if (message.live) {
-      badge = `<span class="helper-msg-badge live">⚡ POWERED BY APIFY</span>`;
+      const badgeText = message.provider === "local-grounded" ? "GROUNDED ANSWER" : "POWERED BY APIFY";
+      badge = `<span class="helper-msg-badge live">${escapeHtml(badgeText)}</span>`;
     } else if (message.fallback && message.role === "assistant") {
       badge = `<span class="helper-msg-badge fallback" title="${escapeAttr(message.fallbackReason || "no LLM key")}">offline</span>`;
     }
     return `
       <div class="${cls}">
-        <div>${escapeHtml(message.text || "")}</div>
+        <div>${formatChatText(message.text || "")}</div>
         ${(badge || (message.role === "assistant" && message.at)) ? `<div class="helper-msg-meta">${badge}<span>${escapeHtml(formatDateTime(message.at))}</span></div>` : ""}
       </div>
     `;
@@ -4124,6 +4298,17 @@ function renderChat() {
   });
   els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
   queuePageTranslation();
+}
+
+function formatChatText(value) {
+  let html = escapeHtml(String(value || ""));
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+    const clean = url.replace(/[),.]+$/, "");
+    const suffix = url.slice(clean.length);
+    return `<a href="${escapeAttr(clean)}" target="_blank" rel="noreferrer">${escapeHtml(clean)}</a>${escapeHtml(suffix)}`;
+  });
+  return html;
 }
 
 function handleChatSubmit(event) {
@@ -4155,6 +4340,7 @@ async function sendChatMessage(text) {
   let liveReply = null;
   let liveError = null;
   let model = null;
+  let provider = null;
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -4170,6 +4356,7 @@ async function sendChatMessage(text) {
     if (data.ok && data.reply) {
       liveReply = data.reply;
       model = data.model;
+      provider = data.provider || data.model || "grounded";
     } else {
       liveError = data.error || `chat endpoint returned ${response.status}`;
     }
@@ -4180,7 +4367,7 @@ async function sendChatMessage(text) {
   // Drop the pending placeholder
   thread.pop();
   if (liveReply) {
-    thread.push({ role: "assistant", text: liveReply, at: new Date().toISOString(), live: true, model });
+    thread.push({ role: "assistant", text: liveReply, at: new Date().toISOString(), live: true, model, provider });
   } else {
     thread.push({
       role: "assistant",
@@ -4245,37 +4432,25 @@ function chatGreeting(store) {
 function chatSuggestions(store) {
   const intel = state.latestIntel || {};
   const mi = intel.marketIntelligence || {};
-  const type = labelType(store.businessType).toLowerCase();
-  const city = store.city || "this city";
   const peak = mi.busyHeatmap?.peakDay
-    ? `Why does this block peak ${mi.busyHeatmap.peakDay} ${formatHourLabel(mi.busyHeatmap.peakHour)}?`
-    : null;
-  const tier = mi.dominantTierLabel
-    ? `Should I price at ${mi.dominantTierLabel} like the block, or different?`
-    : null;
-  const themes = mi.topReviewTags?.length
-    ? `Can I steal "${mi.topReviewTags[0].title}" as a menu/feature angle?`
+    ? `How do I sell more during ${mi.busyHeatmap.peakDay} ${formatHourLabel(mi.busyHeatmap.peakHour)}?`
     : null;
   const warningCount = (intel.warnings || []).filter((w) => w.urgency !== "Low").length;
   const warnQ = warningCount
-    ? `Walk me through my ${warningCount} active warning${warningCount === 1 ? "" : "s"}`
+    ? `What threats can hurt me today?`
     : null;
 
   return [
-    { text: "What should I do today?", kind: "intel" },
+    { text: "How do I increase profit today?", kind: "intel" },
+    { text: "How do I get more footfall?", kind: "intel" },
+    { text: "How do I reduce waste or loss?", kind: "warn" },
+    { text: "How do I get more Google reviews?", kind: "" },
+    { text: "What should I prep for weather?", kind: "warn" },
     { text: peak, kind: "intel" },
-    { text: tier, kind: "intel" },
-    { text: themes, kind: "intel" },
     { text: warnQ, kind: "warn" },
-    { text: `How do I make this ${type} more profitable?`, kind: "" },
-    { text: "What POS system should I use?", kind: "" },
-    { text: "How do I respond to a 1-star review?", kind: "" },
-    { text: "Best way to get more Google reviews?", kind: "" },
-    { text: `What promo would work for a slow Tuesday in ${city}?`, kind: "" },
-    { text: `Hiring a part-time worker — what wage in ${city}?`, kind: "" },
-    { text: "Should I get a beer & wine license?", kind: "" },
-    { text: "How do I negotiate my lease renewal?", kind: "" },
-    { text: "What's my biggest blind spot right now?", kind: "intel" },
+    { text: "Any local news or events near my shop?", kind: "intel" },
+    { text: "Find tortillas and takeout boxes nearby", kind: "" },
+    { text: "What permits or documents matter?", kind: "warn" },
     { text: "Compare me to top-rated nearby", kind: "intel" }
   ].filter((c) => c.text);
 }

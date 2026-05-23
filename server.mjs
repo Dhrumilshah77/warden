@@ -2029,26 +2029,39 @@ async function handleChat({ message, store, intel, history }) {
   if (!text) {
     return { ok: false, error: "Empty message" };
   }
+  const chatStore = store || {};
+  const chatIntel = intel || null;
+  const intent = detectChatIntent(text);
+  const sentiment = detectChatSentiment(text);
+  const liveContext = await buildChatLiveContext({ text, store: chatStore, intel: chatIntel, intent });
   if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
     return {
-      ok: false,
-      fallback: true,
-      error: "No LLM key configured. Add GEMINI_API_KEY or ANTHROPIC_API_KEY to .env to enable the live chatbot."
+      ok: true,
+      reply: buildGroundedChatReply({ text, store: chatStore, intel: chatIntel, intent, sentiment, liveContext }),
+      provider: "local-grounded",
+      intent,
+      sentiment
     };
   }
 
   const model = process.env.ANTHROPIC_API_KEY
     ? (process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001")
     : (process.env.GEMINI_MODEL || "gemini-2.5-flash");
-  const system = buildChatSystemPrompt(store || {}, intel || null);
+  const system = [
+    buildChatSystemPrompt(chatStore, chatIntel),
+    buildChatLiveContextPrompt({ intent, sentiment, liveContext })
+  ].filter(Boolean).join("\n\n");
   const messages = [];
   for (const turn of (Array.isArray(history) ? history : []).slice(-8)) {
     const role = turn?.role === "assistant" ? "assistant" : "user";
     const content = String(turn?.content || turn?.text || "").trim();
     if (content) messages.push({ role, content });
   }
+  const routedUserContent = `${text}\n\nDetected owner sentiment: ${sentiment}.\nDetected intent: ${intent}. Answer like a practical small-business operator, not a generic chatbot.`;
   if (!messages.length || messages[messages.length - 1].content !== text) {
-    messages.push({ role: "user", content: text });
+    messages.push({ role: "user", content: routedUserContent });
+  } else {
+    messages[messages.length - 1].content = routedUserContent;
   }
 
   if (!process.env.ANTHROPIC_API_KEY && process.env.GEMINI_API_KEY) {
@@ -2093,6 +2106,276 @@ async function handleChat({ message, store, intel, history }) {
       error: `Chat call failed: ${error.message}`
     };
   }
+}
+
+function detectChatIntent(text) {
+  const t = String(text || "").toLowerCase();
+  if (/(weather|rain|heat|hot|cold|storm|wind|air quality|forecast)/.test(t)) return "weather";
+  if (/(review|rating|google review|1-star|one star|stars)/.test(t)) return "reviews";
+  if (/(profit|margin|sales|revenue|money|earn|pricing|price|discount|promo|offer|coupon)/.test(t)) return "profit";
+  if (/(footfall|foot traffic|walk[- ]?in|visits?|customers?|busy|slow|traffic)/.test(t)) return "footfall";
+  if (/(loss|waste|spoil|spoilage|overstock|stockout|shortage|risk|threat|warning|safety|crime|danger)/.test(t)) return "risk";
+  if (/(permit|license|inspection|compliance|document|health department|records?)/.test(t)) return "compliance";
+  if (/(news|event|trend|internet|web|current|today around|happening|festival|concert|game)/.test(t)) return "news";
+  if (/(competitor|competition|compare|near me|nearby place|top-rated)/.test(t)) return "competitors";
+  if (/(buy|find|available|availability|stock|restock|supplier|order|where can i get|tortilla|takeout|container|cup|napkin|chair|table|oil|parts?|jack|gloves?|receipt paper|utensils?)/.test(t)) return "product";
+  return "general";
+}
+
+function detectChatSentiment(text) {
+  const t = String(text || "").toLowerCase();
+  if (/(urgent|worried|scared|stressed|panic|losing money|bad|terrible|angry|frustrated|confused|stuck|help me|declining|churn)/.test(t)) return "concerned";
+  if (/(great|good|win|excited|nice|awesome|love|ready)/.test(t)) return "positive";
+  if (/(should i|what if|can i|how do i|not sure|maybe)/.test(t)) return "uncertain";
+  return "neutral";
+}
+
+async function buildChatLiveContext({ text, store, intel, intent }) {
+  const profile = chatProfile(store, intel);
+  const context = { profile };
+  const productQuery = intent === "product" ? extractProductQuery(text, profile.businessType) : "";
+  if (productQuery) {
+    try {
+      context.product = await buildRestockComparison(profile, new URLSearchParams({ q: productQuery }));
+    } catch (error) {
+      context.productError = error.message;
+    }
+  }
+  if (intent === "news" || /\b(internet|web|current|happening|event|news)\b/i.test(text)) {
+    try {
+      const [news, events] = await Promise.all([
+        fetchNews(profile).catch((error) => ({ ok: false, articles: [], message: error.message })),
+        fetchLocalEvents(profile).catch((error) => ({ ok: false, articles: [], message: error.message }))
+      ]);
+      context.news = news;
+      context.events = events;
+    } catch (error) {
+      context.newsError = error.message;
+    }
+  }
+  return context;
+}
+
+function chatProfile(store = {}, intel = null) {
+  const profile = intel?.profile || {};
+  const address = store.address || profile.locationLabel || profile.address || "";
+  return {
+    businessName: store.businessName || profile.businessName || "this shop",
+    businessType: normalizeType(store.businessType || profile.businessType || "retail"),
+    address,
+    city: store.city || profile.city || inferCityFromPayload(address) || "San Francisco",
+    state: store.state || profile.state || "CA",
+    lat: Number.isFinite(Number(store.lat)) ? Number(store.lat) : Number(profile.lat),
+    lon: Number.isFinite(Number(store.lon)) ? Number(store.lon) : Number(profile.lon),
+    radiusMeters: Number(profile.radiusMeters || store.radiusMeters || 1600),
+    avgTicket: store.avgTicket || "",
+    suppliers: store.suppliers || ""
+  };
+}
+
+function extractProductQuery(text, businessType) {
+  const cleaned = String(text || "")
+    .replace(/\b(where can i|where should i|can i|do you|please|near me|nearby|around my shop|around the shop|available|availability|find|buy|get|restock|stock|supplier|suppliers|order|show me|i need|need|for my store|for my shop)\b/gi, " ")
+    .replace(/[?!.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (cleaned && cleaned.length >= 3 && cleaned.length <= 80) return cleaned;
+  const type = normalizeType(businessType);
+  if (type === "restaurant" || type === "food stall") return "tortillas takeout containers";
+  if (type === "auto repair") return "shop towels nitrile gloves";
+  return "receipt paper";
+}
+
+function buildChatLiveContextPrompt({ intent, sentiment, liveContext }) {
+  const lines = [
+    "CHAT ROUTING:",
+    `- Detected intent: ${intent}`,
+    `- Detected sentiment: ${sentiment}`,
+    "- If sentiment is concerned, acknowledge pressure briefly, then give concrete next steps.",
+    "- Prioritize profit, loss reduction, footfall and reviews over generic explanation."
+  ];
+  if (liveContext?.product?.options?.length) {
+    lines.push("");
+    lines.push(`PRODUCT / SUPPLIER CONTEXT for "${liveContext.product.query}":`);
+    for (const item of liveContext.product.options.slice(0, 5)) {
+      lines.push(`- ${item.providerName || item.provider}: ${item.title}; ${item.price}; ${item.stock}; ${item.eta}; ${item.url}`);
+    }
+  }
+  const articles = uniqueArticles([
+    ...(liveContext?.news?.articles || []),
+    ...(liveContext?.events?.articles || [])
+  ]).slice(0, 8);
+  if (articles.length) {
+    lines.push("");
+    lines.push("LOCAL WEB / NEWS CONTEXT:");
+    for (const article of articles) {
+      lines.push(`- ${article.title} (${article.domain || "news"}) ${article.url || ""}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function buildGroundedChatReply({ text, store, intel, intent, sentiment, liveContext }) {
+  const profile = chatProfile(store, intel);
+  const label = labelForType(profile.businessType).toLowerCase();
+  const intro = sentiment === "concerned"
+    ? `I hear the pressure. For ${profile.businessName}, a ${label} in ${profile.city}, I would keep this practical:`
+    : `For ${profile.businessName}, a ${label} in ${profile.city}, here is the practical answer:`;
+  if (intent === "product") return productChatReply({ intro, liveContext, profile });
+  if (intent === "news") return newsChatReply({ intro, liveContext, profile });
+  if (intent === "weather") return weatherChatReply({ intro, intel, profile });
+  if (intent === "reviews") return reviewsChatReply({ intro, intel, profile });
+  if (intent === "footfall") return footfallChatReply({ intro, intel, profile });
+  if (intent === "risk") return riskChatReply({ intro, intel, profile });
+  if (intent === "compliance") return complianceChatReply({ intro, intel, profile });
+  if (intent === "competitors") return competitorChatReply({ intro, intel, profile });
+  return profitChatReply({ intro, intel, profile, text });
+}
+
+function productChatReply({ intro, liveContext, profile }) {
+  const product = liveContext?.product;
+  if (!product?.options?.length) {
+    return `${intro}\n\n1. I could not load supplier rows for that item yet.\n2. Search locally for ${profile.city} pickup first if you need it today.\n3. For anything not needed today, compare Amazon Business, Costco, Walmart, Target and WebstaurantStore for unit price and return terms.`;
+  }
+  const rows = product.options.slice(0, 5).map((item, index) => {
+    const price = item.price || "check live price";
+    const stock = item.stock || item.eta || "confirm stock";
+    return `${index + 1}. **${item.providerName || item.provider}**: ${item.title} — ${price}. ${stock}. ${item.url}`;
+  });
+  return [
+    intro,
+    "",
+    `I found supplier options for **${product.query}**. For same-day needs near ${profile.city}, prefer rows that mention pickup; for planned buys, compare unit price and reviews.`,
+    ...rows,
+    "",
+    "My call: open the top two links, confirm live stock, then buy the cheapest unit price only if delivery/pickup timing protects the next rush."
+  ].join("\n");
+}
+
+function newsChatReply({ intro, liveContext, profile }) {
+  const articles = uniqueArticles([...(liveContext?.news?.articles || []), ...(liveContext?.events?.articles || [])]).slice(0, 5);
+  if (!articles.length) {
+    return `${intro}\n\nI did not find a strong local news/event item in the quick scan. Use the normal plan: update your Google listing, push one visible offer, and ask the assistant again after refresh if you want a wider local scan.`;
+  }
+  const rows = articles.map((article, index) => `${index + 1}. ${article.title} (${article.domain || "local source"})${article.url ? `\n   ${article.url}` : ""}`);
+  return [
+    intro,
+    "",
+    `Here is what I found around ${profile.city} that could affect foot traffic or demand:`,
+    ...rows,
+    "",
+    "Business move: only act if the audience overlaps your customers. If yes, prep one fast-selling item, post a simple offer, and keep extra packaging ready."
+  ].join("\n");
+}
+
+function weatherChatReply({ intro, intel, profile }) {
+  const days = (intel?.weatherForecast || []).slice(0, 4);
+  const rows = days.map((day, index) => `${index + 1}. ${day.day || day.date}: ${day.condition || "forecast"}, high ${day.highF ?? "?"}F, rain ${day.rainProbability ?? "?"}%, wind ${day.windMph ?? "?"}mph.`);
+  const rain = Math.max(0, ...days.map((day) => Number(day.rainProbability)).filter(Number.isFinite));
+  const heat = Math.max(0, ...days.map((day) => Number(day.highF)).filter(Number.isFinite));
+  const move = rain >= 45
+    ? "Push pickup/delivery, check takeout packaging, and avoid over-prepping walk-up-only items."
+    : heat >= 82
+      ? "Feature cold drinks, fast handheld items, and shade-friendly signage before afternoon traffic."
+      : "Use normal prep, then put your best offer outside before the busiest window.";
+  return [intro, "", ...rows, "", `Owner move: **${move}**`].join("\n");
+}
+
+function reviewsChatReply({ intro, intel, profile }) {
+  const mi = intel?.marketIntelligence || {};
+  const topTheme = mi.topReviewTags?.[0]?.title || "speed, taste, or friendliness";
+  const avg = mi.avgRating ? `${Number(mi.avgRating).toFixed(1)} stars nearby` : "nearby ratings are still loading";
+  return [
+    intro,
+    "",
+    `Nearby benchmark: ${avg}. Use one specific prompt tied to what customers liked: **${topTheme}**.`,
+    "1. Ask right after the customer smiles or compliments the food.",
+    "2. Say: “If that helped, could you mention the tacos/service in a Google review? It helps people nearby find us.”",
+    "3. Put the QR code on the receipt window, not just inside the truck.",
+    "4. Reply to every review within 24 hours; mention the item they bought if they named it."
+  ].join("\n");
+}
+
+function footfallChatReply({ intro, intel, profile }) {
+  const mi = intel?.marketIntelligence || {};
+  const peak = mi.busyHeatmap?.peakDay ? `${mi.busyHeatmap.peakDay} ${chatHourLabel(mi.busyHeatmap.peakHour)}` : "your next visible rush";
+  const busy = mi.busyHeatmap?.peakValue ? `about ${Math.round(mi.busyHeatmap.peakValue)}% busy nearby` : "busy-window data is still loading";
+  return [
+    intro,
+    "",
+    `Best window: **${peak}** (${busy}).`,
+    "1. Put one easy-to-read offer outside 45 minutes before that window.",
+    "2. Make the offer a fast item, not a complicated discount.",
+    "3. Update Google photos/menu before the window so nearby searchers trust you.",
+    "4. Ask the assistant for a 1-day promo draft if you want copy."
+  ].join("\n");
+}
+
+function riskChatReply({ intro, intel }) {
+  const warnings = (intel?.warnings || []).filter((item) => item.urgency !== "Low").slice(0, 4);
+  if (!warnings.length) return `${intro}\n\nNo urgent warning is loaded right now. Biggest controllable risks are stockouts, slow service during peak, and missing review follow-up.`;
+  return [intro, "", ...warnings.map((item, index) => `${index + 1}. **${item.title}** — ${item.action || item.why || "Review before the next shift."}`)].join("\n");
+}
+
+function complianceChatReply({ intro, intel, profile }) {
+  const docs = (intel?.compliance || intel?.licenseChecklist || []).slice(0, 6);
+  if (!docs.length) return `${intro}\n\nI do not have the checklist loaded yet. For a ${labelForType(profile.businessType).toLowerCase()} in ${profile.city}, ask again after scan and I will cite the exact documents.`;
+  return [intro, "", "Keep these current first:", ...docs.map((item, index) => `${index + 1}. ${item.name} (${item.authority || "authority"})${item.url ? ` — ${item.url}` : ""}`)].join("\n");
+}
+
+function competitorChatReply({ intro, intel }) {
+  const places = (intel?.nearbyPlaces || intel?.marketPlaces || []).slice(0, 5);
+  const mi = intel?.marketIntelligence || {};
+  const rows = places.map((place, index) => `${index + 1}. ${place.name} — ${place.rating || "?"} stars, ${formatCompactNumber(place.reviews || 0)} reviews${place.price ? `, ${place.price}` : ""}.`);
+  return [
+    intro,
+    "",
+    rows.length ? "Compare against these visible nearby places:" : "Nearby competitor names are still loading.",
+    ...rows,
+    "",
+    mi.avgRating ? `The block average is ${Number(mi.avgRating).toFixed(1)} stars, so the quickest win is clearer photos/menu plus one obvious high-margin offer.` : "Quickest win: clearer photos/menu plus one obvious high-margin offer."
+  ].join("\n");
+}
+
+function profitChatReply({ intro, intel, profile }) {
+  const opportunities = (intel?.opportunities || []).slice(0, 3);
+  const mi = intel?.marketIntelligence || {};
+  const peak = mi.busyHeatmap?.peakDay ? `${mi.busyHeatmap.peakDay} ${chatHourLabel(mi.busyHeatmap.peakHour)}` : "the next rush";
+  const rows = opportunities.length
+    ? opportunities.map((item, index) => `${index + 1}. **${item.title}** — ${item.action || item.why || "Turn this into one owner task."}`)
+    : [
+      "1. Pick one high-margin item and make it the easiest thing to order.",
+      "2. Prep for the next rush, not the whole day.",
+      "3. Ask every happy customer for one Google review while the food is fresh."
+    ];
+  return [
+    intro,
+    "",
+    `My profit answer: focus on **one fast high-margin offer before ${peak}**.`,
+    ...rows,
+    "",
+    `For a ${labelForType(profile.businessType).toLowerCase()}, do not discount the whole menu. Discount only the item that brings people in, then upsell the add-on.`
+  ].join("\n");
+}
+
+function uniqueArticles(articles = []) {
+  const seen = new Set();
+  const out = [];
+  for (const article of articles) {
+    const key = String(article.url || article.title || "").toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(article);
+  }
+  return out;
+}
+
+function chatHourLabel(hour) {
+  const h = Number(hour);
+  if (!Number.isFinite(h)) return "peak time";
+  const suffix = h >= 12 ? "pm" : "am";
+  const hour12 = h % 12 || 12;
+  return `${hour12}${suffix}`;
 }
 
 async function callGeminiChat({ model, system, messages }) {
@@ -6147,9 +6430,9 @@ function normalizeType(type) {
   const map = {
     cafe: "restaurant",
     food: "restaurant",
-    "food stall": "restaurant",
-    stall: "restaurant",
-    "campus food": "restaurant",
+    "food stall": "food stall",
+    stall: "food stall",
+    "campus food": "food stall",
     grocery: "grocery",
     shop: "retail",
     store: "retail",

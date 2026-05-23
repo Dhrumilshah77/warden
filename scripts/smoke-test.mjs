@@ -15,7 +15,7 @@ await check("static app shell", async () => {
   assert(html.includes("id=\"storeNotesBtn\""), "store-specific notes button should be present");
   assert(html.includes("id=\"storeInfoSection\""), "right-side store info view should be present");
   assert(!html.includes("id=\"removeStoreBtn\""), "visible store remove button should not be present");
-  assert(html.includes("id=\"chatFab\""), "floating chatbot button should be present");
+  assert(html.includes("id=\"chatPanel\""), "embedded chatbot panel should be present");
   assert(html.includes("Righthand AI Helper"), "chatbot popup should be present");
   assert(html.includes("id=\"agentSection\""), "delegated agent console should be present");
   assert(html.includes("id=\"agentUserSelect\""), "delegated user selector should be present");
@@ -218,11 +218,11 @@ await check("Santa Clara geocodes from address only", async () => {
     signal.code === "TRD" &&
     /^City trend:/i.test(signal.headline || "") &&
     /Profit angle/i.test(signal.body || "") &&
-    /restaurant/i.test(signal.body || "") &&
+    /(restaurant|food stall)/i.test(signal.body || "") &&
     signal.action &&
     Array.isArray(signal.pointers) &&
     signal.pointers.length >= 3
-  ), "Media and Market should turn city trends into restaurant-specific profit plays");
+  ), "Media and Market should turn city trends into storefront-specific profit plays");
   assert(!data.sourceHealth.find((item) => item.key === "marketScan")?.url.includes("overpass-api.de/api/interpreter"), "market scan source health should use a readable map URL");
   assert(!data.sourceHealth.some((item) => item.key === "worldMonitor"), "WorldMonitor should not appear in owner-facing health checks");
 });
