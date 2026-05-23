@@ -56,8 +56,8 @@ const DEMO_AGENT_USERS = [
     email: DEMO_OWNER_EMAIL,
     role: "owner",
     title: "Owner",
-    tenantId: "tenant-mission-demo",
-    tenantName: "Mission Demo Group",
+    tenantId: "tenant-mission-ops",
+    tenantName: "Mission Operations Group",
     scopes: [
       "storefront.hours.write",
       "marketing.campaign.write",
@@ -71,11 +71,11 @@ const DEMO_AGENT_USERS = [
   {
     id: "manager-ben",
     name: "Ben Lee",
-    email: "ben@missiondemo.com",
+    email: "ben@missionops.local",
     role: "manager",
     title: "Store manager",
-    tenantId: "tenant-mission-demo",
-    tenantName: "Mission Demo Group",
+    tenantId: "tenant-mission-ops",
+    tenantName: "Mission Operations Group",
     scopes: [
       "marketing.campaign.write",
       "customer.segment.write",
@@ -87,11 +87,11 @@ const DEMO_AGENT_USERS = [
   {
     id: "associate-mia",
     name: "Mia Garcia",
-    email: "mia@missiondemo.com",
+    email: "mia@missionops.local",
     role: "associate",
     title: "Front counter associate",
-    tenantId: "tenant-mission-demo",
-    tenantName: "Mission Demo Group",
+    tenantId: "tenant-mission-ops",
+    tenantName: "Mission Operations Group",
     scopes: [
       "notes.write",
       "marketing.campaign.draft"
@@ -647,11 +647,11 @@ function buildAgentSession(params = new URLSearchParams()) {
     selectedUser,
     users: DEMO_AGENT_USERS,
     integrations: agentIntegrationStatus(),
-    message: "Demo mode shows the last-mile agent pattern: Apify supplies evidence, Scalekit gates who the agent can act as, Entire receives the user-scoped business action, and Warden records the audit trail.",
+    message: "Apify supplies market evidence, Scalekit gates who the agent can act as, Entire receives the user-scoped business action, and Warden records the audit trail.",
     judgingHooks: [
       "Same recommendation behaves differently for owner, manager, and associate.",
       "Every execution is scoped to tenant, user, role, and action permission.",
-      "Blocked actions still create an audit event so the demo shows accountability."
+      "Blocked actions still create an audit event for accountability."
     ]
   };
 }
@@ -739,10 +739,13 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
   const customers = demoCustomersForStore(store);
   const signals = customerMemorySignals(customers, store, intel);
   const finance = demoFinancialSnapshot(store, customers, signals);
-  const visibleSignals = user.role === "owner" ? signals : { ...signals, demoCustomerEmail: "" };
+  const visibleSignals = user.role === "owner" ? signals : { ...signals, customerEmail: "" };
   const actions = recommendedAutonomousActions({ user, store, intel, customers, signals, finance })
     .filter((action) => !action.visibilityRoles?.length || action.visibilityRoles.includes(user.role))
     .map((action) => user.role === "owner" ? action : redactAutonomousAction(action));
+  const recipientGuardrail = user.role === "owner"
+    ? `The only automatic customer send is the approved Gmail recipient ${DEMO_CUSTOMER_EMAIL}.`
+    : "Only the owner can see or send approved customer email.";
   return {
     ok: true,
     user,
@@ -752,8 +755,8 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
     finance: user.role === "owner" ? finance : null,
     actions,
     guardrails: [
-      "Only internal Entire.io tasks, drafts, segments, and teammate messages run automatically.",
-      `The only automatic customer send is the fixed Gmail demo recipient ${DEMO_CUSTOMER_EMAIL}.`,
+      "Only internal Entire.io tasks, segments, and teammate messages run automatically.",
+      recipientGuardrail,
       "No public posts, refunds, purchases, real customer sends, or hour changes run without owner approval.",
       "Every automatic move is logged into the shared tenant report trail."
     ],
@@ -848,12 +851,12 @@ async function executeAutonomousActions(body = {}) {
     audit: agentAuditForUser(user, 20),
     liveConnectors,
     message: liveConnectors
-      ? gmailSent
-        ? `Warden Autopilot created ${results.length} automations and sent the fixed demo Gmail through Scalekit.`
+      ? (gmailSent
+        ? `Warden Autopilot created ${results.length} automations and sent the approved Gmail through Scalekit.`
         : gmailTouched
-          ? `Warden Autopilot created ${results.length} automations and created a Scalekit Gmail draft.`
-          : `Warden Autopilot created ${results.length} automations with live connector guardrails.`
-      : `Warden Autopilot safely created ${results.length} internal drafts, tasks, segments, or teammate messages.`
+          ? `Warden Autopilot created ${results.length} automations and created a Scalekit Gmail message.`
+          : `Warden Autopilot created ${results.length} automations with live connector guardrails.`)
+      : `Warden Autopilot safely created ${results.length} internal records, tasks, segments, or teammate messages.`
   };
 }
 
@@ -863,10 +866,10 @@ function demoCustomersForStore(store) {
   const addOn = type.includes("restaurant") ? "extra salsa" : type.includes("coffee") ? "banana bread" : "same-day pickup";
   return [
     {
-      id: "cust-demo-regular",
-      name: "Dhrumil Demo Regular",
+      id: "cust-regular-primary",
+      name: "Dhrumil Regular",
       email: DEMO_CUSTOMER_EMAIL,
-      tags: ["regular", "high-intent", "demo-customer"],
+      tags: ["regular", "high-intent", "opted-in"],
       lastVisitDaysAgo: 18,
       visits90d: 11,
       lifetimeValue: 684,
@@ -877,7 +880,7 @@ function demoCustomersForStore(store) {
     {
       id: "cust-local-lunch",
       name: "Mission Lunch Buyer",
-      email: "lunch.buyer@example.com",
+      email: "",
       tags: ["weekday", "pickup"],
       lastVisitDaysAgo: 5,
       visits90d: 7,
@@ -889,7 +892,7 @@ function demoCustomersForStore(store) {
     {
       id: "cust-family-pack",
       name: "Weekend Family Order",
-      email: "family.order@example.com",
+      email: "",
       tags: ["weekend", "larger basket"],
       lastVisitDaysAgo: 31,
       visits90d: 4,
@@ -920,14 +923,14 @@ function customerMemorySignals(customers, store, intel) {
     lapsedCount: lapsed.length,
     topItem,
     peak,
-    demoCustomerEmail: DEMO_CUSTOMER_EMAIL,
+    customerEmail: DEMO_CUSTOMER_EMAIL,
     estimatedRecoveryValue: Math.round(lapsed.reduce((sum, customer) => sum + (customer.lifetimeValue || 0), 0) * 0.18),
     storeType: labelForType(store.businessType || "retail")
   };
 }
 
 function demoFinancialSnapshot(store, customers, signals) {
-  const avgTicket = Number(store.avgTicket || 0) || 22;
+  const avgTicket = moneyNumber(store.avgTicket) || 22;
   const visits = customers.reduce((sum, customer) => sum + (customer.visits90d || 0), 0);
   const monthlyOrders = Math.max(420, Math.round(visits * 18));
   const revenue = Math.round(monthlyOrders * avgTicket);
@@ -953,11 +956,17 @@ function demoFinancialSnapshot(store, customers, signals) {
   };
 }
 
+function moneyNumber(value) {
+  const text = String(value || "").replace(/,/g, "");
+  const match = text.match(/\d+(\.\d+)?/);
+  return match ? Number(match[0]) : 0;
+}
+
 function recommendedAutonomousActions({ user, store, intel, customers, signals, finance }) {
   const customer = customers[0];
   const city = store.city || "your city";
   const apifyEvidence = intel?.marketProvider === "apify"
-    ? `Apify market scan plus ${customers.length} demo customer records`
+    ? `Apify market scan plus customer/order records`
     : `Customer memory plus ${intel?.marketPlaces?.length || 0} local map records`;
   return [
     autonomousAction({
@@ -972,7 +981,7 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
       payload: {
         segmentName: `${store.businessName || "Store"} lapsed regulars`,
         customerIds: customers.filter((item) => item.lastVisitDaysAgo >= 14).map((item) => item.id),
-        demoCustomerEmail: customer.email,
+        customerEmail: customer.email,
         reason: `Recover regulars before ${signals.peak}`
       }
     }),
@@ -991,27 +1000,27 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
       }
     }),
     autonomousAction({
-      id: "auto-customer-comeback-draft",
-      title: "Auto-draft regular comeback campaign",
-      target: "Entire.io Campaign Draft",
-      summary: `Drafted a comeback note for regulars who buy ${signals.topItem}; owner still approves sending.`,
-      guardrail: "Campaign draft only; no email, SMS, coupon, or publish action.",
-      evidence: `${signals.regularCount} regular customers in demo memory`,
+      id: "auto-customer-comeback-record",
+      title: "Auto-prepare regular comeback campaign",
+      target: "Entire.io Campaign Record",
+      summary: `Prepared a comeback note for regulars who buy ${signals.topItem}; owner still controls sending.`,
+      guardrail: "Campaign record only; no email, SMS, coupon, or publish action.",
+      evidence: `${signals.regularCount} regular customers in the customer file`,
       visibilityRoles: ["owner"],
       inboxRole: "",
       payload: {
-        draftTo: customer.email,
+        to: customer.email,
         subject: `${store.businessName || "Your store"} saved your usual`,
-        body: `Draft only: invite ${customer.name} back for ${signals.topItem} before ${signals.peak}.`,
+        body: `Invite ${customer.name} back for ${signals.topItem} before ${signals.peak}.`,
         ownerApprovalRequired: true
       }
     }),
     autonomousAction({
       id: "auto-send-churn-save-email",
-      title: "Auto-send demo comeback email",
+      title: "Auto-send comeback email",
       target: "Gmail Send via Scalekit",
-      summary: `Sends the demo comeback note to the approved test customer who usually buys ${signals.topItem}.`,
-      guardrail: "Demo customer only, under $5 offer value, one send per run, no SMS or public post.",
+      summary: `Sends a comeback note to the approved customer who usually buys ${signals.topItem}.`,
+      guardrail: "Approved customer only, under $5 offer value, one send per run, no SMS or public post.",
       evidence: `${customer.email} has not visited for ${customer.lastVisitDaysAgo} days after ${customer.visits90d} recent visits`,
       visibilityRoles: ["owner"],
       inboxRole: "",
@@ -1054,11 +1063,11 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
       }
     }),
     autonomousAction({
-      id: "auto-supplier-draft-from-orders",
-      title: "Auto-draft supplier restock from regular orders",
-      target: "Entire.io Vendor Order Draft",
-      summary: `Drafted reorder quantities tied to regular-customer favorites and the next peak window.`,
-      guardrail: "Supplier order draft only; no purchase, payment, or vendor submission.",
+      id: "auto-supplier-order-from-orders",
+      title: "Auto-prepare supplier restock from regular orders",
+      target: "Entire.io Vendor Order",
+      summary: `Prepared reorder quantities tied to regular-customer favorites and the next peak window.`,
+      guardrail: "Supplier order record only; no purchase, payment, or vendor submission.",
       evidence: `${customer.name} and other regulars repeatedly order ${signals.topItem}`,
       inboxRole: "manager",
       payload: {
@@ -1123,12 +1132,12 @@ function redactAutonomousAction(action) {
     ...action,
     evidence: String(action.evidence || "")
       .replace(DEMO_CUSTOMER_EMAIL, "an opted-in regular customer")
-      .replace(/Dhrumil Demo Regular/g, "A regular customer"),
+      .replace(/Dhrumil Regular/g, "A regular customer"),
     payload: {
       ...action.payload,
       to: undefined,
       draftTo: undefined,
-      demoCustomerEmail: undefined,
+      customerEmail: undefined,
       customerIds: undefined
     }
   };
@@ -1157,7 +1166,7 @@ function redactAuditEvent(event) {
   const redactText = (value) => typeof value === "string"
     ? value
       .replace(DEMO_CUSTOMER_EMAIL, "an opted-in regular customer")
-      .replace(/Dhrumil Demo Regular/g, "A regular customer")
+      .replace(/Dhrumil Regular/g, "A regular customer")
       .replace(/lunch\.buyer@example\.com|family\.order@example\.com/g, "a customer")
     : value;
   return {
@@ -1312,17 +1321,17 @@ function agentIntegrationStatus() {
     },
     scalekit: {
       configured: scalekitConfigured,
-      mode: scalekitConfigured ? (process.env.SCALEKIT_MODE || "live-ready") : "mock",
+      mode: scalekitConfigured ? (process.env.SCALEKIT_MODE || "connected") : "not-connected",
       role: "Delegated user authorization and permission boundary"
     },
     gmail: {
       configured: scalekitConfigured,
-      mode: scalekitConfigured ? "active-through-scalekit" : "mock",
-      role: "Owner-scoped comeback drafts and customer follow-up"
+      mode: scalekitConfigured ? "active-through-scalekit" : "not-connected",
+      role: "Owner-scoped comeback sends and customer follow-up"
     },
     entire: {
       configured: entireConfigured,
-      mode: entireConfigured ? (process.env.ENTIRE_MODE || "live-ready") : "mock",
+      mode: entireConfigured ? (process.env.ENTIRE_MODE || "connected") : "local-record",
       role: "Business action destination for CRM/campaign/task updates"
     },
     gemini: {
@@ -1577,7 +1586,7 @@ async function executeScalekitDelegation({ user, store, action }) {
     }
   }
   return {
-    mode: configured ? "sdk-ready" : "mock",
+    mode: configured ? "connected" : "local-policy",
     summary: `Authorized ${action.title} as ${user.email} for tenant ${user.tenantId}`,
     connectedAccount: {
       provider: "scalekit",
@@ -1615,7 +1624,7 @@ async function executeEntireAction({ user, store, action, scalekit }) {
     }
   }
   return {
-    mode: configured ? "api-ready" : "mock",
+    mode: configured ? "connected" : "local-record",
     summary: `Created ${action.target} record as ${user.email}`,
     referenceId,
     record: {
@@ -1633,8 +1642,8 @@ async function executeGmailAutomation({ user, store, action, demoRecipient, deli
 
   if (!scalekitConfiguredForTools()) {
     return {
-      mode: "mock",
-      summary: "Gmail draft skipped because Scalekit API credentials are not configured"
+      mode: "not-connected",
+      summary: "Gmail send skipped because Scalekit is not connected"
     };
   }
 
@@ -1673,8 +1682,8 @@ async function executeGmailAutomation({ user, store, action, demoRecipient, deli
     return {
       mode: "live",
       summary: deliveryMode === "send"
-        ? `Sent real Gmail demo email as ${account.identifier} to ${recipient} using the Scalekit connected account`
-        : `Created real Gmail draft as ${account.identifier} to ${recipient} using the Scalekit connected account`,
+        ? `Sent real Gmail email as ${account.identifier} to ${recipient} using the Scalekit connected account`
+        : `Prepared real Gmail message as ${account.identifier} to ${recipient} using the Scalekit connected account`,
       connector: account.connector,
       connectedAccountId: account.id,
       delivery: deliveryMode,
@@ -1770,7 +1779,7 @@ async function createGmailMessageViaScalekit({ connectedAccountId, to, subject, 
 function safeDemoRecipient(candidate, fallback, requested) {
   const value = String(requested || process.env.WARDEN_GMAIL_DEMO_TO || DEMO_CUSTOMER_EMAIL || candidate || "").trim();
   if (value && !/@example\.com$/i.test(value)) return value;
-  return fallback || value || "owner@example.com";
+  return fallback || value || "owner@business.local";
 }
 
 function gmailDeliveryMode(requested, recipient) {

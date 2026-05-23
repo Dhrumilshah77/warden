@@ -2362,9 +2362,9 @@
       border: 1px solid var(--line);
       border-radius: 9px;
       background: #12170f;
-      padding: 12px;
+      padding: 11px;
       display: grid;
-      gap: 10px;
+      gap: 9px;
       min-width: 0;
     }
     .agent-feature-head {
@@ -2391,6 +2391,26 @@
       font-size: 12px;
       line-height: 1.42;
       margin-top: 2px;
+    }
+    .agent-built-with {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--subtle);
+      font-size: 11px;
+      line-height: 1.3;
+    }
+    .agent-built-with span {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 6px;
+      background: #11150f;
+      padding: 6px 8px;
+    }
+    .agent-built-with b {
+      color: var(--muted);
+      font-weight: 760;
     }
     .agent-runbook {
       display: grid;
@@ -2509,6 +2529,72 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
       gap: 8px;
+    }
+    .owner-analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .owner-analytics-stat {
+      min-width: 0;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 7px;
+      background: #171c15;
+      padding: 9px;
+      display: grid;
+      gap: 2px;
+    }
+    .owner-analytics-stat strong {
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+    .owner-analytics-stat span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 680;
+    }
+    .owner-analytics-stat small {
+      color: var(--subtle);
+      font-size: 10px;
+      overflow-wrap: anywhere;
+    }
+    .owner-action-list {
+      display: grid;
+      gap: 6px;
+    }
+    .owner-action-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 7px;
+      background: #11150f;
+      padding: 8px;
+      min-width: 0;
+    }
+    .owner-action-title {
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 760;
+      line-height: 1.25;
+    }
+    .owner-action-copy {
+      color: var(--subtle);
+      font-size: 11px;
+      line-height: 1.35;
+      margin-top: 2px;
+    }
+    .owner-action-row > span {
+      color: var(--green);
+      font-size: 10px;
+      font-family: var(--mono);
+      white-space: nowrap;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .autonomy-stat {
       border: 1px solid rgba(255,255,255,.07);
@@ -2712,6 +2798,8 @@
       .agent-select-wrap { min-width: 100%; }
       .agent-role-tabs { grid-template-columns: 1fr; }
       .agent-feature-grid { grid-template-columns: 1fr; }
+      .owner-analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .owner-action-row { grid-template-columns: 1fr; }
       .agent-runbook-row { grid-template-columns: 24px 1fr; }
       .customer-send-row { grid-template-columns: 1fr; }
       .agent-mini-stat { white-space: normal; }
@@ -2981,10 +3069,10 @@
               <div class="agent-control">
                 <div>
                 <div class="agent-title">Show what each person can do</div>
-                <div class="agent-copy">Owner sees customer drafts. Manager and associate see only their own requests and tasks.</div>
+                <div class="agent-copy">Owner sees customer actions. Manager and associate see only their own requests and tasks.</div>
               </div>
               <div class="agent-tab-panel">
-                <div class="agent-tab-kicker">Open demo tabs</div>
+                <div class="agent-tab-kicker">Open role tabs</div>
                 <div class="agent-role-tabs" id="agentRoleTabs"></div>
               </div>
               <label class="agent-select-wrap hidden" for="agentUserSelect">

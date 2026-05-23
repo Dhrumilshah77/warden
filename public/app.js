@@ -2522,12 +2522,13 @@ function renderAgentConsole() {
   const integrations = session.integrations || {};
   const entries = Object.entries(integrations);
   els.agentIntegrationStrip.innerHTML = entries.length ? `
-    <div class="agent-integration-summary">
-      ${escapeHtml(currentUser?.title || "User")} permissions are checked before Warden acts. Apify finds the signal; Gmail runs as the connected owner through Scalekit.
+    <div class="agent-built-with">
+      <span><b>Built with Apify</b> Google Places, review themes, supplier products</span>
+      <span><b>Built with Scalekit</b> user-scoped Gmail and permission checks</span>
     </div>
   ` : `<div class="empty">Loading connection status...</div>`;
 
-  els.agentMeta.textContent = currentUser ? `${currentUser.title} tab` : "Role-based demo";
+  els.agentMeta.textContent = currentUser ? `${currentUser.title} tab` : "Role-based access";
   renderAgentAutopilot();
   renderAgentInbox();
   renderAgentReceipt();
@@ -2665,6 +2666,12 @@ function renderCustomerRecovery() {
     els.agentCustomerPanel.innerHTML = "";
     return;
   }
+  const pending = (state.agentInbox || []).filter((item) => item.type === "approval" && item.status === "pending");
+  if (!pending.length) {
+    els.agentCustomerPanel.style.display = "none";
+    els.agentCustomerPanel.innerHTML = "";
+    return;
+  }
   els.agentCustomerPanel.style.display = "";
   const actions = state.agentActions.filter((action) => action.category === "customer-recovery");
   const store = selectedStore() || {};
@@ -2675,7 +2682,7 @@ function renderCustomerRecovery() {
     <div class="agent-feature-head">
       <div>
         <div class="agent-feature-title">Owner Review</div>
-        <div class="agent-feature-copy">Customer messages and credits stop here until the owner approves them.</div>
+        <div class="agent-feature-copy">Pending customer actions stop here until the owner approves them.</div>
       </div>
       <span class="agent-mini-stat">~$${escapeHtml(String(recoveryValue))} at stake</span>
     </div>
@@ -2699,38 +2706,53 @@ function renderAgentAutonomy() {
   const signals = plan.signals || {};
   const finance = plan.finance || {};
   const actions = plan.actions || [];
-  const customers = plan.customers || [];
-  const lapsedCustomers = customers.filter((customer) => customer.lastVisitDaysAgo >= 14).slice(0, 3);
-  const sendRows = lapsedCustomers.map((customer) => `
-    <div class="customer-send-row">
-      <div>
-        <div class="customer-send-name">${escapeHtml(customer.name)}</div>
-        <div class="customer-send-note">${escapeHtml(customer.email)} · last bought ${escapeHtml(customer.lastOrder?.item || signals.topItem || "usual item")} ${escapeHtml(customer.lastOrder?.at || "")}</div>
-      </div>
-      <span class="agent-mini-stat">${escapeHtml(customer.risk || "follow up")}</span>
-    </div>
-  `).join("");
-  const safeWork = actions
-    .filter((action) => !/campaign/i.test(action.target || ""))
-    .slice(0, 3)
-    .map((action) => action.title.replace(/^Auto-(build|create|draft|message)\s+/i, ""))
-    .join(" · ");
+  const market = state.latestIntel?.marketIntelligence || {};
+  const places = state.latestIntel?.marketPlaces || [];
+  const competitorCount = Number(market.competitorsAnalyzed || places.length || 0);
+  const marketSource = state.latestIntel?.marketProvider === "apify" ? "Apify scan" : state.latestIntel ? "map scan" : "scanning";
+  const peak = signals.peak || (market.busyHeatmap?.peakDay ? `${market.busyHeatmap.peakDay} ${formatHourLabel(market.busyHeatmap.peakHour)}` : "Next peak");
+  const approvedEmail = signals.customerEmail || signals.demoCustomerEmail || "approved customer";
+  const actionById = new Map(actions.map((action) => [action.id, action]));
+  const ownerActions = [
+    actionById.get("auto-send-churn-save-email"),
+    actionById.get("auto-manager-prep-checklist"),
+    actionById.get("auto-profit-leak-fix")
+  ].filter(Boolean);
+  const analytics = [
+    { label: "Competitors", value: competitorCount ? formatCount(competitorCount) : "--", detail: competitorCount ? marketSource : "scanning" },
+    { label: "Avg rating", value: market.avgRating ? `${Number(market.avgRating).toFixed(1)}★` : "--", detail: market.avgRating ? "nearby block" : "scanning" },
+    { label: "Peak window", value: peak, detail: peak === "Next peak" ? "scanning" : (signals.topItem || "top item") },
+    { label: "Margin", value: Number.isFinite(Number(finance.margin)) ? `${finance.margin}%` : "--", detail: `$${formatCount(finance.netProfit || 0)} profit` }
+  ];
   els.agentAutonomyPanel.innerHTML = `
     <div class="agent-feature-head">
       <div>
-        <div class="agent-feature-title">Customer Comeback List</div>
-        <div class="agent-feature-copy">Owner-only customer memory. Warden can send the fixed demo Gmail as the owner and keep the rest as internal work.</div>
+        <div class="agent-feature-title">Owner Analytics</div>
+        <div class="agent-feature-copy">Important numbers and AI actions for the next shift.</div>
       </div>
-      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Working..." : "Run automations"}</button>
+      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Working..." : "Run AI actions"}</button>
     </div>
-    <div class="autonomy-summary">
-      <div class="autonomy-stat"><strong>${escapeHtml(String(signals.lapsedCount ?? "--"))}</strong><span>people to win back</span></div>
-      <div class="autonomy-stat"><strong>$${escapeHtml(String(signals.estimatedRecoveryValue ?? "--"))}</strong><span>possible value</span></div>
-      <div class="autonomy-stat"><strong>$${escapeHtml(String(finance.netProfit ?? "--"))}</strong><span>${escapeHtml(finance.month || "month")} profit</span></div>
-      <div class="autonomy-stat"><strong>${escapeHtml(String(finance.cashBufferDays ?? "--"))}</strong><span>cash buffer days</span></div>
+    <div class="owner-analytics-grid">
+      ${analytics.map((item) => `
+        <div class="owner-analytics-stat">
+          <strong>${escapeHtml(String(item.value))}</strong>
+          <span>${escapeHtml(item.label)}</span>
+          <small>${escapeHtml(item.detail)}</small>
+        </div>
+      `).join("")}
     </div>
-    <div class="customer-send-list">${sendRows || `<div class="empty">${escapeHtml(plan.error || "Customer list loads after the scan finishes.")}</div>`}</div>
-    <div class="agent-evidence">Uses Apify evidence and live Gmail through Scalekit when connected. Also creates safe internal work: ${escapeHtml(safeWork || "manager checklist and supplier draft")}.</div>
+    <div class="owner-action-list">
+      ${ownerActions.map((action) => `
+        <div class="owner-action-row">
+          <div>
+            <div class="owner-action-title">${escapeHtml(action.title.replace(/^Auto-(build|create|draft|message|send)\s+/i, ""))}</div>
+            <div class="owner-action-copy">${escapeHtml(compactSentence(action.summary || action.guardrail || "", 128))}</div>
+          </div>
+          <span>${escapeHtml(action.id === "auto-send-churn-save-email" ? approvedEmail : agentDecisionText(action.policy?.decision || "auto_safe"))}</span>
+        </div>
+      `).join("") || `<div class="empty">${escapeHtml(plan.error || "Actions load after the scan finishes.")}</div>`}
+    </div>
+    <div class="agent-evidence">Uses Apify evidence and Scalekit Gmail. No purchase, public post, or hour change happens here.</div>
   `;
 }
 
@@ -2738,7 +2760,23 @@ function renderAgentInbox() {
   if (!els.agentInboxPanel) return;
   const user = currentAgentUser();
   const items = state.agentInbox || [];
-  const list = items.slice(0, 5).map((item) => {
+  const compactItems = [];
+  const seen = new Set();
+  for (const item of items) {
+    const actionKey = item.type === "approval"
+      ? (item.target || item.action?.target || item.action?.id || item.title || item.id)
+      : (item.action?.id || item.target || item.title || item.id);
+    const key = [
+      item.type || "item",
+      item.status || "open",
+      item.fromUserId || item.fromRole || "warden",
+      actionKey
+    ].join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    compactItems.push(item);
+  }
+  const list = compactItems.slice(0, 3).map((item) => {
     const canApprove = user?.role === "owner" && item.type === "approval" && item.status === "pending";
     return `
       <div class="agent-inbox-item ${escapeAttr(item.status || "open")}">
@@ -2873,14 +2911,14 @@ function agentPolicyLine(action) {
 }
 
 function friendlyAgentTarget(target = "") {
-  if (/Campaign/i.test(target)) return "Customer message draft";
+  if (/Campaign/i.test(target)) return "Customer message";
   if (/Customer Segment/i.test(target)) return "Customer list";
-  if (/Vendor|Supplier/i.test(target)) return "Supplier draft";
+  if (/Vendor|Supplier/i.test(target)) return "Supplier order";
   if (/Task|Checklist/i.test(target)) return "Team checklist";
   if (/Internal Message/i.test(target)) return "Team message";
   if (/Credit/i.test(target)) return "Customer credit";
   if (/Hours/i.test(target)) return "Store hours";
-  if (/Promotion/i.test(target)) return "Promo draft";
+  if (/Promotion/i.test(target)) return "Promo";
   return target || "Store action";
 }
 
@@ -2889,7 +2927,7 @@ async function runAutonomousActions() {
   const store = selectedStore();
   if (!store) return;
   if (currentAgentUser()?.role !== "owner") {
-    renderBanners([{ level: "warning", title: "Owner approval needed", body: "Customer send lists and the demo Gmail action only appear in the owner tab." }]);
+    renderBanners([{ level: "warning", title: "Owner approval needed", body: "Customer send actions only appear in the owner tab." }]);
     return;
   }
   state.agentAutonomyRunning = true;
@@ -2913,10 +2951,10 @@ async function runAutonomousActions() {
       policy: { decision: "auto_safe", reason: `${data.count || 0} low-risk internal actions created automatically.` },
       auditEvent: gmailEvent || data.auditEvents?.[0],
       scalekit: { summary: "Tenant-scoped autonomous guardrails checked" },
-      entire: { summary: "Entire draft/task/segment records created" },
+      entire: { summary: "Entire task, segment, and message records created" },
       gmail: gmailEvent?.gmail ? { summary: gmailEvent.gmail } : null
     };
-    renderBanners([{ level: "opportunity", title: "Automations finished", body: data.message || "Warden sent the demo Gmail plus owner-only internal work." }]);
+    renderBanners([{ level: "opportunity", title: "Automations finished", body: data.message || "Warden sent the approved Gmail plus owner-only internal work." }]);
     await refreshAgentAutonomy();
     await refreshAgentActions();
     await refreshAgentTrail();

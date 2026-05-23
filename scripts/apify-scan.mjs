@@ -17,8 +17,8 @@ await loadDotEnv(path.join(__dirname, "..", ".env"));
 const TOKEN = process.env.APIFY_TOKEN;
 if (!TOKEN) {
   console.error("APIFY_TOKEN is not set. Add it to .env at the repo root, or run:");
-  console.error('  $env:APIFY_TOKEN = "apify_api_xxx"   # PowerShell');
-  console.error('  export APIFY_TOKEN=apify_api_xxx     # bash');
+  console.error('  $env:APIFY_TOKEN = "<your_apify_token>"   # PowerShell');
+  console.error('  export APIFY_TOKEN=<your_apify_token>     # bash');
   process.exit(1);
 }
 
