@@ -2451,10 +2451,7 @@ function wireScatterTooltip() {
 const COMPLIANCE_GROUPS = [
   { key: "industry",     icon: "🎯", title: "Required for your industry",  cls: "industry" },
   { key: "registration", icon: "🏛️", title: "Tax & registration",          cls: "" },
-  { key: "insurance",    icon: "🛡️", title: "Insurance & coverage",        cls: "insurance" },
-  { key: "employer",     icon: "👥", title: "Employer & HR records",       cls: "" },
-  { key: "storefront",   icon: "🏪", title: "Storefront & accessibility",  cls: "" },
-  { key: "records",      icon: "📂", title: "Records to keep handy",       cls: "records" }
+  { key: "insurance",    icon: "🛡️", title: "Insurance & coverage",        cls: "insurance" }
 ];
 
 function renderCompliance(intel) {
