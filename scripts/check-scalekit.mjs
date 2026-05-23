@@ -8,9 +8,9 @@ const root = path.resolve(__dirname, "..");
 await loadDotEnv();
 
 const targets = [
-  { label: "Apify", aliases: ["apify", "apify-mcp"] },
+  { label: "Apify", aliases: ["apify", "apify-mcp", "apifymcp"] },
   { label: "Zoom", aliases: ["zoom"] },
-  { label: "Google Calendar", aliases: ["google-calendar", "google_calendar", "calendar"] },
+  { label: "Google Calendar", aliases: ["google-calendar", "google_calendar", "googlecalendar", "calendar"] },
   { label: "Gmail", aliases: ["gmail", "google-mail", "google_mail"] }
 ];
 
@@ -122,11 +122,11 @@ function connectorCheck(target, connections, accounts) {
   const accountMatches = accounts.filter((item) => matchesTarget(item, target.aliases));
   return {
     connector: target.label,
-    connectionConfigured: connectionMatches.length > 0,
+    connectionConfigured: connectionMatches.length > 0 || accountMatches.length > 0,
     connectionStatuses: unique(connectionMatches.map(statusOf).filter(Boolean)),
     connectedAccounts: accountMatches.length,
     activeConnectedAccounts: accountMatches.filter((item) => /active/i.test(statusOf(item))).length,
-    workingForToolCalls: connectionMatches.length > 0 && accountMatches.some((item) => /active/i.test(statusOf(item)))
+    workingForToolCalls: accountMatches.some((item) => /active/i.test(statusOf(item)))
   };
 }
 
@@ -138,10 +138,11 @@ function matchesTarget(item, aliases) {
     item?.provider,
     item?.provider_name,
     item?.providerName,
+    item?.provider_key,
+    item?.providerKey,
     item?.connector,
     item?.connector_name,
     item?.connectorName,
-    item?.identifier,
     item?.id
   ].filter(Boolean).join(" ").toLowerCase();
   return aliases.some((alias) => haystack.includes(alias.toLowerCase()));
