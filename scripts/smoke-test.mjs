@@ -34,6 +34,7 @@ await check("static app shell", async () => {
   assert(appJs.includes("runPeakDayAutopilot"), "peak day autopilot should be wired in the UI");
   assert(appJs.includes("runAutonomousActions"), "safe autonomous actions should be executable from the UI");
   assert(appJs.includes("Customer Comeback List"), "customer memory comeback list should be rendered in the UI");
+  assert(appJs.includes("View AI work"), "automated AI work log should be visible from a button");
   assert(appJs.includes("Owner Review"), "owner review controls should be rendered in the UI");
   assert(appJs.includes("messageManagerForAction"), "blocked users should be able to message a manager");
   assert(!appJs.includes("removeStoreBtn"), "app JS should not wire a visible remove store button");
@@ -75,10 +76,16 @@ await check("delegated action policy changes by user", async () => {
 
   const autonomy = await postJson("/api/agent/autonomy", { userId: "owner-ava", store, intel: intelPayload });
   assert(autonomy.customers.some((customer) => customer.tags.includes("regular")), "autonomy plan should include demo regular customers");
-  assert(autonomy.actions.length >= 5, "autonomy plan should recommend multiple safe actions");
+  assert(autonomy.actions.length >= 8, "autonomy plan should recommend multiple safe actions");
+  assert(autonomy.actions.some((action) => action.id === "auto-send-churn-save-email"), "autonomy should include opted-in churn-save email");
+  assert(autonomy.actions.some((action) => action.id === "auto-monthly-earnings-report"), "autonomy should include owner financial report");
   assert(autonomy.actions.every((action) => action.policy?.decision === "auto_safe"), "autonomy actions should be marked auto-safe");
+  assert(autonomy.finance?.netProfit > 0, "owner autonomy should include a financial snapshot");
+  const managerAutonomy = await postJson("/api/agent/autonomy", { userId: "manager-ben", store, intel: intelPayload });
+  assert(managerAutonomy.customers.length === 0, "manager autonomy should not expose customer email list");
+  assert(!JSON.stringify(managerAutonomy).includes("regular.customer@example.com"), "manager autonomy should not leak demo customer email");
   const autonomousRun = await postJson("/api/agent/autonomy/run", { userId: "owner-ava", store, intel: intelPayload });
-  assert(autonomousRun.count >= 5, "autonomous run should create safe internal actions");
+  assert(autonomousRun.count >= 8, "autonomous run should create safe internal actions");
   assert(autonomousRun.auditEvents.every((event) => event.decision === "auto_executed"), "autonomous events should be logged as auto_executed");
 
   const manager = await postJson("/api/agent/actions", { userId: "manager-ben", store, intel: intelPayload });

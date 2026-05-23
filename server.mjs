@@ -464,7 +464,7 @@ export async function handleRequest(req, res) {
         ok: true,
         user,
         inbox: agentInboxForUser(user),
-        audit: agentAuditForTenant(user.tenantId)
+        audit: agentAuditForUser(user)
       });
     }
 
@@ -670,7 +670,7 @@ function buildAgentActions(body = {}, params = new URLSearchParams()) {
     tenant: { id: user.tenantId, name: user.tenantName },
     integrations: agentIntegrationStatus(),
     actions,
-    audit: agentAuditForTenant(user.tenantId, 12),
+    audit: agentAuditForUser(user, 12),
     inbox: agentInboxForUser(user)
   };
 }
@@ -738,22 +738,25 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
   const intel = body.intel || null;
   const customers = demoCustomersForStore(store);
   const signals = customerMemorySignals(customers, store, intel);
+  const finance = demoFinancialSnapshot(store, customers, signals);
   const visibleSignals = user.role === "owner" ? signals : { ...signals, demoCustomerEmail: "" };
-  const actions = recommendedAutonomousActions({ user, store, intel, customers, signals })
-    .filter((action) => !action.visibilityRoles?.length || action.visibilityRoles.includes(user.role));
+  const actions = recommendedAutonomousActions({ user, store, intel, customers, signals, finance })
+    .filter((action) => !action.visibilityRoles?.length || action.visibilityRoles.includes(user.role))
+    .map((action) => user.role === "owner" ? action : redactAutonomousAction(action));
   return {
     ok: true,
     user,
     tenant: { id: user.tenantId, name: user.tenantName },
     customers: user.role === "owner" ? customers : [],
     signals: visibleSignals,
+    finance: user.role === "owner" ? finance : null,
     actions,
     guardrails: [
       "Only internal Entire.io tasks, drafts, segments, and teammate messages run automatically.",
       "No public posts, refunds, purchases, customer sends, or hour changes run without owner approval.",
       "Every automatic move is logged into the shared tenant report trail."
     ],
-    audit: agentAuditForTenant(user.tenantId, 12),
+    audit: agentAuditForUser(user, 12),
     inbox: agentInboxForUser(user)
   };
 }
@@ -799,6 +802,7 @@ async function executeAutonomousActions(body = {}) {
     results.push({ action, scalekit, entire, auditEvent });
 
     if (action.inboxRole) {
+      const inboxAction = action.inboxRole === "owner" ? action : redactAutonomousAction(action);
       DELEGATED_AGENT_INBOX.unshift({
         id: `auto-msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
         type: "autonomous_message",
@@ -811,11 +815,11 @@ async function executeAutonomousActions(body = {}) {
         fromUserName: "Warden Autopilot",
         fromRole: "autonomous_agent",
         toRole: action.inboxRole,
-        title: action.title,
-        body: `${action.summary} Evidence: ${action.evidence}`,
-        action,
+        title: inboxAction.title,
+        body: `${inboxAction.summary} Evidence: ${inboxAction.evidence}`,
+        action: inboxAction,
         store,
-        target: action.target
+        target: inboxAction.target
       });
     }
   }
@@ -827,7 +831,7 @@ async function executeAutonomousActions(body = {}) {
     results,
     auditEvents,
     inbox: agentInboxForUser(user),
-    audit: agentAuditForTenant(user.tenantId, 20),
+    audit: agentAuditForUser(user, 20),
     message: `Warden Autopilot safely created ${results.length} internal drafts, tasks, segments, or teammate messages.`
   };
 }
@@ -901,7 +905,34 @@ function customerMemorySignals(customers, store, intel) {
   };
 }
 
-function recommendedAutonomousActions({ user, store, intel, customers, signals }) {
+function demoFinancialSnapshot(store, customers, signals) {
+  const avgTicket = Number(store.avgTicket || 0) || 22;
+  const visits = customers.reduce((sum, customer) => sum + (customer.visits90d || 0), 0);
+  const monthlyOrders = Math.max(420, Math.round(visits * 18));
+  const revenue = Math.round(monthlyOrders * avgTicket);
+  const cogs = Math.round(revenue * 0.34);
+  const labor = Math.round(revenue * 0.27);
+  const rent = Math.round(revenue * 0.11);
+  const fees = Math.round(revenue * 0.06);
+  const netProfit = revenue - cogs - labor - rent - fees;
+  const margin = Math.round((netProfit / revenue) * 100);
+  const cashBufferDays = Math.max(9, Math.round((netProfit + revenue * 0.18) / Math.max(420, (labor + rent + cogs) / 30)));
+  return {
+    month: "May",
+    revenue,
+    cogs,
+    labor,
+    rent,
+    fees,
+    netProfit,
+    margin,
+    cashBufferDays,
+    topProfitItem: signals.topItem,
+    leak: "delivery fees rose faster than pickup sales"
+  };
+}
+
+function recommendedAutonomousActions({ user, store, intel, customers, signals, finance }) {
   const customer = customers[0];
   const city = store.city || "your city";
   const apifyEvidence = intel?.marketProvider === "apify"
@@ -955,6 +986,51 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals }
       }
     }),
     autonomousAction({
+      id: "auto-send-churn-save-email",
+      title: "Auto-send regular comeback email",
+      target: "Entire.io Email Send",
+      summary: `Sent one quiet win-back email to an opted-in regular who usually buys ${signals.topItem}.`,
+      guardrail: "Opted-in regular only, under $5 offer value, one send per 30 days, no SMS or public post.",
+      evidence: `${customer.email} has not visited for ${customer.lastVisitDaysAgo} days after ${customer.visits90d} recent visits`,
+      visibilityRoles: ["owner"],
+      inboxRole: "",
+      payload: {
+        to: customer.email,
+        subject: `${store.businessName || "Your store"} saved your usual`,
+        body: `We saved your usual ${signals.topItem}. Come by before ${signals.peak} and get a small regular-customer thank you.`,
+        offerCap: 5,
+        consent: "opted_in",
+        frequencyCapDays: 30,
+        sentAutomatically: true
+      }
+    }),
+    autonomousAction({
+      id: "auto-monthly-earnings-report",
+      title: "Auto-close monthly earnings report",
+      target: "Entire.io Owner Finance Report",
+      summary: `Closed ${finance.month}: $${finance.revenue} sales, $${finance.netProfit} estimated profit, ${finance.margin}% margin.`,
+      guardrail: "Owner-only report; no bank movement, tax filing, payroll change, or accounting submission.",
+      evidence: `Cash buffer estimated at ${finance.cashBufferDays} days; ${finance.leak}`,
+      visibilityRoles: ["owner"],
+      inboxRole: "",
+      payload: finance
+    }),
+    autonomousAction({
+      id: "auto-profit-leak-fix",
+      title: "Auto-create profit leak fix",
+      target: "Entire.io Owner Task",
+      summary: `Found ${finance.leak}; created a pickup-first promotion and delivery-fee review task.`,
+      guardrail: "Internal owner task only; no price, fee, menu, or public listing changes.",
+      evidence: `${finance.month} margin ${finance.margin}% with ${signals.topItem} as the top profit item`,
+      visibilityRoles: ["owner"],
+      inboxRole: "",
+      payload: {
+        issue: finance.leak,
+        fix: `Push pickup-first ${signals.topItem} offer before changing prices`,
+        expectedImpact: "Protect margin without surprising customers"
+      }
+    }),
+    autonomousAction({
       id: "auto-supplier-draft-from-orders",
       title: "Auto-draft supplier restock from regular orders",
       target: "Entire.io Vendor Order Draft",
@@ -966,6 +1042,20 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals }
         item: signals.storeType.toLowerCase().includes("restaurant") ? "takeout bags and containers" : "top-selling shelf stock",
         reason: `Protect ${signals.topItem} demand in ${city}`,
         purchaseBlockedUntilOwnerApproves: true
+      }
+    }),
+    autonomousAction({
+      id: "auto-staff-coverage-ping",
+      title: "Auto-ping staff coverage",
+      target: "Entire.io Staff Message",
+      summary: `Asked the team for coverage before ${signals.peak} and attached the prep checklist.`,
+      guardrail: "Internal staff message only; no schedule change, payroll change, or customer-facing promise.",
+      evidence: `${signals.peak} demand signal plus ${signals.regularCount} regular-customer demand`,
+      inboxRole: "manager",
+      payload: {
+        message: `Can someone cover pickup flow before ${signals.peak}? Warden expects ${signals.topItem} demand.`,
+        assigneeRole: "manager",
+        scheduleChangeBlocked: true
       }
     }),
     autonomousAction({
@@ -1005,6 +1095,22 @@ function autonomousAction(input) {
   };
 }
 
+function redactAutonomousAction(action) {
+  return {
+    ...action,
+    evidence: String(action.evidence || "")
+      .replace(DEMO_CUSTOMER_EMAIL, "an opted-in regular customer")
+      .replace(/Dhrumil Demo Regular/g, "A regular customer"),
+    payload: {
+      ...action.payload,
+      to: undefined,
+      draftTo: undefined,
+      demoCustomerEmail: undefined,
+      customerIds: undefined
+    }
+  };
+}
+
 function agentInboxForUser(user) {
   return DELEGATED_AGENT_INBOX
     .filter((item) => item.tenantId === user.tenantId)
@@ -1017,6 +1123,27 @@ function agentAuditForTenant(tenantId, limit = 30) {
   return DELEGATED_ACTION_AUDIT
     .filter((event) => event.tenantId === tenantId)
     .slice(0, limit);
+}
+
+function agentAuditForUser(user, limit = 30) {
+  const events = agentAuditForTenant(user.tenantId, limit);
+  return user.role === "owner" ? events : events.map(redactAuditEvent);
+}
+
+function redactAuditEvent(event) {
+  const redactText = (value) => typeof value === "string"
+    ? value
+      .replace(DEMO_CUSTOMER_EMAIL, "an opted-in regular customer")
+      .replace(/Dhrumil Demo Regular/g, "A regular customer")
+      .replace(/lunch\.buyer@example\.com|family\.order@example\.com/g, "a customer")
+    : value;
+  return {
+    ...event,
+    reason: redactText(event.reason),
+    evidence: redactText(event.evidence),
+    scalekit: redactText(event.scalekit),
+    entire: redactText(event.entire)
+  };
 }
 
 function createApprovalRequest({ user, store, action, policy, auditEvent }) {

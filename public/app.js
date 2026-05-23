@@ -1136,6 +1136,7 @@ const state = {
   agentLoading: false,
   agentAutopilotRunning: false,
   agentAutonomyRunning: false,
+  agentAutoLogOpen: false,
   reviewItems: loadReviewItems(),
   chatThreads: loadChatThreads(),
   chatOpen: false,
@@ -2562,16 +2563,53 @@ function renderAgentAutopilot() {
   const copy = user?.role === "owner"
     ? "Warden prepares the plan and only finishes actions the owner is allowed to approve."
     : "Warden shows what this teammate can do, ask for, or send to a manager.";
+  const autoLog = renderAgentAutoWorkLog();
   els.agentAutopilotPanel.innerHTML = `
     <div class="agent-feature-head">
       <div>
         <div class="agent-feature-title">${escapeHtml(title)}</div>
         <div class="agent-feature-copy">${escapeHtml(copy)}</div>
       </div>
-      <button class="btn good" data-agent-autopilot ${state.agentAutopilotRunning || !coreActions.length ? "disabled" : ""}>${state.agentAutopilotRunning ? "Working..." : "Prepare plan"}</button>
+      <div class="agent-button-stack">
+        <button class="btn good" data-agent-autopilot ${state.agentAutopilotRunning || !coreActions.length ? "disabled" : ""}>${state.agentAutopilotRunning ? "Working..." : "Prepare plan"}</button>
+        <button class="btn" data-agent-auto-log>${state.agentAutoLogOpen ? "Hide AI work" : "View AI work"}</button>
+      </div>
     </div>
     <div class="agent-runbook">${rows || `<div class="empty">Waiting for delegated actions...</div>`}</div>
     <div class="agent-evidence">${allowed} ready · ${approvals} ask owner · ${blocked} ask manager</div>
+    ${state.agentAutoLogOpen ? autoLog : ""}
+  `;
+}
+
+function renderAgentAutoWorkLog() {
+  const autoEvents = (state.agentSession?.audit || [])
+    .filter((event) => event.userId === "warden-autopilot" || event.decision === "auto_executed")
+    .slice(0, 7);
+  const planned = (state.agentAutonomy?.actions || []).slice(0, 7);
+  const rows = autoEvents.length
+    ? autoEvents.map((event) => `
+      <div class="autonomy-row">
+        <div>
+          <div class="autonomy-row-title">${escapeHtml(event.actionTitle || "AI work")}</div>
+          <div class="autonomy-row-copy">${escapeHtml(event.reason || event.evidence || "Completed by Warden")}</div>
+        </div>
+        <span class="agent-decision allowed">done</span>
+      </div>
+    `).join("")
+    : planned.map((action) => `
+      <div class="autonomy-row">
+        <div>
+          <div class="autonomy-row-title">${escapeHtml(action.title)}</div>
+          <div class="autonomy-row-copy">${escapeHtml(action.summary || action.guardrail || "")}</div>
+        </div>
+        <span class="agent-decision allowed">ready</span>
+      </div>
+    `).join("");
+  return `
+    <div class="agent-auto-log">
+      <div class="agent-evidence">AI work log</div>
+      <div class="autonomy-list">${rows || `<div class="empty">No automated work yet. Run AI work from the owner tab.</div>`}</div>
+    </div>
   `;
 }
 
@@ -2615,6 +2653,7 @@ function renderAgentAutonomy() {
   els.agentAutonomyPanel.style.display = "";
   const plan = state.agentAutonomy || {};
   const signals = plan.signals || {};
+  const finance = plan.finance || {};
   const actions = plan.actions || [];
   const customers = plan.customers || [];
   const lapsedCustomers = customers.filter((customer) => customer.lastVisitDaysAgo >= 14).slice(0, 3);
@@ -2638,12 +2677,13 @@ function renderAgentAutonomy() {
         <div class="agent-feature-title">Customer Comeback List</div>
         <div class="agent-feature-copy">Owner-only list of customers Warden found for a draft comeback email. Nothing is sent until the owner approves.</div>
       </div>
-      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Creating..." : "Create drafts"}</button>
+      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Working..." : "Run AI work"}</button>
     </div>
     <div class="autonomy-summary">
       <div class="autonomy-stat"><strong>${escapeHtml(String(signals.lapsedCount ?? "--"))}</strong><span>people to win back</span></div>
       <div class="autonomy-stat"><strong>$${escapeHtml(String(signals.estimatedRecoveryValue ?? "--"))}</strong><span>possible value</span></div>
-      <div class="autonomy-stat"><strong>${escapeHtml(signals.topItem || "--")}</strong><span>personalized item</span></div>
+      <div class="autonomy-stat"><strong>$${escapeHtml(String(finance.netProfit ?? "--"))}</strong><span>${escapeHtml(finance.month || "month")} profit</span></div>
+      <div class="autonomy-stat"><strong>${escapeHtml(String(finance.cashBufferDays ?? "--"))}</strong><span>cash buffer days</span></div>
     </div>
     <div class="customer-send-list">${sendRows || `<div class="empty">${escapeHtml(plan.error || "Customer list loads after the scan finishes.")}</div>`}</div>
     <div class="agent-evidence">Also creates safe internal work: ${escapeHtml(safeWork || "manager checklist and supplier draft")}.</div>
@@ -2716,6 +2756,11 @@ function renderAgentReplay() {
 
 function wireAgentFeatureButtons() {
   els.agentAutopilotPanel?.querySelector("[data-agent-autopilot]")?.addEventListener("click", runPeakDayAutopilot);
+  els.agentAutopilotPanel?.querySelector("[data-agent-auto-log]")?.addEventListener("click", () => {
+    state.agentAutoLogOpen = !state.agentAutoLogOpen;
+    renderAgentAutopilot();
+    wireAgentFeatureButtons();
+  });
   wireAgentAutonomyButtons();
   wireAgentInboxButtons();
   els.agentCustomerPanel?.querySelectorAll("[data-agent-execute]").forEach((button) => {
