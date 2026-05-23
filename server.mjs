@@ -738,13 +738,15 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
   const intel = body.intel || null;
   const customers = demoCustomersForStore(store);
   const signals = customerMemorySignals(customers, store, intel);
-  const actions = recommendedAutonomousActions({ user, store, intel, customers, signals });
+  const visibleSignals = user.role === "owner" ? signals : { ...signals, demoCustomerEmail: "" };
+  const actions = recommendedAutonomousActions({ user, store, intel, customers, signals })
+    .filter((action) => !action.visibilityRoles?.length || action.visibilityRoles.includes(user.role));
   return {
     ok: true,
     user,
     tenant: { id: user.tenantId, name: user.tenantName },
-    customers,
-    signals,
+    customers: user.role === "owner" ? customers : [],
+    signals: visibleSignals,
     actions,
     guardrails: [
       "Only internal Entire.io tasks, drafts, segments, and teammate messages run automatically.",
@@ -913,6 +915,7 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals }
       summary: `Grouped ${signals.lapsedCount} lapsed regulars around ${signals.topItem}; no message was sent.`,
       guardrail: "Segment draft only; no customer contact and no public action.",
       evidence: `${customer.email} last ordered ${customer.lastOrder.item} ${customer.lastOrder.at}`,
+      visibilityRoles: ["owner"],
       inboxRole: "",
       payload: {
         segmentName: `${store.businessName || "Store"} lapsed regulars`,
@@ -942,6 +945,7 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals }
       summary: `Drafted a comeback note for regulars who buy ${signals.topItem}; owner still approves sending.`,
       guardrail: "Campaign draft only; no email, SMS, coupon, or publish action.",
       evidence: `${signals.regularCount} regular customers in demo memory`,
+      visibilityRoles: ["owner"],
       inboxRole: "",
       payload: {
         draftTo: customer.email,
@@ -992,6 +996,7 @@ function autonomousAction(input) {
     evidence: input.evidence,
     inboxRole: input.inboxRole,
     payload: input.payload || {},
+    visibilityRoles: input.visibilityRoles || [],
     policy: {
       decision: "auto_safe",
       tone: "good",

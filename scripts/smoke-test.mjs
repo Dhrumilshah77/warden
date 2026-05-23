@@ -33,8 +33,8 @@ await check("static app shell", async () => {
   assert(appJs.includes("refreshAgentTrail"), "cross-tab report trail should refresh");
   assert(appJs.includes("runPeakDayAutopilot"), "peak day autopilot should be wired in the UI");
   assert(appJs.includes("runAutonomousActions"), "safe autonomous actions should be executable from the UI");
-  assert(appJs.includes("Customer Memory Autopilot"), "customer memory autopilot should be rendered in the UI");
-  assert(appJs.includes("Customer Recovery Agent"), "customer recovery agent should be rendered in the UI");
+  assert(appJs.includes("Customer Comeback List"), "customer memory comeback list should be rendered in the UI");
+  assert(appJs.includes("Owner Review"), "owner review controls should be rendered in the UI");
   assert(appJs.includes("messageManagerForAction"), "blocked users should be able to message a manager");
   assert(!appJs.includes("removeStoreBtn"), "app JS should not wire a visible remove store button");
   assert(appJs.includes("buildChatReply"), "chatbot should have store-aware reply logic");

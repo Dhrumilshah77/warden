@@ -2428,6 +2428,12 @@ async function refreshAgentTrail() {
 async function refreshAgentAutonomy() {
   const store = selectedStore();
   if (!store) return;
+  const user = currentAgentUser();
+  if (user?.role && user.role !== "owner") {
+    state.agentAutonomy = null;
+    renderAgentAutonomy();
+    return;
+  }
   try {
     const response = await fetch("/api/agent/autonomy", {
       method: "POST",
@@ -2467,28 +2473,28 @@ function renderAgentConsole() {
     if (els.agentRoleTabs) els.agentRoleTabs.innerHTML = `<div class="empty">Loading role tabs...</div>`;
   }
 
+  const currentUser = currentAgentUser();
   const integrations = session.integrations || {};
   const entries = Object.entries(integrations);
-  els.agentIntegrationStrip.innerHTML = entries.length ? entries.map(([name, item]) => `
-    <article class="agent-integration">
-      <div class="agent-integration-head">
-        <span>${escapeHtml(agentIntegrationLabel(name))}</span>
-        <span class="agent-mode ${escapeAttr(String(item.mode || "").replace(/_/g, "-"))}">${escapeHtml(item.mode || "mock")}</span>
-      </div>
-      <div class="agent-integration-body">${escapeHtml(item.role || "")}</div>
-    </article>
-  `).join("") : `<div class="empty">Loading integration status...</div>`;
+  els.agentIntegrationStrip.innerHTML = entries.length ? `
+    <div class="agent-integration-summary">
+      ${escapeHtml(currentUser?.title || "User")} permissions are checked before Warden acts. Work is saved in Entire, and market evidence comes from Apify.
+    </div>
+  ` : `<div class="empty">Loading connection status...</div>`;
 
-  const currentUser = currentAgentUser();
-  const modeText = entries.map(([name, item]) => `${agentIntegrationLabel(name)}: ${item.mode || "mock"}`).join(" · ");
-  els.agentMeta.textContent = currentUser ? `${currentUser.name} tab · ${modeText || "Scalekit + Entire ready"}` : modeText || "Scalekit + Entire ready";
+  els.agentMeta.textContent = currentUser ? `${currentUser.title} tab` : "Role-based demo";
   renderAgentAutopilot();
   renderAgentInbox();
   renderAgentReceipt();
   renderAgentAutonomy();
   renderCustomerRecovery();
 
-  if (state.agentLoading) {
+  const ownerMode = currentUser?.role === "owner";
+  els.agentActionsPanel.style.display = ownerMode ? "none" : "";
+
+  if (ownerMode) {
+    els.agentActionsPanel.innerHTML = "";
+  } else if (state.agentLoading) {
     els.agentActionsPanel.innerHTML = loadingCards(4);
   } else {
     const coreActions = state.agentActions.filter((action) => action.category !== "customer-recovery");
@@ -2499,7 +2505,7 @@ function renderAgentConsole() {
     }
   }
 
-  if (!state.agentLoading && !state.agentActions.length) {
+  if (!ownerMode && !state.agentLoading && !state.agentActions.length) {
     els.agentActionsPanel.innerHTML = `<div class="empty">${escapeHtml(session.actionError || session.error || "Agent actions load after the city scan finishes.")}</div>`;
   }
 
@@ -2525,10 +2531,10 @@ function renderAgentRoleTabs(users, currentId) {
   if (!els.agentRoleTabs) return;
   els.agentRoleTabs.innerHTML = users.map((user) => {
     const active = user.id === currentId;
-    const label = active ? "This tab" : `Open ${user.title.toLowerCase()} tab`;
+    const label = active ? `${user.name} is active here` : `Open ${user.title.toLowerCase()} view`;
     return `
       <a class="agent-role-tab ${active ? "active" : ""}" href="${escapeAttr(agentTabUrl(user.id))}" target="_blank" rel="noreferrer" ${active ? `aria-current="page"` : ""}>
-        <span class="agent-role-name">${escapeHtml(user.name)} · ${escapeHtml(user.title)}</span>
+        <span class="agent-role-name">${escapeHtml(user.title)}</span>
         <span class="agent-role-sub">${escapeHtml(label)}</span>
       </a>
     `;
@@ -2537,35 +2543,47 @@ function renderAgentRoleTabs(users, currentId) {
 
 function renderAgentAutopilot() {
   if (!els.agentAutopilotPanel) return;
+  const user = currentAgentUser();
   const coreActions = state.agentActions.filter((action) => action.category !== "customer-recovery");
   const allowed = coreActions.filter((action) => action.policy?.decision === "allowed").length;
   const approvals = coreActions.filter((action) => action.policy?.decision === "needs_approval").length;
   const blocked = coreActions.filter((action) => action.policy?.decision === "blocked").length;
-  const rows = coreActions.slice(0, 4).map((action, index) => `
+  const rows = coreActions.slice(0, user?.role === "owner" ? 3 : 4).map((action, index) => `
     <div class="agent-runbook-row">
       <span class="agent-runbook-num">${index + 1}</span>
       <div>
         <div class="agent-runbook-main">${escapeHtml(action.title)}</div>
-        <div class="agent-runbook-sub">${escapeHtml(action.target)} · ${escapeHtml((action.policy?.decision || "blocked").replace("_", " "))}</div>
+        <div class="agent-runbook-sub">${escapeHtml(agentPolicyLine(action))}</div>
       </div>
-      <span class="agent-mini-stat">${escapeHtml(action.risk || "medium")}</span>
+      <span class="agent-mini-stat">${escapeHtml(agentDecisionText(action.policy?.decision))}</span>
     </div>
   `).join("");
+  const title = user?.role === "associate" ? "My Task Helper" : user?.role === "manager" ? "Manager Prep" : "Tomorrow Prep";
+  const copy = user?.role === "owner"
+    ? "Warden prepares the plan and only finishes actions the owner is allowed to approve."
+    : "Warden shows what this teammate can do, ask for, or send to a manager.";
   els.agentAutopilotPanel.innerHTML = `
     <div class="agent-feature-head">
       <div>
-        <div class="agent-feature-title">Peak Day Autopilot</div>
-        <div class="agent-feature-copy">One operating plan from Warden's current demand, supply, hours, and compliance signals.</div>
+        <div class="agent-feature-title">${escapeHtml(title)}</div>
+        <div class="agent-feature-copy">${escapeHtml(copy)}</div>
       </div>
-      <button class="btn good" data-agent-autopilot ${state.agentAutopilotRunning || !coreActions.length ? "disabled" : ""}>${state.agentAutopilotRunning ? "Running..." : "Prepare tomorrow"}</button>
+      <button class="btn good" data-agent-autopilot ${state.agentAutopilotRunning || !coreActions.length ? "disabled" : ""}>${state.agentAutopilotRunning ? "Working..." : "Prepare plan"}</button>
     </div>
     <div class="agent-runbook">${rows || `<div class="empty">Waiting for delegated actions...</div>`}</div>
-    <div class="agent-evidence">Ready: ${allowed} execute · ${approvals} approval · ${blocked} blocked</div>
+    <div class="agent-evidence">${allowed} ready · ${approvals} ask owner · ${blocked} ask manager</div>
   `;
 }
 
 function renderCustomerRecovery() {
   if (!els.agentCustomerPanel) return;
+  const user = currentAgentUser();
+  if (user?.role !== "owner") {
+    els.agentCustomerPanel.style.display = "none";
+    els.agentCustomerPanel.innerHTML = "";
+    return;
+  }
+  els.agentCustomerPanel.style.display = "";
   const actions = state.agentActions.filter((action) => action.category === "customer-recovery");
   const store = selectedStore() || {};
   const avgTicket = Number(store.avgTicket || 0);
@@ -2574,50 +2592,61 @@ function renderCustomerRecovery() {
   els.agentCustomerPanel.innerHTML = `
     <div class="agent-feature-head">
       <div>
-        <div class="agent-feature-title">Customer Recovery Agent</div>
-        <div class="agent-feature-copy">Find the people most likely to come back, route the offer through the right user, and record the action in Entire.</div>
+        <div class="agent-feature-title">Owner Review</div>
+        <div class="agent-feature-copy">Customer messages and credits stop here until the owner approves them.</div>
       </div>
       <span class="agent-mini-stat">~$${escapeHtml(String(recoveryValue))} at stake</span>
     </div>
     <div class="agent-evidence">Signal: ${escapeHtml(topTheme)}</div>
     <div class="customer-recovery-grid">
-      ${actions.length ? actions.map(renderAgentActionCard).join("") : `<div class="empty">Recovery actions load after the city scan finishes.</div>`}
+      ${actions.length ? actions.slice(0, 2).map(renderAgentActionCard).join("") : `<div class="empty">Recovery actions load after the city scan finishes.</div>`}
     </div>
   `;
 }
 
 function renderAgentAutonomy() {
   if (!els.agentAutonomyPanel) return;
+  const user = currentAgentUser();
+  if (user?.role !== "owner") {
+    els.agentAutonomyPanel.style.display = "none";
+    els.agentAutonomyPanel.innerHTML = "";
+    return;
+  }
+  els.agentAutonomyPanel.style.display = "";
   const plan = state.agentAutonomy || {};
   const signals = plan.signals || {};
   const actions = plan.actions || [];
   const customers = plan.customers || [];
-  const demoCustomer = customers[0];
-  const rows = actions.slice(0, 5).map((action) => `
-    <div class="autonomy-row">
+  const lapsedCustomers = customers.filter((customer) => customer.lastVisitDaysAgo >= 14).slice(0, 3);
+  const sendRows = lapsedCustomers.map((customer) => `
+    <div class="customer-send-row">
       <div>
-        <div class="autonomy-row-title">${escapeHtml(action.title)}</div>
-        <div class="autonomy-row-copy">${escapeHtml(action.summary || "")}</div>
-        <div class="agent-evidence">${escapeHtml(action.guardrail || action.policy?.reason || "")}</div>
+        <div class="customer-send-name">${escapeHtml(customer.name)}</div>
+        <div class="customer-send-note">${escapeHtml(customer.email)} · last bought ${escapeHtml(customer.lastOrder?.item || signals.topItem || "usual item")} ${escapeHtml(customer.lastOrder?.at || "")}</div>
       </div>
-      <span class="agent-decision allowed">auto safe</span>
+      <span class="agent-mini-stat">${escapeHtml(customer.risk || "follow up")}</span>
     </div>
   `).join("");
+  const safeWork = actions
+    .filter((action) => !/campaign/i.test(action.target || ""))
+    .slice(0, 3)
+    .map((action) => action.title.replace(/^Auto-(build|create|draft|message)\s+/i, ""))
+    .join(" · ");
   els.agentAutonomyPanel.innerHTML = `
     <div class="agent-feature-head">
       <div>
-        <div class="agent-feature-title">Customer Memory Autopilot</div>
-        <div class="agent-feature-copy">Warden can create internal tasks, drafts, segments, and teammate notes without asking for every low-risk step.</div>
+        <div class="agent-feature-title">Customer Comeback List</div>
+        <div class="agent-feature-copy">Owner-only list of customers Warden found for a draft comeback email. Nothing is sent until the owner approves.</div>
       </div>
-      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Creating..." : "Run safe actions"}</button>
+      <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Creating..." : "Create drafts"}</button>
     </div>
     <div class="autonomy-summary">
-      <div class="autonomy-stat"><strong>${escapeHtml(String(signals.regularCount ?? "--"))}</strong><span>regular customers</span></div>
-      <div class="autonomy-stat"><strong>${escapeHtml(String(signals.lapsedCount ?? "--"))}</strong><span>lapsed or at risk</span></div>
-      <div class="autonomy-stat"><strong>$${escapeHtml(String(signals.estimatedRecoveryValue ?? "--"))}</strong><span>estimated recovery value</span></div>
-      <div class="autonomy-stat"><strong>${escapeHtml(signals.topItem || "--")}</strong><span>${escapeHtml(demoCustomer?.email || "demo customer")}</span></div>
+      <div class="autonomy-stat"><strong>${escapeHtml(String(signals.lapsedCount ?? "--"))}</strong><span>people to win back</span></div>
+      <div class="autonomy-stat"><strong>$${escapeHtml(String(signals.estimatedRecoveryValue ?? "--"))}</strong><span>possible value</span></div>
+      <div class="autonomy-stat"><strong>${escapeHtml(signals.topItem || "--")}</strong><span>personalized item</span></div>
     </div>
-    <div class="autonomy-list">${rows || `<div class="empty">${escapeHtml(plan.error || "Autonomous safe actions load after the scan finishes.")}</div>`}</div>
+    <div class="customer-send-list">${sendRows || `<div class="empty">${escapeHtml(plan.error || "Customer list loads after the scan finishes.")}</div>`}</div>
+    <div class="agent-evidence">Also creates safe internal work: ${escapeHtml(safeWork || "manager checklist and supplier draft")}.</div>
   `;
 }
 
@@ -2630,21 +2659,21 @@ function renderAgentInbox() {
     return `
       <div class="agent-inbox-item ${escapeAttr(item.status || "open")}">
         <div class="agent-inbox-meta">
-          <span>${escapeHtml(item.type || "item")} · ${escapeHtml(item.status || "open")}</span>
+          <span>${escapeHtml(item.fromUserName || "Warden")}</span>
           <span>${escapeHtml(formatDateTime(item.updatedAt || item.at))}</span>
         </div>
         <div class="agent-inbox-title">${escapeHtml(item.title || "Delegated update")}</div>
         <div>${escapeHtml(item.body || "")}</div>
-        <div class="agent-evidence">${escapeHtml(item.fromUserName || "User")} → ${escapeHtml(item.toRole || "team")} · ${escapeHtml(item.target || "")}</div>
-        ${canApprove ? `<div class="agent-inbox-foot"><button class="btn good" data-agent-approve="${escapeAttr(item.id)}">Approve and execute</button></div>` : ""}
+        ${item.target ? `<div class="agent-evidence">${escapeHtml(item.target)}</div>` : ""}
+        ${canApprove ? `<div class="agent-inbox-foot"><button class="btn good" data-agent-approve="${escapeAttr(item.id)}">Approve</button></div>` : ""}
       </div>
     `;
   }).join("");
   els.agentInboxPanel.innerHTML = `
     <div class="agent-feature-head">
       <div>
-        <div class="agent-feature-title">Delegation Inbox</div>
-        <div class="agent-feature-copy">Requests and messages scoped to ${escapeHtml(user?.name || "the selected user")}.</div>
+        <div class="agent-feature-title">Inbox</div>
+        <div class="agent-feature-copy">${escapeHtml(user?.title || "User")} sees only requests and tasks meant for them.</div>
       </div>
       <button class="btn" data-agent-refresh-inbox>Refresh</button>
     </div>
@@ -2669,51 +2698,20 @@ function renderAgentReceipt() {
         <div class="agent-receipt-title">${escapeHtml(receipt.executed ? "Execution receipt" : "Policy receipt")}</div>
         <button class="btn" data-agent-clear-receipt>Close</button>
       </div>
-      <div class="agent-receipt-row"><span>Actor</span><span>${escapeHtml(event.userName || currentAgentUser()?.name || "Selected user")} · ${escapeHtml(event.userRole || currentAgentUser()?.role || "")}</span></div>
-      <div class="agent-receipt-row"><span>Tenant</span><span>${escapeHtml(event.tenantName || currentAgentUser()?.tenantName || "tenant")}</span></div>
+      <div class="agent-receipt-row"><span>Done by</span><span>${escapeHtml(event.userName || currentAgentUser()?.name || "Selected user")} · ${escapeHtml(event.userRole || currentAgentUser()?.role || "")}</span></div>
+      <div class="agent-receipt-row"><span>Business</span><span>${escapeHtml(event.tenantName || currentAgentUser()?.tenantName || "tenant")}</span></div>
       <div class="agent-receipt-row"><span>Action</span><span>${escapeHtml(event.actionTitle || receipt.item?.action?.title || "Delegated action")}</span></div>
-      <div class="agent-receipt-row"><span>Policy</span><span>${escapeHtml(receipt.policy?.decision || event.decision || "logged")} · ${escapeHtml(scopes)}</span></div>
-      <div class="agent-receipt-row"><span>Scalekit</span><span>${escapeHtml(receipt.scalekit?.summary || event.scalekit || "Authorization recorded")}</span></div>
-      <div class="agent-receipt-row"><span>Entire</span><span>${escapeHtml(receipt.entire?.summary || event.entire || receipt.item?.externalRef || "Awaiting execution")}</span></div>
+      <div class="agent-receipt-row"><span>Permission</span><span>${escapeHtml(agentDecisionText(receipt.policy?.decision || event.decision))} · ${escapeHtml(scopes)}</span></div>
+      <div class="agent-receipt-row"><span>Login check</span><span>${escapeHtml(receipt.scalekit?.summary || event.scalekit || "Authorization recorded")}</span></div>
+      <div class="agent-receipt-row"><span>Saved in</span><span>${escapeHtml(receipt.entire?.summary || event.entire || receipt.item?.externalRef || "Awaiting execution")}</span></div>
     </div>
   `;
 }
 
 function renderAgentReplay() {
   if (!els.agentReplayPanel) return;
-  const auditItems = (state.agentSession?.audit || []).map((event) => ({
-    at: event.at,
-    status: event.decision || "logged",
-    title: `${event.userName || "User"} ${event.executed ? "executed" : "attempted"} ${event.actionTitle || "action"}`,
-    body: event.reason || event.target || ""
-  }));
-  const inboxItems = (state.agentInbox || []).map((item) => ({
-    at: item.updatedAt || item.at,
-    status: item.status || item.type || "open",
-    title: item.title || "Delegated inbox item",
-    body: item.body || ""
-  }));
-  const items = [...auditItems, ...inboxItems]
-    .sort((a, b) => new Date(b.at) - new Date(a.at))
-    .slice(0, 6);
-  els.agentReplayPanel.innerHTML = `
-    <div class="agent-feature-head">
-      <div>
-        <div class="agent-feature-title">Audit Replay</div>
-        <div class="agent-feature-copy">A judge-readable timeline of blocked, requested, approved, and executed agent moves.</div>
-      </div>
-      <span class="agent-mini-stat">${items.length} events</span>
-    </div>
-    <div class="agent-replay-list">
-      ${items.length ? items.map((item) => `
-        <div class="agent-replay-item ${escapeAttr(item.status || "logged")}">
-          <div class="agent-replay-meta"><span>${escapeHtml(item.status || "logged")}</span><span>${escapeHtml(formatDateTime(item.at))}</span></div>
-          <div class="agent-replay-title">${escapeHtml(item.title)}</div>
-          <div>${escapeHtml(item.body || "")}</div>
-        </div>
-      `).join("") : `<div class="empty">No replay events yet. Run an action, request approval, or message a manager.</div>`}
-    </div>
-  `;
+  els.agentReplayPanel.style.display = "none";
+  els.agentReplayPanel.innerHTML = "";
 }
 
 function wireAgentFeatureButtons() {
@@ -2746,32 +2744,64 @@ function wireAgentInboxButtons() {
 function renderAgentActionCard(action) {
   const decision = action.policy?.decision || "blocked";
   const isBlocked = decision === "blocked";
-  const buttonText = decision === "allowed" ? "Execute as user" : decision === "needs_approval" ? "Request approval" : "Message manager";
+  const buttonText = decision === "allowed" ? "Do this" : decision === "needs_approval" ? "Ask owner" : "Ask manager";
   const buttonAttr = isBlocked ? `data-agent-message="${escapeAttr(action.id)}"` : `data-agent-execute="${escapeAttr(action.id)}"`;
   return `
     <article class="agent-action ${escapeAttr(decision)}">
       <div class="agent-action-head">
         <div>
           <div class="agent-action-title">${escapeHtml(action.title)}</div>
-          <div class="agent-evidence">${escapeHtml(action.target)} · ${escapeHtml(action.category || "action")}</div>
+          <div class="agent-evidence">${escapeHtml(friendlyAgentTarget(action.target))}</div>
         </div>
-        <span class="agent-decision ${escapeAttr(decision)}">${escapeHtml(decision.replace("_", " "))}</span>
+        <span class="agent-decision ${escapeAttr(decision)}">${escapeHtml(agentDecisionText(decision))}</span>
       </div>
       <div class="agent-action-copy">${escapeHtml(action.summary || "")}</div>
-      <div class="agent-policy-copy">${escapeHtml(action.policy?.reason || "")}</div>
-      <div class="agent-evidence">Evidence: ${escapeHtml(action.evidence || "Warden scan")}</div>
+      <div class="agent-policy-copy">${escapeHtml(agentPolicyLine(action))}</div>
       <div class="agent-action-foot">
-        <span class="agent-evidence">Scopes: ${escapeHtml((action.requiredScopes || []).join(", ") || "none")}</span>
+        <span class="agent-evidence">${escapeHtml(action.evidence || "Warden scan")}</span>
         <button class="btn ${decision === "allowed" ? "good" : ""}" ${buttonAttr}>${escapeHtml(buttonText)}</button>
       </div>
     </article>
   `;
 }
 
+function agentDecisionText(decision) {
+  if (decision === "allowed") return "Ready";
+  if (decision === "needs_approval") return "Needs owner";
+  if (decision === "blocked") return "Ask manager";
+  if (decision === "auto_safe" || decision === "auto_executed") return "Auto safe";
+  if (decision === "messaged") return "Sent";
+  return titleCase(String(decision || "Logged").replace(/_/g, " "));
+}
+
+function agentPolicyLine(action) {
+  const decision = action?.policy?.decision;
+  if (decision === "allowed") return "This person has permission to do it.";
+  if (decision === "needs_approval") return "Prepared, but the owner must approve first.";
+  if (decision === "blocked") return "This person cannot do it, so Warden will message a manager.";
+  return action?.policy?.reason || action?.guardrail || "Permission checked.";
+}
+
+function friendlyAgentTarget(target = "") {
+  if (/Campaign/i.test(target)) return "Customer message draft";
+  if (/Customer Segment/i.test(target)) return "Customer list";
+  if (/Vendor|Supplier/i.test(target)) return "Supplier draft";
+  if (/Task|Checklist/i.test(target)) return "Team checklist";
+  if (/Internal Message/i.test(target)) return "Team message";
+  if (/Credit/i.test(target)) return "Customer credit";
+  if (/Hours/i.test(target)) return "Store hours";
+  if (/Promotion/i.test(target)) return "Promo draft";
+  return target || "Store action";
+}
+
 async function runAutonomousActions() {
   if (state.agentAutonomyRunning) return;
   const store = selectedStore();
   if (!store) return;
+  if (currentAgentUser()?.role !== "owner") {
+    renderBanners([{ level: "warning", title: "Owner approval needed", body: "Customer email drafts and send lists only appear in the owner tab." }]);
+    return;
+  }
   state.agentAutonomyRunning = true;
   renderAgentAutonomy();
   try {
@@ -2793,7 +2823,7 @@ async function runAutonomousActions() {
       scalekit: { summary: "Tenant-scoped autonomous guardrails checked" },
       entire: { summary: "Entire draft/task/segment records created" }
     };
-    renderBanners([{ level: "opportunity", title: "Autonomous safe actions created", body: data.message || "Warden created internal drafts and tasks without public side effects." }]);
+    renderBanners([{ level: "opportunity", title: "Drafts created", body: data.message || "Warden created owner-only customer drafts and internal tasks." }]);
     await refreshAgentAutonomy();
     await refreshAgentActions();
     await refreshAgentTrail();
@@ -2921,14 +2951,14 @@ async function approveAgentRequest(requestId) {
 function renderAgentAudit(audit) {
   const items = audit || [];
   els.agentAuditPanel.innerHTML = `
-    <div class="agent-audit-title">Shared tenant report trail</div>
+    <div class="agent-audit-title">Report trail</div>
     ${items.length ? items.slice(0, 8).map((event) => `
       <div class="agent-audit-row">
         <span>${escapeHtml(formatDateTime(event.at))}</span>
-        <span><b>${escapeHtml(event.userName || "User")}</b> ${escapeHtml(event.executed ? "executed" : "attempted")} ${escapeHtml(event.actionTitle || "action")} for ${escapeHtml(event.storeName || "store")}</span>
-        <span class="agent-audit-decision">${escapeHtml(event.decision || "logged")}</span>
+        <span><b>${escapeHtml(event.userName || "User")}</b> ${escapeHtml(event.executed ? "completed" : "asked for")} ${escapeHtml(event.actionTitle || "action")}</span>
+        <span class="agent-audit-decision">${escapeHtml(agentDecisionText(event.decision || "logged"))}</span>
       </div>
-    `).join("") : `<div class="empty">No delegated actions yet. Open owner, manager, and associate tabs, then run a request to watch this fill in everywhere.</div>`}
+    `).join("") : `<div class="empty">No actions yet. Run one request and every role tab will show the same trail.</div>`}
   `;
 }
 
