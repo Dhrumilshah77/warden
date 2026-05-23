@@ -16,6 +16,7 @@ const APP_USER_AGENT = "Warden/0.2 (local storefront intelligence; contact: loca
 // populate them. Functions further down the file still use the same identifiers.
 const APIFY_PLACES_CACHE = new Map();
 const APIFY_PRODUCTS_CACHE = new Map();
+const COMMONS_IMAGE_CACHE = new Map();
 
 await loadDotEnv();
 await loadDiskCaches();
@@ -1093,6 +1094,7 @@ function buildChatSystemPrompt(store, intel) {
 }
 
 const APIFY_PRODUCTS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const COMMONS_IMAGES_TTL_MS = 24 * 60 * 60 * 1000;
 
 async function fetchApifyProducts(query, businessType) {
   if (!process.env.APIFY_TOKEN || process.env.APIFY_PRODUCTS_DISABLED === "1") return null;
@@ -1230,8 +1232,16 @@ async function buildRestockComparison(profile, params) {
   } catch (error) {
     liveProducts = null;
   }
+  let commonsImages = null;
+  if (!liveProducts?.products?.some((product) => product?.image)) {
+    try {
+      commonsImages = await fetchCommonsImages(searchText);
+    } catch (error) {
+      commonsImages = null;
+    }
+  }
 
-  const options = enrichRestockOptionsWithLiveProducts(baseOptions, liveProducts?.products);
+  const options = enrichRestockOptionsWithProductImages(baseOptions, liveProducts?.products, commonsImages);
 
   return {
     ok: true,
@@ -1271,19 +1281,109 @@ function shouldUseCatalogRestockRows(query, category) {
   return category.terms.some((term) => text === term);
 }
 
-function enrichRestockOptionsWithLiveProducts(options, products) {
-  if (!Array.isArray(options) || !Array.isArray(products) || !products.length) return options;
-  const withImages = products.filter((product) => product?.image);
-  if (!withImages.length) return options;
+async function fetchCommonsImages(query) {
+  if (process.env.COMMONS_IMAGES_DISABLED === "1") return null;
+  const cleanQuery = String(query || "").replace(/\s+/g, " ").trim();
+  if (!cleanQuery) return null;
+  const cacheKey = cleanQuery.toLowerCase();
+  const cached = COMMONS_IMAGE_CACHE.get(cacheKey);
+  if (cached && Date.now() - cached.at < COMMONS_IMAGES_TTL_MS) return cached.payload;
+
+  const url = new URL("https://commons.wikimedia.org/w/api.php");
+  url.search = new URLSearchParams({
+    action: "query",
+    generator: "search",
+    gsrsearch: `${cleanQuery} product filetype:bitmap`,
+    gsrnamespace: "6",
+    gsrlimit: "10",
+    prop: "imageinfo",
+    iiprop: "url|mime|size",
+    iiurlwidth: "240",
+    format: "json",
+    origin: "*"
+  });
+  const data = await fetchJson(url, { headers: { "User-Agent": APP_USER_AGENT } }, 7000);
+  const pages = Object.values(data?.query?.pages || {});
+  const images = pages
+    .map((page) => normalizeCommonsImage(page, cleanQuery))
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, 5);
+  const payload = images.length ? images : null;
+  COMMONS_IMAGE_CACHE.set(cacheKey, { at: Date.now(), payload });
+  return payload;
+}
+
+function normalizeCommonsImage(page, query) {
+  const info = page?.imageinfo?.[0];
+  const image = info?.thumburl || info?.url || "";
+  if (!image || !/^image\//i.test(info?.mime || "")) return null;
+  const title = String(page.title || "").replace(/^File:/i, "").replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").trim();
+  const score = commonsImageScore(title, query);
+  if (score < 2) return null;
+  return {
+    title,
+    image,
+    url: info.descriptionurl || "",
+    source: "Wikimedia Commons",
+    index: Number(page.index || 999),
+    score
+  };
+}
+
+function commonsImageScore(title, query) {
+  const cleanTitle = String(title || "").toLowerCase();
+  const words = queryWords(query);
+  let score = 0;
+  if (cleanTitle.includes(String(query || "").toLowerCase())) score += 5;
+  for (const word of words) {
+    const variants = new Set([word, singularize(word), pluralize(word)]);
+    if ([...variants].some((variant) => variant && cleanTitle.includes(variant))) score += 2;
+  }
+  if (/\b(pair|store|shop|sold|product|chair|shoe|recliner|table|shelf|rack|glove|container|cup|roll|paper|bag)\b/i.test(cleanTitle)) score += 1;
+  if (/\b(person|people|man|woman|child|workshop|repairing|event|street|statue|painting|screenshot|game)\b/i.test(cleanTitle)) score -= 3;
+  if (/\b(product photography)\b/i.test(cleanTitle)) score -= 4;
+  return score;
+}
+
+function queryWords(value) {
+  const stopWords = new Set(["best", "selling", "commercial", "business", "grade", "bulk", "pack", "case", "count", "item", "option", "product"]);
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length > 2 && !stopWords.has(word));
+}
+
+function singularize(word) {
+  return String(word || "").replace(/ies$/i, "y").replace(/s$/i, "");
+}
+
+function pluralize(word) {
+  const clean = String(word || "");
+  if (!clean || clean.endsWith("s")) return clean;
+  return clean.endsWith("y") ? `${clean.slice(0, -1)}ies` : `${clean}s`;
+}
+
+function enrichRestockOptionsWithProductImages(options, products, commonsImages) {
+  if (!Array.isArray(options)) return options;
+  const withImages = Array.isArray(products) ? products.filter((product) => product?.image) : [];
+  const openImages = Array.isArray(commonsImages) ? commonsImages.filter((image) => image?.image) : [];
+  if (!withImages.length && !openImages.length) return options;
   return options.map((option, index) => {
     if (option.imageSource === "supplier") return option;
-    const product = withImages[index % withImages.length];
+    const product = withImages[index % withImages.length] || null;
+    const openImage = openImages[index % openImages.length] || null;
     return {
       ...option,
-      image: product.image,
-      imageSource: "apify",
-      liveProductTitle: product.title || "",
-      liveProductUrl: product.url || ""
+      image: product?.image || openImage?.image || option.image,
+      imageSource: product?.image ? "apify" : "commons",
+      liveProductTitle: product?.title || "",
+      liveProductUrl: product?.url || "",
+      imageCredit: openImage?.source || "",
+      imageCreditUrl: openImage?.url || "",
+      imageCreditTitle: openImage?.title || ""
     };
   });
 }
@@ -1360,7 +1460,6 @@ function restockOption(option, category, query, businessType) {
   const supplierQuery = String(option.searchQuery || `${query} ${option.title}`).replace(/\s+/g, " ").trim();
   const fallbackImage = restockImageDataUri(provider, option.title, category.id);
   const extractedImage = option.imageUrl || option.thumbnailUrl || "";
-  const queryImage = restockQueryPhotoUrl(query, provider.id, option.title);
 
   return {
     id: `${provider.id}-${slugify(option.title)}`,
@@ -1381,37 +1480,10 @@ function restockOption(option, category, query, businessType) {
     why: `${provider.name} is a strong compare point for ${option.fit.toLowerCase()}: ${option.salesSignal.toLowerCase()}, ${option.pack}, and ${option.stock.toLowerCase()}.`,
     caution: "Confirm live price, shipping, return terms and exact dimensions before purchase.",
     url: provider.url(supplierQuery),
-    image: extractedImage || queryImage || fallbackImage,
+    image: extractedImage || fallbackImage,
     fallbackImage,
-    imageSource: extractedImage ? "supplier" : queryImage ? "query-photo" : "generated"
+    imageSource: extractedImage ? "supplier" : "generated"
   };
-}
-
-function restockQueryPhotoUrl(query, providerId, title) {
-  const keywords = restockPhotoKeywords(query || title);
-  if (!keywords) return "";
-  const lock = stableImageLock(`${providerId}|${query}|${title}`);
-  return `https://loremflickr.com/180/140/${keywords}?lock=${lock}`;
-}
-
-function restockPhotoKeywords(value) {
-  const stopWords = new Set(["best", "selling", "commercial", "business", "grade", "bulk", "pack", "case", "count", "item", "option"]);
-  const words = String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .split(/\s+/)
-    .map((word) => word.trim())
-    .filter((word) => word.length > 2 && !stopWords.has(word))
-    .slice(0, 4);
-  return words.map((word) => encodeURIComponent(word)).join(",");
-}
-
-function stableImageLock(value) {
-  let hash = 0;
-  for (const char of String(value || "")) {
-    hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
-  }
-  return Math.abs(hash % 9999) + 1;
 }
 
 function restockSummary(query, category, options, profile) {

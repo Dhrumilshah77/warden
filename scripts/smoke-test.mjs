@@ -106,7 +106,7 @@ await check("spoon restock returns priced product rows", async () => {
   assert(data.options.some((item) => /spoon|cutlery/i.test(item.title || "")), "spoon rows should include spoon/cutlery products");
 });
 
-await check("specific restock searches keep query-specific photos", async () => {
+await check("specific restock searches avoid random photo fallbacks", async () => {
   const data = await json(`/api/restock?${new URLSearchParams({
     businessName: "Mission Lounge",
     businessType: "retail",
@@ -118,8 +118,8 @@ await check("specific restock searches keep query-specific photos", async () => 
   assert(data.mode === "custom-supplier-search", `expected custom-supplier-search, got ${data.mode}`);
   assert(data.category === "custom", `expected custom category, got ${data.category}`);
   assert(data.options.every((item) => /recliner chair/i.test(item.title || "")), "recliner rows should preserve exact search text");
-  assert(data.options.every((item) => /^https:\/\/loremflickr\.com\/180\/140\/recliner,chair\?lock=/.test(item.image || "")), "recliner rows should use query-based real-photo URLs");
-  assert(data.options.every((item) => item.imageSource === "query-photo"), "recliner rows should not fall back to generated SVG thumbnails");
+  assert(!data.options.some((item) => /loremflickr|source\.unsplash/i.test(item.image || "")), "restock rows should not use unreliable random image services");
+  assert(data.options.every((item) => ["generated", "supplier", "apify", "commons"].includes(item.imageSource)), "restock image source should be traceable");
 });
 
 await check("Santa Clara geocodes from address only", async () => {
