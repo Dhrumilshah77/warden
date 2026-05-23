@@ -4293,7 +4293,7 @@ function renderChat() {
     }
     return `
       <div class="${cls}">
-        <div>${formatChatText(message.text || "")}</div>
+        <div class="helper-chat-content">${formatChatText(message.text || "")}</div>
         ${(badge || (message.role === "assistant" && message.at)) ? `<div class="helper-msg-meta">${badge}<span>${escapeHtml(formatDateTime(message.at))}</span></div>` : ""}
       </div>
     `;
@@ -4321,12 +4321,110 @@ function renderChat() {
 }
 
 function formatChatText(value) {
+  const lines = String(value || "").split(/\r?\n/);
+  const blocks = [];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+    if (isMarkdownTableStart(lines, index)) {
+      const table = collectMarkdownTable(lines, index);
+      blocks.push(renderChatTable(table.rows));
+      index = table.next;
+      continue;
+    }
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (index < lines.length && /^\s*\d+\.\s+/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*\d+\.\s+/, ""));
+        index += 1;
+      }
+      blocks.push(`<ol>${items.map((item) => `<li>${formatChatInline(item)}</li>`).join("")}</ol>`);
+      continue;
+    }
+    if (/^\s*[-*]\s+/.test(line)) {
+      const items = [];
+      while (index < lines.length && /^\s*[-*]\s+/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*[-*]\s+/, ""));
+        index += 1;
+      }
+      blocks.push(`<ul>${items.map((item) => `<li>${formatChatInline(item)}</li>`).join("")}</ul>`);
+      continue;
+    }
+
+    const paragraph = [];
+    while (
+      index < lines.length &&
+      lines[index].trim() &&
+      !isMarkdownTableStart(lines, index) &&
+      !/^\s*(?:\d+\.|[-*])\s+/.test(lines[index])
+    ) {
+      paragraph.push(lines[index].trim());
+      index += 1;
+    }
+    blocks.push(`<p>${formatChatInline(paragraph.join(" "))}</p>`);
+  }
+  return blocks.join("");
+}
+
+function isMarkdownTableStart(lines, index) {
+  const current = lines[index] || "";
+  const next = lines[index + 1] || "";
+  return current.includes("|") && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(next);
+}
+
+function collectMarkdownTable(lines, start) {
+  const rows = [splitMarkdownRow(lines[start])];
+  let index = start + 2;
+  while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
+    rows.push(splitMarkdownRow(lines[index]));
+    index += 1;
+  }
+  return { rows, next: index };
+}
+
+function splitMarkdownRow(line) {
+  return String(line || "")
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function renderChatTable(rows) {
+  if (!rows.length) return "";
+  const header = rows[0];
+  const body = rows.slice(1);
+  return `
+    <div class="helper-table-wrap">
+      <table class="helper-table">
+        <thead><tr>${header.map((cell) => `<th>${formatChatInline(cell)}</th>`).join("")}</tr></thead>
+        <tbody>${body.map((row) => `<tr>${header.map((_, i) => `<td>${formatChatInline(row[i] || "")}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function formatChatInline(value) {
+  const linkTokens = [];
   let html = escapeHtml(String(value || ""));
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_match, label, url) => {
+    const token = `@@CHAT_LINK_${linkTokens.length}@@`;
+    linkTokens.push(`<a href="${escapeAttr(url)}" target="_blank" rel="noreferrer">${label}</a>`);
+    return token;
+  });
   html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+  html = html.replace(/(^|[\s(])(https?:\/\/[^\s<]+)/g, (match, prefix, url) => {
     const clean = url.replace(/[),.]+$/, "");
     const suffix = url.slice(clean.length);
-    return `<a href="${escapeAttr(clean)}" target="_blank" rel="noreferrer">${escapeHtml(clean)}</a>${escapeHtml(suffix)}`;
+    return `${prefix}<a href="${escapeAttr(clean)}" target="_blank" rel="noreferrer">${escapeHtml(clean)}</a>${escapeHtml(suffix)}`;
+  });
+  linkTokens.forEach((link, i) => {
+    html = html.replace(`@@CHAT_LINK_${i}@@`, link);
   });
   return html;
 }
@@ -4342,6 +4440,7 @@ function handleChatSubmit(event) {
 async function sendChatMessage(text) {
   const store = selectedStore();
   if (!store) return;
+  const restockQuery = chatRestockQuery(text);
   const userAt = new Date().toISOString();
   const thread = chatThreadForStore(store.id);
   thread.push({ role: "user", text, at: userAt });
@@ -4400,6 +4499,19 @@ async function sendChatMessage(text) {
   state.chatThreads[store.id] = thread.slice(-40);
   saveChatThreads();
   renderChat();
+  if (restockQuery) searchRestock(restockQuery);
+}
+
+function chatRestockQuery(text) {
+  const value = String(text || "").toLowerCase();
+  const looksLikeProduct = /(i want to buy|where can i get|where should i buy|buy|order|restock|supplier|available|availability|in stock|need.*(?:tomato|tomatoes|tortilla|container|cup|napkin|chair|table|oil|glove|receipt|utensil|produce|vegetable)|find.*(?:tomato|tomatoes|tortilla|container|cup|napkin|chair|table|oil|glove|receipt|utensil|produce|vegetable))/i.test(value);
+  if (!looksLikeProduct) return "";
+  return String(text || "")
+    .replace(/\b(i want to|where can i|where should i|can i|do you|please|near me|nearby|around my shop|around the shop|available|availability|find|buy|get|restock|stock|supplier|suppliers|order|show me|i need|need|for my store|for my shop)\b/gi, " ")
+    .replace(/[?!.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
 }
 
 function compactIntelForChat(intel) {

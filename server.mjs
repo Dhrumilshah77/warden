@@ -2345,6 +2345,15 @@ async function handleChat({ message, store, intel, history }) {
   const intent = detectChatIntent(text);
   const sentiment = detectChatSentiment(text);
   const liveContext = await buildChatLiveContext({ text, store: chatStore, intel: chatIntel, intent });
+  if (intent === "product") {
+    return {
+      ok: true,
+      reply: buildGroundedChatReply({ text, store: chatStore, intel: chatIntel, intent, sentiment, liveContext }),
+      provider: liveContext?.product?.options?.length ? "apify-restock" : "local-grounded",
+      intent,
+      sentiment
+    };
+  }
   if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
     return {
       ok: true,
@@ -2429,7 +2438,7 @@ function detectChatIntent(text) {
   if (/(permit|license|inspection|compliance|document|health department|records?)/.test(t)) return "compliance";
   if (/(news|event|trend|internet|web|current|today around|happening|festival|concert|game)/.test(t)) return "news";
   if (/(competitor|competition|compare|near me|nearby place|top-rated)/.test(t)) return "competitors";
-  if (/(buy|find|available|availability|stock|restock|supplier|order|where can i get|tortilla|takeout|container|cup|napkin|chair|table|oil|parts?|jack|gloves?|receipt paper|utensils?)/.test(t)) return "product";
+  if (/(buy|find|available|availability|stock|restock|supplier|order|where can i get|tortilla|takeout|container|cup|napkin|chair|table|oil|parts?|jack|gloves?|receipt paper|utensils?|tomatoes?|produce|vegetables?)/.test(t)) return "product";
   return "general";
 }
 
@@ -2486,7 +2495,7 @@ function chatProfile(store = {}, intel = null) {
 
 function extractProductQuery(text, businessType) {
   const cleaned = String(text || "")
-    .replace(/\b(where can i|where should i|can i|do you|please|near me|nearby|around my shop|around the shop|available|availability|find|buy|get|restock|stock|supplier|suppliers|order|show me|i need|need|for my store|for my shop)\b/gi, " ")
+    .replace(/\b(i want to|want to|where can i|where should i|can i|do you|please|near me|nearby|around my shop|around the shop|available|availability|find|buy|get|restock|stock|supplier|suppliers|order|show me|i need|need|for my store|for my shop)\b/gi, " ")
     .replace(/[?!.]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -2546,21 +2555,41 @@ function buildGroundedChatReply({ text, store, intel, intent, sentiment, liveCon
 function productChatReply({ intro, liveContext, profile }) {
   const product = liveContext?.product;
   if (!product?.options?.length) {
-    return `${intro}\n\n1. I could not load supplier rows for that item yet.\n2. Search locally for ${profile.city} pickup first if you need it today.\n3. For anything not needed today, compare Amazon Business, Costco, Walmart, Target and WebstaurantStore for unit price and return terms.`;
+    return [
+      intro,
+      "",
+      "| Supplier | Best use | Price | Timing | Action |",
+      "|---|---|---|---|---|",
+      `| Local pickup | Same-day emergency in ${markdownTableCell(profile.city)} | Check live | Today if nearby | Search Google Maps or call nearby groceries |`,
+      "| Costco / Business Center | Bulk produce or pantry items | Check live | Same day if pickup | Compare unit price before buying |",
+      "| Restaurant supply store | Larger case quantities | Check live | Pickup or delivery varies | Confirm freshness and minimum order |",
+      "",
+      "Owner call: if you need it for today's service, prioritize pickup and freshness over the lowest price."
+    ].join("\n");
   }
   const rows = product.options.slice(0, 5).map((item, index) => {
     const price = item.price || "check live price";
-    const stock = item.stock || item.eta || "confirm stock";
-    return `${index + 1}. **${item.providerName || item.provider}**: ${item.title} — ${price}. ${stock}. ${item.url}`;
+    const timing = [item.stock, item.eta].filter(Boolean).join(" / ") || "confirm stock";
+    return `| ${markdownTableCell(item.providerName || item.provider || `Option ${index + 1}`)} | ${markdownTableCell(item.title)} | ${markdownTableCell(price)} | ${markdownTableCell(timing)} | ${item.url ? `[View / buy](${item.url})` : "Check supplier"} |`;
   });
   return [
     intro,
     "",
     `I found supplier options for **${product.query}**. For same-day needs near ${profile.city}, prefer rows that mention pickup; for planned buys, compare unit price and reviews.`,
+    "",
+    "| Supplier | Product | Price | Timing | Action |",
+    "|---|---|---|---|---|",
     ...rows,
     "",
     "My call: open the top two links, confirm live stock, then buy the cheapest unit price only if delivery/pickup timing protects the next rush."
   ].join("\n");
+}
+
+function markdownTableCell(value) {
+  return String(value || "")
+    .replace(/\|/g, "/")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function newsChatReply({ intro, liveContext, profile }) {
