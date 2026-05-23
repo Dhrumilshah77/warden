@@ -60291,5 +60291,6366 @@
       },
       "message": "Richmond Google Places scan via Apify Actor compass/crawler-google-places returned 20 live business records."
     }
+  },
+  "compass/crawler-google-places|v7|san francisco|california|restaurant|10": {
+    "at": 1779564841717,
+    "payload": {
+      "ok": true,
+      "sourceUrl": "https://www.google.com/maps/search/?api=1&query=restaurants+in+San+Francisco+%4037.790368%2C-122.396955",
+      "technicalUrl": "https://console.apify.com/actors/compass~crawler-google-places",
+      "provider": "apify",
+      "actorId": "compass/crawler-google-places",
+      "items": [
+        {
+          "name": "Fog Harbor Fish House",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant",
+            "American restaurant",
+            "Californian restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 11 AM to 10 PM; Tuesday: 11 AM to 10 PM; Wednesday: 11 AM to 10 PM; Thursday: 11 AM to 10 PM; Friday: 11 AM to 10 PM; Saturday: 11 AM to 10 PM; Sunday: 11 AM to 10 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            }
+          ],
+          "rating": 4.5,
+          "reviews": 10099,
+          "price": "$20–80",
+          "priceTier": 2,
+          "description": "Pier 39 seafood institution with fresh fish & scenic views of the bay & Golden Gate Bridge.",
+          "reviewsTags": [
+            {
+              "title": "clam chowder",
+              "count": 937
+            },
+            {
+              "title": "cioppino",
+              "count": 194
+            },
+            {
+              "title": "golden gate bridge view",
+              "count": 92
+            },
+            {
+              "title": "lobster roll",
+              "count": 166
+            },
+            {
+              "title": "sunset view",
+              "count": 100
+            },
+            {
+              "title": "crab cakes",
+              "count": 155
+            },
+            {
+              "title": "dungeness crab",
+              "count": 84
+            },
+            {
+              "title": "outdoor seating",
+              "count": 49
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              22,
+              40,
+              55,
+              69,
+              72,
+              68,
+              72,
+              73,
+              72,
+              50,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              26,
+              31,
+              36,
+              40,
+              44,
+              48,
+              56,
+              63,
+              69,
+              69,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              9,
+              18,
+              30,
+              43,
+              50,
+              50,
+              63,
+              84,
+              91,
+              70,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              29,
+              34,
+              27,
+              27,
+              29,
+              47,
+              66,
+              88,
+              91,
+              77,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              16,
+              27,
+              29,
+              34,
+              38,
+              55,
+              75,
+              83,
+              80,
+              65,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              25,
+              41,
+              43,
+              58,
+              62,
+              70,
+              77,
+              91,
+              87,
+              72,
+              0,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              31,
+              40,
+              48,
+              48,
+              54,
+              68,
+              83,
+              100,
+              98,
+              83,
+              0,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Less busy than usual",
+          "liveBusyPercent": 4,
+          "reviewsDistribution": {
+            "oneStar": 267,
+            "twoStar": 210,
+            "threeStar": 594,
+            "fourStar": 1948,
+            "fiveStar": 7080
+          },
+          "neighborhood": "Fisherman's Wharf",
+          "menuUrl": "https://checkle.menu/fogharbor_sf",
+          "phone": "(415) 421-2442",
+          "website": "https://fogharbor.com/?utm_source=google&utm_medium=organic&utm_campaign=gmb_listing",
+          "address": "39 Pier, San Francisco, CA 94133",
+          "lat": 37.8089961,
+          "lon": -122.4102878,
+          "url": "https://www.google.com/maps/search/?api=1&query=Fog%20Harbor%20Fish%20House&query_place_id=ChIJHSGzi_yAhYARptfivXk-Qlo",
+          "distanceMeters": 2379.6674540595477
+        },
+        {
+          "name": "Scoma's Restaurant",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant",
+            "Crab house",
+            "Fine dining restaurant",
+            "Italian restaurant",
+            "Takeout Restaurant",
+            "Restaurant",
+            "Seafood market"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 12 to 9 PM; Tuesday: 12 to 9 PM; Wednesday: 12 to 9 PM; Thursday: 12 to 9 PM; Friday: 12 to 10 PM; Saturday: 12 to 10 PM; Sunday: 12 to 9 PM",
+          "openingHoursStruct": [
+            {
+              "open": 12,
+              "close": 21
+            },
+            {
+              "open": 12,
+              "close": 21
+            },
+            {
+              "open": 12,
+              "close": 21
+            },
+            {
+              "open": 12,
+              "close": 21
+            },
+            {
+              "open": 12,
+              "close": 22
+            },
+            {
+              "open": 12,
+              "close": 22
+            },
+            {
+              "open": 12,
+              "close": 21
+            }
+          ],
+          "rating": 4.6,
+          "reviews": 6940,
+          "price": "$50–100",
+          "priceTier": 4,
+          "description": "Spacious waterfront restaurant serving seafood pulled straight off the boat.",
+          "reviewsTags": [
+            {
+              "title": "cioppino",
+              "count": 273
+            },
+            {
+              "title": "clam chowder",
+              "count": 289
+            },
+            {
+              "title": "bar seating",
+              "count": 95
+            },
+            {
+              "title": "sourdough bread",
+              "count": 61
+            },
+            {
+              "title": "crab cakes",
+              "count": 138
+            },
+            {
+              "title": "bay view",
+              "count": 8
+            },
+            {
+              "title": "crab louie",
+              "count": 51
+            },
+            {
+              "title": "halibut",
+              "count": 64
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              48,
+              69,
+              77,
+              78,
+              75,
+              77,
+              76,
+              75,
+              61,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              36,
+              42,
+              42,
+              44,
+              50,
+              62,
+              78,
+              84,
+              70,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              26,
+              36,
+              39,
+              42,
+              48,
+              61,
+              73,
+              76,
+              66,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              29,
+              38,
+              41,
+              42,
+              49,
+              63,
+              79,
+              84,
+              68,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              26,
+              30,
+              33,
+              36,
+              44,
+              61,
+              78,
+              82,
+              70,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              48,
+              61,
+              61,
+              64,
+              69,
+              79,
+              88,
+              90,
+              81,
+              58,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              50,
+              68,
+              77,
+              82,
+              87,
+              95,
+              100,
+              95,
+              82,
+              61,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "A little busy",
+          "liveBusyPercent": 58,
+          "reviewsDistribution": {
+            "oneStar": 155,
+            "twoStar": 155,
+            "threeStar": 386,
+            "fourStar": 1196,
+            "fiveStar": 5048
+          },
+          "neighborhood": "",
+          "menuUrl": "https://scomas.com/menulist/",
+          "phone": "(415) 771-4383",
+          "website": "https://scomas.com/",
+          "address": "1965 Al Scoma Way, San Francisco, CA 94133",
+          "lat": 37.808932,
+          "lon": -122.4184329,
+          "url": "https://www.google.com/maps/search/?api=1&query=Scoma's%20Restaurant&query_place_id=ChIJrcYeh_yAhYARNMwNAmHKa5c",
+          "distanceMeters": 2796.8062180260395
+        },
+        {
+          "name": "Sotto Mare",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant",
+            "Italian restaurant",
+            "Restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 11:30 AM to 9 PM; Tuesday: 11:30 AM to 9 PM; Wednesday: 11:30 AM to 9 PM; Thursday: 11:30 AM to 9 PM; Friday: 11:30 AM to 10 PM; Saturday: 11:30 AM to 10 PM; Sunday: 11:30 AM to 9 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 22
+            },
+            {
+              "open": 11.5,
+              "close": 22
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            }
+          ],
+          "rating": 4.6,
+          "reviews": 5023,
+          "price": "$30–70",
+          "priceTier": 3,
+          "description": "Neighborhood spot with nautical decor and a menu of pasta, cioppino, and other Italian-style seafood.",
+          "reviewsTags": [
+            {
+              "title": "cioppino",
+              "count": 1007
+            },
+            {
+              "title": "clam chowder",
+              "count": 146
+            },
+            {
+              "title": "outdoor seating",
+              "count": 58
+            },
+            {
+              "title": "seafood risotto",
+              "count": 56
+            },
+            {
+              "title": "seafood linguine",
+              "count": 36
+            },
+            {
+              "title": "bar seating",
+              "count": 54
+            },
+            {
+              "title": "west coast oysters",
+              "count": 35
+            },
+            {
+              "title": "Lobster Ravioli",
+              "count": 58
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              19,
+              28,
+              37,
+              42,
+              47,
+              52,
+              60,
+              68,
+              66,
+              54,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              19,
+              21,
+              19,
+              22,
+              29,
+              40,
+              51,
+              52,
+              44,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              12,
+              19,
+              23,
+              25,
+              23,
+              27,
+              32,
+              41,
+              44,
+              39,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              11,
+              17,
+              23,
+              25,
+              26,
+              29,
+              36,
+              44,
+              47,
+              41,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              15,
+              21,
+              23,
+              22,
+              22,
+              27,
+              37,
+              51,
+              58,
+              52,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              20,
+              26,
+              30,
+              31,
+              35,
+              44,
+              59,
+              70,
+              75,
+              69,
+              56,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              23,
+              37,
+              47,
+              53,
+              59,
+              68,
+              81,
+              92,
+              100,
+              92,
+              76,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Not too busy",
+          "liveBusyPercent": 29,
+          "reviewsDistribution": {
+            "oneStar": 135,
+            "twoStar": 99,
+            "threeStar": 231,
+            "fourStar": 804,
+            "fiveStar": 3754
+          },
+          "neighborhood": "North Beach",
+          "menuUrl": "https://www.sottomaresf.com/menu",
+          "phone": "(415) 398-3181",
+          "website": "http://sottomaresf.com/",
+          "address": "552 Green St, San Francisco, CA 94133",
+          "lat": 37.7997503,
+          "lon": -122.4083449,
+          "url": "https://www.google.com/maps/search/?api=1&query=Sotto%20Mare&query_place_id=ChIJQfYyVvGAhYARJVwoboB1WKQ",
+          "distanceMeters": 1445.6856691726352
+        },
+        {
+          "name": "Pier Market Seafood Restaurant",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant",
+            "American restaurant",
+            "Californian restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 11 AM to 10 PM; Tuesday: 11 AM to 10 PM; Wednesday: 11 AM to 10 PM; Thursday: 11 AM to 10 PM; Friday: 11 AM to 10 PM; Saturday: 11 AM to 10 PM; Sunday: 11 AM to 10 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            }
+          ],
+          "rating": 4.4,
+          "reviews": 8526,
+          "price": "$20–30",
+          "priceTier": 2,
+          "description": "Waterfront seafood restaurant & market offering fresh fish, patio seating & bay views at Pier 39.",
+          "reviewsTags": [
+            {
+              "title": "clam chowder",
+              "count": 388
+            },
+            {
+              "title": "crab cakes",
+              "count": 154
+            },
+            {
+              "title": "view of the bay",
+              "count": 23
+            },
+            {
+              "title": "cioppino",
+              "count": 75
+            },
+            {
+              "title": "view of the pier",
+              "count": 22
+            },
+            {
+              "title": "sourdough bread bowl",
+              "count": 71
+            },
+            {
+              "title": "sunset view",
+              "count": 36
+            },
+            {
+              "title": "calamari",
+              "count": 177
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              31,
+              51,
+              67,
+              73,
+              72,
+              70,
+              75,
+              76,
+              69,
+              49,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              22,
+              36,
+              46,
+              49,
+              47,
+              47,
+              52,
+              55,
+              52,
+              41,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              16,
+              29,
+              36,
+              38,
+              38,
+              41,
+              48,
+              55,
+              54,
+              41,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              18,
+              30,
+              40,
+              43,
+              41,
+              42,
+              46,
+              49,
+              47,
+              39,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              19,
+              32,
+              42,
+              47,
+              48,
+              50,
+              54,
+              56,
+              55,
+              44,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              27,
+              44,
+              54,
+              58,
+              57,
+              60,
+              66,
+              72,
+              73,
+              56,
+              0,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              35,
+              55,
+              70,
+              79,
+              84,
+              90,
+              95,
+              100,
+              91,
+              72,
+              0,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Not too busy",
+          "liveBusyPercent": 43,
+          "reviewsDistribution": {
+            "oneStar": 197,
+            "twoStar": 218,
+            "threeStar": 650,
+            "fourStar": 2026,
+            "fiveStar": 5435
+          },
+          "neighborhood": "Fisherman's Wharf",
+          "menuUrl": "https://checkle.menu/piermarket_sf",
+          "phone": "(415) 989-7437",
+          "website": "https://www.piermarket.com/?utm_source=google&utm_medium=organic&utm_campaign=gmb_listing",
+          "address": "39 Pier, San Francisco, CA 94133",
+          "lat": 37.8097776,
+          "lon": -122.4105536,
+          "url": "https://www.google.com/maps/search/?api=1&query=Pier%20Market%20Seafood%20Restaurant&query_place_id=ChIJHSGzi_yAhYAR9CGTkz3GiJ0",
+          "distanceMeters": 2466.9034323666965
+        },
+        {
+          "name": "La Mar Cocina Peruana San Francisco",
+          "category": "Peruvian restaurant",
+          "categories": [
+            "Peruvian restaurant",
+            "Latin American restaurant",
+            "Restaurant",
+            "Seafood restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 11:30 AM to 2:30 PM, 5 to 9 PM; Tuesday: 11:30 AM to 2:30 PM, 5 to 9 PM; Wednesday: 11:30 AM to 2:30 PM, 5 to 9 PM; Thursday: 11:30 AM to 2:30 PM, 5 to 9 PM; Friday: 11:30 AM to 2:30 PM, 5 to 9:30 PM; Saturday: 11:30 AM to 2:30 PM, 5 to 9:30 PM; Sunday: 11:30 AM to 2:30 PM, 5 to 9 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11.5,
+              "close": 14.5
+            },
+            {
+              "open": 11.5,
+              "close": 14.5
+            },
+            {
+              "open": 11.5,
+              "close": 14.5
+            },
+            {
+              "open": 11.5,
+              "close": 14.5
+            },
+            {
+              "open": 11.5,
+              "close": 14.5
+            },
+            {
+              "open": 11.5,
+              "close": 14.5
+            },
+            {
+              "open": 11.5,
+              "close": 14.5
+            }
+          ],
+          "rating": 4.5,
+          "reviews": 4865,
+          "price": "$100+",
+          "priceTier": 4,
+          "description": "Celeb chef Gastón Acurio serves Peruvian seafood in a large, partially outdoor space on the pier.",
+          "reviewsTags": [
+            {
+              "title": "Lomo Saltado Beef",
+              "count": 33
+            },
+            {
+              "title": "tiraditos",
+              "count": 40
+            },
+            {
+              "title": "outdoor seating",
+              "count": 167
+            },
+            {
+              "title": "halibut",
+              "count": 42
+            },
+            {
+              "title": "tres leches cake",
+              "count": 45
+            },
+            {
+              "title": "bay view",
+              "count": 27
+            },
+            {
+              "title": "octopus",
+              "count": 113
+            },
+            {
+              "title": "water view",
+              "count": 11
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              20,
+              31,
+              37,
+              34,
+              0,
+              0,
+              35,
+              44,
+              46,
+              38,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              17,
+              24,
+              24,
+              20,
+              0,
+              0,
+              41,
+              61,
+              70,
+              61,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              20,
+              26,
+              24,
+              0,
+              0,
+              58,
+              81,
+              91,
+              80,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              22,
+              30,
+              29,
+              25,
+              0,
+              0,
+              61,
+              82,
+              89,
+              75,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              15,
+              23,
+              26,
+              23,
+              0,
+              0,
+              55,
+              78,
+              86,
+              80,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              19,
+              27,
+              33,
+              32,
+              0,
+              0,
+              43,
+              60,
+              77,
+              78,
+              64,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              25,
+              39,
+              44,
+              37,
+              0,
+              0,
+              58,
+              84,
+              100,
+              96,
+              71,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Not too busy",
+          "liveBusyPercent": 21,
+          "reviewsDistribution": {
+            "oneStar": 143,
+            "twoStar": 105,
+            "threeStar": 288,
+            "fourStar": 973,
+            "fiveStar": 3356
+          },
+          "neighborhood": "Northern Waterfront",
+          "menuUrl": "http://places.singleplatform.com/la-mar-cebicheria-peruana/menu?ref=google",
+          "phone": "(415) 397-8880",
+          "website": "https://lamarcebicheria.com/san-francisco/",
+          "address": "PIER 1 1/2 The Embarcadero N, San Francisco, CA 94111",
+          "lat": 37.797239,
+          "lon": -122.3953922,
+          "url": "https://www.google.com/maps/search/?api=1&query=La%20Mar%20Cocina%20Peruana%20San%20Francisco&query_place_id=ChIJURDKN2eAhYARN0AMzUEaiKo",
+          "distanceMeters": 776.2879365761482
+        },
+        {
+          "name": "Piccolo Forno",
+          "category": "Italian restaurant",
+          "categories": [
+            "Italian restaurant"
+          ],
+          "cuisine": "",
+          "openingHours": "Monday: 11:45 AM to 10 PM; Tuesday: Closed; Wednesday: 11:45 AM to 10 PM; Thursday: 11:45 AM to 10 PM; Friday: 11:45 AM to 10 PM; Saturday: 11:45 AM to 10 PM; Sunday: 11:45 AM to 10 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11.75,
+              "close": 22
+            },
+            {
+              "open": -1,
+              "close": -1
+            },
+            {
+              "open": 11.75,
+              "close": 22
+            },
+            {
+              "open": 11.75,
+              "close": 22
+            },
+            {
+              "open": 11.75,
+              "close": 22
+            },
+            {
+              "open": 11.75,
+              "close": 22
+            },
+            {
+              "open": 11.75,
+              "close": 22
+            }
+          ],
+          "rating": 4.7,
+          "reviews": 2219,
+          "price": "$20–30",
+          "priceTier": 2,
+          "description": "Casual neighborhood trattoria with Italian classics & espresso in colorful, contemporary quarters.",
+          "reviewsTags": [
+            {
+              "title": "pinsa",
+              "count": 44
+            },
+            {
+              "title": "gluten free pasta",
+              "count": 48
+            },
+            {
+              "title": "outdoor seating",
+              "count": 16
+            },
+            {
+              "title": "mushroom ravioli",
+              "count": 20
+            },
+            {
+              "title": "fettuccine alfredo",
+              "count": 29
+            },
+            {
+              "title": "lobster ravioli",
+              "count": 17
+            },
+            {
+              "title": "al dente pasta",
+              "count": 20
+            },
+            {
+              "title": "butternut squash ravioli",
+              "count": 10
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              29,
+              47,
+              54,
+              60,
+              68,
+              81,
+              97,
+              100,
+              87,
+              61,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              13,
+              20,
+              27,
+              27,
+              30,
+              33,
+              45,
+              59,
+              67,
+              64,
+              50,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              27,
+              34,
+              32,
+              31,
+              36,
+              44,
+              56,
+              60,
+              56,
+              41,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              15,
+              24,
+              30,
+              31,
+              30,
+              33,
+              46,
+              59,
+              66,
+              54,
+              39,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              18,
+              27,
+              34,
+              40,
+              45,
+              49,
+              62,
+              73,
+              74,
+              67,
+              50,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              26,
+              43,
+              53,
+              57,
+              62,
+              72,
+              84,
+              92,
+              88,
+              81,
+              63,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Not too busy",
+          "liveBusyPercent": 42,
+          "reviewsDistribution": {
+            "oneStar": 49,
+            "twoStar": 31,
+            "threeStar": 82,
+            "fourStar": 283,
+            "fiveStar": 1774
+          },
+          "neighborhood": "Russian Hill",
+          "menuUrl": "http://places.singleplatform.com/piccolo-forno-1/menu?ref=google",
+          "phone": "(415) 757-0087",
+          "website": "https://piccolo-forno-sf.com/",
+          "address": "725 Columbus Ave, San Francisco, CA 94133",
+          "lat": 37.801363,
+          "lon": -122.412033,
+          "url": "https://www.google.com/maps/search/?api=1&query=Piccolo%20Forno&query_place_id=ChIJLeYyO_CAhYAR6j9XsEIm3GI",
+          "distanceMeters": 1802.7606677938688
+        },
+        {
+          "name": "Wayfare Tavern",
+          "category": "American restaurant",
+          "categories": [
+            "American restaurant",
+            "Bar"
+          ],
+          "cuisine": "",
+          "openingHours": "Monday: 11:30 AM to 9 PM; Tuesday: 11:30 AM to 9 PM; Wednesday: 11:30 AM to 9 PM; Thursday: 11:30 AM to 9 PM; Friday: 11:30 AM to 10 PM; Saturday: 11:30 AM to 10 PM; Sunday: 11:30 AM to 9 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 22
+            },
+            {
+              "open": 11.5,
+              "close": 22
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            }
+          ],
+          "rating": 4.5,
+          "reviews": 2982,
+          "price": "$50–100",
+          "priceTier": 4,
+          "description": "Popular upscale eatery serving Tyler Florence's American fare in a British pub-style setting.",
+          "reviewsTags": [
+            {
+              "title": "deviled eggs",
+              "count": 97
+            },
+            {
+              "title": "fried chicken",
+              "count": 397
+            },
+            {
+              "title": "bar seating",
+              "count": 35
+            },
+            {
+              "title": "beef tartare",
+              "count": 52
+            },
+            {
+              "title": "burrata toast",
+              "count": 39
+            },
+            {
+              "title": "prompt seating",
+              "count": 3
+            },
+            {
+              "title": "The Tavern Burger and Fries",
+              "count": 19
+            },
+            {
+              "title": "bone marrow",
+              "count": 19
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              20,
+              28,
+              33,
+              34,
+              34,
+              36,
+              43,
+              48,
+              47,
+              42,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              48,
+              63,
+              70,
+              68,
+              64,
+              71,
+              79,
+              81,
+              73,
+              56,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              54,
+              73,
+              76,
+              65,
+              60,
+              64,
+              78,
+              84,
+              80,
+              62,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              54,
+              75,
+              79,
+              76,
+              77,
+              84,
+              95,
+              100,
+              91,
+              72,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              56,
+              81,
+              89,
+              82,
+              69,
+              72,
+              78,
+              80,
+              70,
+              54,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              38,
+              54,
+              59,
+              59,
+              53,
+              55,
+              61,
+              64,
+              65,
+              59,
+              45,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              23,
+              33,
+              39,
+              41,
+              40,
+              41,
+              48,
+              55,
+              57,
+              52,
+              42,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Not busy",
+          "liveBusyPercent": 6,
+          "reviewsDistribution": {
+            "oneStar": 81,
+            "twoStar": 62,
+            "threeStar": 211,
+            "fourStar": 643,
+            "fiveStar": 1985
+          },
+          "neighborhood": "Financial District",
+          "menuUrl": "https://www.wayfaretavern.com/menus",
+          "phone": "(415) 772-9060",
+          "website": "https://www.wayfaretavern.com/",
+          "address": "201 Pine St, San Francisco, CA 94111",
+          "lat": 37.7921097,
+          "lon": -122.3999688,
+          "url": "https://www.google.com/maps/search/?api=1&query=Wayfare%20Tavern&query_place_id=ChIJE5T3YoqAhYARtxUohSbFVDc",
+          "distanceMeters": 328.0858490376443
+        },
+        {
+          "name": "Bubba Gump Shrimp Co.",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant",
+            "American restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 11 AM to 10 PM; Tuesday: 11 AM to 10 PM; Wednesday: 11 AM to 10 PM; Thursday: 11 AM to 10 PM; Friday: 10:30 AM to 10:30 PM; Saturday: 10:30 AM to 10:30 PM; Sunday: 10:30 AM to 10 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 10.5,
+              "close": 22.5
+            },
+            {
+              "open": 10.5,
+              "close": 22.5
+            },
+            {
+              "open": 10.5,
+              "close": 22
+            }
+          ],
+          "rating": 4.2,
+          "reviews": 8290,
+          "price": "$20–30",
+          "priceTier": 2,
+          "description": "Family-friendly restaurant offering shrimp & classic southern fare in a casual setting.",
+          "reviewsTags": [
+            {
+              "title": "forrest gump theme",
+              "count": 368
+            },
+            {
+              "title": "view of the bay",
+              "count": 57
+            },
+            {
+              "title": "clam chowder",
+              "count": 62
+            },
+            {
+              "title": "gumbo",
+              "count": 43
+            },
+            {
+              "title": "ocean view",
+              "count": 44
+            },
+            {
+              "title": "coconut shrimp",
+              "count": 37
+            },
+            {
+              "title": "sunset view",
+              "count": 24
+            },
+            {
+              "title": "fried shrimp",
+              "count": 41
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              15,
+              27,
+              43,
+              58,
+              68,
+              77,
+              81,
+              83,
+              78,
+              68,
+              55,
+              37,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              13,
+              25,
+              38,
+              43,
+              45,
+              44,
+              43,
+              45,
+              40,
+              35,
+              24,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              22,
+              29,
+              32,
+              34,
+              36,
+              41,
+              43,
+              41,
+              32,
+              20,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              16,
+              25,
+              30,
+              32,
+              36,
+              39,
+              44,
+              47,
+              45,
+              38,
+              25,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              25,
+              36,
+              42,
+              43,
+              44,
+              47,
+              48,
+              45,
+              37,
+              25,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              11,
+              20,
+              29,
+              37,
+              46,
+              52,
+              57,
+              60,
+              63,
+              63,
+              56,
+              44,
+              28,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              12,
+              25,
+              47,
+              70,
+              89,
+              96,
+              100,
+              99,
+              96,
+              90,
+              78,
+              58,
+              35,
+              0
+            ]
+          },
+          "liveBusyText": "Not too busy",
+          "liveBusyPercent": 33,
+          "reviewsDistribution": {
+            "oneStar": 474,
+            "twoStar": 344,
+            "threeStar": 846,
+            "fourStar": 1900,
+            "fiveStar": 4726
+          },
+          "neighborhood": "Fisherman's Wharf",
+          "menuUrl": "https://www.bubbagump.com/location/bubba-gump-san-francisco-ca/#menus",
+          "phone": "(415) 781-4867",
+          "website": "https://www.bubbagump.com/location/bubba-gump-san-francisco-ca/",
+          "address": "Pier 39 Box M-211, San Francisco, CA 94133",
+          "lat": 37.8111257,
+          "lon": -122.4103593,
+          "url": "https://www.google.com/maps/search/?api=1&query=Bubba%20Gump%20Shrimp%20Co.&query_place_id=ChIJ_8px9PyAhYARs6brg40w7Ao",
+          "distanceMeters": 2591.257264412229
+        },
+        {
+          "name": "Crab House at Pier 39",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant",
+            "American restaurant",
+            "Californian restaurant",
+            "Crab house",
+            "Family restaurant",
+            "Fish restaurant",
+            "Lunch restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 11 AM to 10 PM; Tuesday: 11 AM to 10 PM; Wednesday: 11 AM to 10 PM; Thursday: 11 AM to 10 PM; Friday: 11 AM to 10 PM; Saturday: 11 AM to 10 PM; Sunday: 11 AM to 10 PM",
+          "openingHoursStruct": [
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            },
+            {
+              "open": 11,
+              "close": 22
+            }
+          ],
+          "rating": 4.3,
+          "reviews": 4890,
+          "price": "$30–90",
+          "priceTier": 3,
+          "description": "Informal seafood place offering a creative and crab-focused menu, plus views of the Golden Gate Bridge.",
+          "reviewsTags": [
+            {
+              "title": "crab chowder",
+              "count": 188
+            },
+            {
+              "title": "dungeness crab",
+              "count": 79
+            },
+            {
+              "title": "view of the bay",
+              "count": 26
+            },
+            {
+              "title": "outdoor seating",
+              "count": 7
+            },
+            {
+              "title": "garlic noodles",
+              "count": 49
+            },
+            {
+              "title": "sunset view",
+              "count": 19
+            },
+            {
+              "title": "crab fried rice",
+              "count": 48
+            },
+            {
+              "title": "cioppino",
+              "count": 30
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              33,
+              50,
+              65,
+              71,
+              78,
+              84,
+              91,
+              97,
+              89,
+              66,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              23,
+              32,
+              40,
+              41,
+              44,
+              53,
+              59,
+              65,
+              62,
+              53,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              20,
+              29,
+              33,
+              36,
+              37,
+              42,
+              45,
+              53,
+              51,
+              43,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              24,
+              37,
+              42,
+              43,
+              40,
+              42,
+              49,
+              58,
+              63,
+              55,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              17,
+              29,
+              40,
+              46,
+              47,
+              55,
+              63,
+              75,
+              77,
+              64,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              21,
+              36,
+              45,
+              54,
+              57,
+              66,
+              78,
+              92,
+              93,
+              76,
+              0,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              43,
+              66,
+              79,
+              92,
+              95,
+              99,
+              100,
+              97,
+              89,
+              80,
+              0,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Less busy than usual",
+          "liveBusyPercent": 30,
+          "reviewsDistribution": {
+            "oneStar": 187,
+            "twoStar": 167,
+            "threeStar": 437,
+            "fourStar": 1071,
+            "fiveStar": 3028
+          },
+          "neighborhood": "Fisherman's Wharf",
+          "menuUrl": "https://checkle.menu/crabhouse_pier39",
+          "phone": "(415) 651-2574",
+          "website": "https://crabhouse39.com/?utm_source=google&utm_medium=organic&utm_campaign=gmb_listing",
+          "address": "2 Beach St, San Francisco, CA 94133",
+          "lat": 37.8094571,
+          "lon": -122.4104213,
+          "url": "https://www.google.com/maps/search/?api=1&query=Crab%20House%20at%20Pier%2039&query_place_id=ChIJ9T3A5PyAhYARce9_Mje3PoE",
+          "distanceMeters": 2430.1059374212045
+        },
+        {
+          "name": "Boulevard",
+          "category": "American restaurant",
+          "categories": [
+            "American restaurant",
+            "Californian restaurant",
+            "Cocktail bar",
+            "Fine dining restaurant",
+            "Restaurant"
+          ],
+          "cuisine": "",
+          "openingHours": "Monday: 5 to 9:30 PM; Tuesday: 5 to 9:30 PM; Wednesday: 5 to 9:30 PM; Thursday: 5 to 9:30 PM; Friday: 5 to 9:30 PM; Saturday: 5 to 9:30 PM; Sunday: Closed",
+          "openingHoursStruct": [
+            {
+              "open": 5,
+              "close": 21.5
+            },
+            {
+              "open": 5,
+              "close": 21.5
+            },
+            {
+              "open": 5,
+              "close": 21.5
+            },
+            {
+              "open": 5,
+              "close": 21.5
+            },
+            {
+              "open": 5,
+              "close": 21.5
+            },
+            {
+              "open": 5,
+              "close": 21.5
+            },
+            {
+              "open": -1,
+              "close": -1
+            }
+          ],
+          "rating": 4.6,
+          "reviews": 1695,
+          "price": "$100+",
+          "priceTier": 4,
+          "description": "Refined American fare from renowned chef Nancy Oakes at a chic Embarcadero spot boasting bay views.",
+          "reviewsTags": [
+            {
+              "title": "pork chop",
+              "count": 52
+            },
+            {
+              "title": "scallops",
+              "count": 34
+            },
+            {
+              "title": "view of the bay bridge",
+              "count": 16
+            },
+            {
+              "title": "beef tartare",
+              "count": 17
+            },
+            {
+              "title": "bar seating",
+              "count": 5
+            },
+            {
+              "title": "halibut",
+              "count": 19
+            },
+            {
+              "title": "prix fixe menu",
+              "count": 23
+            },
+            {
+              "title": "wine list",
+              "count": 58
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              45,
+              59,
+              68,
+              51,
+              38,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              63,
+              73,
+              76,
+              62,
+              48,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              72,
+              97,
+              100,
+              84,
+              54,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              55,
+              70,
+              77,
+              69,
+              51,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              52,
+              76,
+              94,
+              84,
+              65,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              52,
+              63,
+              69,
+              69,
+              45,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "",
+          "liveBusyPercent": null,
+          "reviewsDistribution": {
+            "oneStar": 28,
+            "twoStar": 26,
+            "threeStar": 97,
+            "fourStar": 314,
+            "fiveStar": 1230
+          },
+          "neighborhood": "Financial District",
+          "menuUrl": "https://www.boulevardrestaurant.com/menus/",
+          "phone": "(415) 543-6084",
+          "website": "https://www.boulevardrestaurant.com/",
+          "address": "1 Mission St, San Francisco, CA 94105",
+          "lat": 37.7932697,
+          "lon": -122.3928679,
+          "url": "https://www.google.com/maps/search/?api=1&query=Boulevard&query_place_id=ChIJF-zbSmSAhYARvOafjdCRszQ",
+          "distanceMeters": 482.8172058298533
+        },
+        {
+          "name": "Lazy Bear",
+          "category": "New American restaurant",
+          "categories": [
+            "New American restaurant",
+            "Fine dining restaurant",
+            "Restaurant"
+          ],
+          "cuisine": "",
+          "openingHours": "Monday: Closed; Tuesday: 5 to 10 PM; Wednesday: 5 to 10 PM; Thursday: 5 to 10 PM; Friday: 5 to 10 PM; Saturday: 5 to 10 PM; Sunday: Closed",
+          "openingHoursStruct": [
+            {
+              "open": -1,
+              "close": -1
+            },
+            {
+              "open": 5,
+              "close": 22
+            },
+            {
+              "open": 5,
+              "close": 22
+            },
+            {
+              "open": 5,
+              "close": 22
+            },
+            {
+              "open": 5,
+              "close": 22
+            },
+            {
+              "open": 5,
+              "close": 22
+            },
+            {
+              "open": -1,
+              "close": -1
+            }
+          ],
+          "rating": 4.7,
+          "reviews": 1177,
+          "price": "$100+",
+          "priceTier": 4,
+          "description": "The revered pop-up gets a permanent setting with this midcentury space serving New American cuisine.",
+          "reviewsTags": [
+            {
+              "title": "tasting menu",
+              "count": 36
+            },
+            {
+              "title": "wine pairing",
+              "count": 68
+            },
+            {
+              "title": "caviar",
+              "count": 10
+            },
+            {
+              "title": "fine dining",
+              "count": 74
+            },
+            {
+              "title": "wagyu",
+              "count": 28
+            },
+            {
+              "title": "communal dining",
+              "count": 23
+            },
+            {
+              "title": "sommeliers",
+              "count": 13
+            },
+            {
+              "title": "Whipped Scrambled Eggs Bacon Maple Hot Sauce",
+              "count": 5
+            }
+          ],
+          "popularTimes": null,
+          "liveBusyText": "",
+          "liveBusyPercent": null,
+          "reviewsDistribution": {
+            "oneStar": 19,
+            "twoStar": 20,
+            "threeStar": 42,
+            "fourStar": 87,
+            "fiveStar": 1009
+          },
+          "neighborhood": "Mission District",
+          "menuUrl": "",
+          "phone": "(415) 874-9921",
+          "website": "http://www.lazybearsf.com/",
+          "address": "3416 19th St, San Francisco, CA 94110",
+          "lat": 37.7604119,
+          "lon": -122.4197156,
+          "url": "https://www.google.com/maps/search/?api=1&query=Lazy%20Bear&query_place_id=ChIJk35bizx-j4AREil6UPp7Jn4",
+          "distanceMeters": 3885.4703321361885
+        },
+        {
+          "name": "Cotogna",
+          "category": "Italian restaurant",
+          "categories": [
+            "Italian restaurant"
+          ],
+          "cuisine": "",
+          "openingHours": "Monday: Closed; Tuesday: 4:30 to 9 PM; Wednesday: 11:30 AM to 9 PM; Thursday: 11:30 AM to 9 PM; Friday: 11:30 AM to 9:30 PM; Saturday: 11:30 AM to 9:30 PM; Sunday: Closed",
+          "openingHoursStruct": [
+            {
+              "open": -1,
+              "close": -1
+            },
+            {
+              "open": 4.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21
+            },
+            {
+              "open": 11.5,
+              "close": 21.5
+            },
+            {
+              "open": 11.5,
+              "close": 21.5
+            },
+            {
+              "open": -1,
+              "close": -1
+            }
+          ],
+          "rating": 4.5,
+          "reviews": 2186,
+          "price": "$100+",
+          "priceTier": 4,
+          "description": "Popular eatery serving spit-roasted and grilled meat & fish, wood-fired pizza and house-made pasta.",
+          "reviewsTags": [
+            {
+              "title": "raviolo",
+              "count": 121
+            },
+            {
+              "title": "custom placemats",
+              "count": 16
+            },
+            {
+              "title": "outdoor seating",
+              "count": 80
+            },
+            {
+              "title": "crudo",
+              "count": 25
+            },
+            {
+              "title": "bar seating",
+              "count": 20
+            },
+            {
+              "title": "gnocco fritto",
+              "count": 14
+            },
+            {
+              "title": "carbonara pizza",
+              "count": 14
+            },
+            {
+              "title": "gelato",
+              "count": 38
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              51,
+              66,
+              74,
+              77,
+              71,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              43,
+              61,
+              72,
+              72,
+              70,
+              76,
+              79,
+              84,
+              78,
+              75,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              49,
+              64,
+              74,
+              73,
+              68,
+              62,
+              64,
+              66,
+              66,
+              63,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              60,
+              84,
+              97,
+              100,
+              93,
+              85,
+              80,
+              77,
+              78,
+              83,
+              75,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              57,
+              79,
+              87,
+              85,
+              83,
+              81,
+              78,
+              72,
+              77,
+              70,
+              69,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Less busy than usual",
+          "liveBusyPercent": 37,
+          "reviewsDistribution": {
+            "oneStar": 107,
+            "twoStar": 54,
+            "threeStar": 89,
+            "fourStar": 286,
+            "fiveStar": 1650
+          },
+          "neighborhood": "Jackson Square",
+          "menuUrl": "http://cotognasf.com/",
+          "phone": "(415) 775-8508",
+          "website": "http://cotognasf.com/",
+          "address": "490 Pacific Ave, San Francisco, CA 94133",
+          "lat": 37.7974453,
+          "lon": -122.4035759,
+          "url": "https://www.google.com/maps/search/?api=1&query=Cotogna&query_place_id=ChIJA0YvGPWAhYAReXmaDTTdWzU",
+          "distanceMeters": 978.6597113882044
+        },
+        {
+          "name": "Chowder's",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: 10 AM to 9 PM; Tuesday: 10 AM to 9 PM; Wednesday: 10 AM to 9 PM; Thursday: 10 AM to 9 PM; Friday: 10 AM to 9:30 PM; Saturday: 10 AM to 9:30 PM; Sunday: 10 AM to 9 PM",
+          "openingHoursStruct": [
+            {
+              "open": 10,
+              "close": 21
+            },
+            {
+              "open": 10,
+              "close": 21
+            },
+            {
+              "open": 10,
+              "close": 21
+            },
+            {
+              "open": 10,
+              "close": 21
+            },
+            {
+              "open": 10,
+              "close": 21.5
+            },
+            {
+              "open": 10,
+              "close": 21.5
+            },
+            {
+              "open": 10,
+              "close": 21
+            }
+          ],
+          "rating": 4.3,
+          "reviews": 3203,
+          "price": "$10–20",
+          "priceTier": 1,
+          "description": "Quick-service eatery supplying chowder & other  seafood in a kid-friendly venue with outdoor seats.",
+          "reviewsTags": [
+            {
+              "title": "clam chowder",
+              "count": 461
+            },
+            {
+              "title": "sourdough bowl",
+              "count": 121
+            },
+            {
+              "title": "ocean view",
+              "count": 7
+            },
+            {
+              "title": "bread bowl",
+              "count": 163
+            },
+            {
+              "title": "crab cakes",
+              "count": 47
+            },
+            {
+              "title": "outdoor seating",
+              "count": 36
+            },
+            {
+              "title": "fish and chips",
+              "count": 155
+            },
+            {
+              "title": "people watching",
+              "count": 3
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              25,
+              35,
+              55,
+              70,
+              79,
+              79,
+              79,
+              82,
+              85,
+              81,
+              67,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              21,
+              28,
+              35,
+              43,
+              48,
+              47,
+              45,
+              50,
+              52,
+              42,
+              28,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              25,
+              25,
+              27,
+              29,
+              40,
+              44,
+              43,
+              43,
+              52,
+              52,
+              45,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              26,
+              41,
+              44,
+              44,
+              34,
+              39,
+              48,
+              57,
+              58,
+              51,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              21,
+              33,
+              35,
+              37,
+              33,
+              38,
+              46,
+              61,
+              62,
+              52,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              18,
+              29,
+              45,
+              55,
+              61,
+              64,
+              50,
+              50,
+              54,
+              69,
+              69,
+              58,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              27,
+              44,
+              65,
+              82,
+              90,
+              98,
+              94,
+              100,
+              97,
+              93,
+              84,
+              69,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "Less busy than usual",
+          "liveBusyPercent": 21,
+          "reviewsDistribution": {
+            "oneStar": 104,
+            "twoStar": 103,
+            "threeStar": 374,
+            "fourStar": 837,
+            "fiveStar": 1785
+          },
+          "neighborhood": "Fisherman's Wharf",
+          "menuUrl": "",
+          "phone": "(415) 391-4737",
+          "website": "http://www.chowderspier39.com/",
+          "address": "2 Beach St, San Francisco, CA 94133",
+          "lat": 37.8090954,
+          "lon": -122.4102679,
+          "url": "https://www.google.com/maps/search/?api=1&query=Chowder's&query_place_id=ChIJHSGzi_yAhYAR6nmtmfLpeWU",
+          "distanceMeters": 2388.4276733267347
+        },
+        {
+          "name": "Delancey Street Restaurant",
+          "category": "American restaurant",
+          "categories": [
+            "American restaurant",
+            "Restaurant"
+          ],
+          "cuisine": "",
+          "openingHours": "Monday: Closed; Tuesday: 11 AM to 2 PM, 5:30 to 10 PM; Wednesday: 11 AM to 2 PM, 5:30 to 10 PM; Thursday: Closed; Friday: 11 AM to 2 PM, 5:30 to 10 PM; Saturday: 10 AM to 3 PM, 5:30 to 10 PM; Sunday: 10 AM to 3 PM, 5:30 to 10 PM",
+          "openingHoursStruct": [
+            {
+              "open": -1,
+              "close": -1
+            },
+            {
+              "open": 11,
+              "close": 14
+            },
+            {
+              "open": 11,
+              "close": 14
+            },
+            {
+              "open": -1,
+              "close": -1
+            },
+            {
+              "open": 11,
+              "close": 14
+            },
+            {
+              "open": 10,
+              "close": 15
+            },
+            {
+              "open": 10,
+              "close": 15
+            }
+          ],
+          "rating": 4.5,
+          "reviews": 1601,
+          "price": "$20–30",
+          "priceTier": 2,
+          "description": "Eclectic bistro & training school for Delancey Street Foundation residents rebuilding their lives.",
+          "reviewsTags": [
+            {
+              "title": "view of the bay bridge",
+              "count": 15
+            },
+            {
+              "title": "fried chicken sandwich",
+              "count": 13
+            },
+            {
+              "title": "crab cakes",
+              "count": 12
+            },
+            {
+              "title": "gumbo",
+              "count": 8
+            },
+            {
+              "title": "outdoor seating",
+              "count": 35
+            },
+            {
+              "title": "waterfront view",
+              "count": 3
+            },
+            {
+              "title": "sweet potato pie",
+              "count": 5
+            },
+            {
+              "title": "sundae",
+              "count": 12
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              56,
+              67,
+              66,
+              63,
+              65,
+              0,
+              0,
+              53,
+              52,
+              41,
+              30,
+              16,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              24,
+              38,
+              44,
+              0,
+              0,
+              0,
+              54,
+              56,
+              50,
+              43,
+              34,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              36,
+              45,
+              47,
+              0,
+              0,
+              0,
+              42,
+              48,
+              48,
+              36,
+              27,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              28,
+              32,
+              31,
+              0,
+              0,
+              0,
+              47,
+              61,
+              60,
+              52,
+              41,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              32,
+              51,
+              67,
+              76,
+              71,
+              0,
+              0,
+              83,
+              95,
+              100,
+              86,
+              62,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "A little busy",
+          "liveBusyPercent": 69,
+          "reviewsDistribution": {
+            "oneStar": 61,
+            "twoStar": 29,
+            "threeStar": 90,
+            "fourStar": 253,
+            "fiveStar": 1168
+          },
+          "neighborhood": "South Beach",
+          "menuUrl": "",
+          "phone": "(415) 512-5179",
+          "website": "http://www.delanceystreetfoundation.org/enterrestaurant.php",
+          "address": "600 The Embarcadero, San Francisco, CA 94107",
+          "lat": 37.7843599,
+          "lon": -122.3884342,
+          "url": "https://www.google.com/maps/search/?api=1&query=Delancey%20Street%20Restaurant&query_place_id=ChIJTRf2DXeAhYARsjppfRXu44s",
+          "distanceMeters": 1003.4839120528924
+        },
+        {
+          "name": "Mission Rock Resort",
+          "category": "Seafood restaurant",
+          "categories": [
+            "Seafood restaurant",
+            "American restaurant"
+          ],
+          "cuisine": "Seafood restaurant",
+          "openingHours": "Monday: Closed; Tuesday: 11:30 AM to 8:30 PM; Wednesday: 11:30 AM to 8:30 PM; Thursday: 11:30 AM to 8:30 PM; Friday: 11:30 AM to 8:30 PM; Saturday: 10 AM to 8:30 PM; Sunday: 10 AM to 7:30 PM",
+          "openingHoursStruct": [
+            {
+              "open": -1,
+              "close": -1
+            },
+            {
+              "open": 11.5,
+              "close": 20.5
+            },
+            {
+              "open": 11.5,
+              "close": 20.5
+            },
+            {
+              "open": 11.5,
+              "close": 20.5
+            },
+            {
+              "open": 11.5,
+              "close": 20.5
+            },
+            {
+              "open": 10,
+              "close": 20.5
+            },
+            {
+              "open": 10,
+              "close": 19.5
+            }
+          ],
+          "rating": 4.4,
+          "reviews": 2162,
+          "price": "$30–60",
+          "priceTier": 3,
+          "description": "Waterside, bi-level seafood restaurant and cafe with an oyster bar and decks overlooking the bay.",
+          "reviewsTags": [
+            {
+              "title": "oysters",
+              "count": 194
+            },
+            {
+              "title": "view of the bay",
+              "count": 42
+            },
+            {
+              "title": "clam chowder",
+              "count": 26
+            },
+            {
+              "title": "outdoor seating",
+              "count": 103
+            },
+            {
+              "title": "crab roll",
+              "count": 15
+            },
+            {
+              "title": "bloody mary",
+              "count": 15
+            },
+            {
+              "title": "happy hour",
+              "count": 137
+            },
+            {
+              "title": "ceviche",
+              "count": 23
+            }
+          ],
+          "popularTimes": {
+            "Sun": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              33,
+              49,
+              65,
+              71,
+              71,
+              65,
+              64,
+              63,
+              63,
+              48,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Mon": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Tue": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              22,
+              29,
+              32,
+              35,
+              46,
+              67,
+              89,
+              100,
+              85,
+              62,
+              0,
+              0,
+              0
+            ],
+            "Wed": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              18,
+              31,
+              43,
+              51,
+              61,
+              74,
+              93,
+              100,
+              85,
+              59,
+              0,
+              0,
+              0
+            ],
+            "Thu": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              20,
+              32,
+              39,
+              44,
+              54,
+              64,
+              75,
+              77,
+              64,
+              47,
+              0,
+              0,
+              0
+            ],
+            "Fri": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              32,
+              42,
+              51,
+              55,
+              62,
+              74,
+              87,
+              94,
+              87,
+              67,
+              0,
+              0,
+              0
+            ],
+            "Sat": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              25,
+              42,
+              61,
+              74,
+              77,
+              78,
+              78,
+              86,
+              92,
+              80,
+              56,
+              0,
+              0,
+              0
+            ]
+          },
+          "liveBusyText": "A little busy",
+          "liveBusyPercent": 59,
+          "reviewsDistribution": {
+            "oneStar": 41,
+            "twoStar": 46,
+            "threeStar": 155,
+            "fourStar": 592,
+            "fiveStar": 1328
+          },
+          "neighborhood": "Mission Bay",
+          "menuUrl": "",
+          "phone": "(415) 701-7625",
+          "website": "http://missionrockresort.com/",
+          "address": "817 Terry A Francois Blvd, San Francisco, CA 94158",
+          "lat": 37.765485,
+          "lon": -122.3865679,
+          "url": "https://www.google.com/maps/search/?api=1&query=Mission%20Rock%20Resort&query_place_id=ChIJryemAsd_j4AR60urAIzz6Dc",
+          "distanceMeters": 2913.5581331442054
+        }
+      ],
+      "count": 20,
+      "summary": {
+        "radiusMeters": 4800,
+        "topCategories": [
+          {
+            "label": "Seafood restaurant",
+            "count": 9
+          },
+          {
+            "label": "American restaurant",
+            "count": 4
+          },
+          {
+            "label": "Italian restaurant",
+            "count": 2
+          },
+          {
+            "label": "New American restaurant",
+            "count": 2
+          },
+          {
+            "label": "Peruvian restaurant",
+            "count": 1
+          },
+          {
+            "label": "Bakery",
+            "count": 1
+          },
+          {
+            "label": "Californian restaurant",
+            "count": 1
+          }
+        ],
+        "competitorCount": 15,
+        "sampleCompetitors": [
+          {
+            "name": "Fog Harbor Fish House",
+            "category": "Seafood restaurant",
+            "categories": [
+              "Seafood restaurant",
+              "American restaurant",
+              "Californian restaurant"
+            ],
+            "cuisine": "Seafood restaurant",
+            "openingHours": "Monday: 11 AM to 10 PM; Tuesday: 11 AM to 10 PM; Wednesday: 11 AM to 10 PM; Thursday: 11 AM to 10 PM; Friday: 11 AM to 10 PM; Saturday: 11 AM to 10 PM; Sunday: 11 AM to 10 PM",
+            "openingHoursStruct": [
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              }
+            ],
+            "rating": 4.5,
+            "reviews": 10099,
+            "price": "$20–80",
+            "priceTier": 2,
+            "description": "Pier 39 seafood institution with fresh fish & scenic views of the bay & Golden Gate Bridge.",
+            "reviewsTags": [
+              {
+                "title": "clam chowder",
+                "count": 937
+              },
+              {
+                "title": "cioppino",
+                "count": 194
+              },
+              {
+                "title": "golden gate bridge view",
+                "count": 92
+              },
+              {
+                "title": "lobster roll",
+                "count": 166
+              },
+              {
+                "title": "sunset view",
+                "count": 100
+              },
+              {
+                "title": "crab cakes",
+                "count": 155
+              },
+              {
+                "title": "dungeness crab",
+                "count": 84
+              },
+              {
+                "title": "outdoor seating",
+                "count": 49
+              }
+            ],
+            "popularTimes": {
+              "Sun": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                22,
+                40,
+                55,
+                69,
+                72,
+                68,
+                72,
+                73,
+                72,
+                50,
+                0,
+                0,
+                0
+              ],
+              "Mon": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                26,
+                31,
+                36,
+                40,
+                44,
+                48,
+                56,
+                63,
+                69,
+                69,
+                0,
+                0,
+                0
+              ],
+              "Tue": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                9,
+                18,
+                30,
+                43,
+                50,
+                50,
+                63,
+                84,
+                91,
+                70,
+                0,
+                0,
+                0
+              ],
+              "Wed": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                29,
+                34,
+                27,
+                27,
+                29,
+                47,
+                66,
+                88,
+                91,
+                77,
+                0,
+                0,
+                0
+              ],
+              "Thu": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                16,
+                27,
+                29,
+                34,
+                38,
+                55,
+                75,
+                83,
+                80,
+                65,
+                0,
+                0,
+                0
+              ],
+              "Fri": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                25,
+                41,
+                43,
+                58,
+                62,
+                70,
+                77,
+                91,
+                87,
+                72,
+                0,
+                0,
+                0
+              ],
+              "Sat": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                31,
+                40,
+                48,
+                48,
+                54,
+                68,
+                83,
+                100,
+                98,
+                83,
+                0,
+                0,
+                0
+              ]
+            },
+            "liveBusyText": "Less busy than usual",
+            "liveBusyPercent": 4,
+            "reviewsDistribution": {
+              "oneStar": 267,
+              "twoStar": 210,
+              "threeStar": 594,
+              "fourStar": 1948,
+              "fiveStar": 7080
+            },
+            "neighborhood": "Fisherman's Wharf",
+            "menuUrl": "https://checkle.menu/fogharbor_sf",
+            "phone": "(415) 421-2442",
+            "website": "https://fogharbor.com/?utm_source=google&utm_medium=organic&utm_campaign=gmb_listing",
+            "address": "39 Pier, San Francisco, CA 94133",
+            "lat": 37.8089961,
+            "lon": -122.4102878,
+            "url": "https://www.google.com/maps/search/?api=1&query=Fog%20Harbor%20Fish%20House&query_place_id=ChIJHSGzi_yAhYARptfivXk-Qlo",
+            "distanceMeters": 2379.6674540595477
+          },
+          {
+            "name": "Scoma's Restaurant",
+            "category": "Seafood restaurant",
+            "categories": [
+              "Seafood restaurant",
+              "Crab house",
+              "Fine dining restaurant",
+              "Italian restaurant",
+              "Takeout Restaurant",
+              "Restaurant",
+              "Seafood market"
+            ],
+            "cuisine": "Seafood restaurant",
+            "openingHours": "Monday: 12 to 9 PM; Tuesday: 12 to 9 PM; Wednesday: 12 to 9 PM; Thursday: 12 to 9 PM; Friday: 12 to 10 PM; Saturday: 12 to 10 PM; Sunday: 12 to 9 PM",
+            "openingHoursStruct": [
+              {
+                "open": 12,
+                "close": 21
+              },
+              {
+                "open": 12,
+                "close": 21
+              },
+              {
+                "open": 12,
+                "close": 21
+              },
+              {
+                "open": 12,
+                "close": 21
+              },
+              {
+                "open": 12,
+                "close": 22
+              },
+              {
+                "open": 12,
+                "close": 22
+              },
+              {
+                "open": 12,
+                "close": 21
+              }
+            ],
+            "rating": 4.6,
+            "reviews": 6940,
+            "price": "$50–100",
+            "priceTier": 4,
+            "description": "Spacious waterfront restaurant serving seafood pulled straight off the boat.",
+            "reviewsTags": [
+              {
+                "title": "cioppino",
+                "count": 273
+              },
+              {
+                "title": "clam chowder",
+                "count": 289
+              },
+              {
+                "title": "bar seating",
+                "count": 95
+              },
+              {
+                "title": "sourdough bread",
+                "count": 61
+              },
+              {
+                "title": "crab cakes",
+                "count": 138
+              },
+              {
+                "title": "bay view",
+                "count": 8
+              },
+              {
+                "title": "crab louie",
+                "count": 51
+              },
+              {
+                "title": "halibut",
+                "count": 64
+              }
+            ],
+            "popularTimes": {
+              "Sun": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                48,
+                69,
+                77,
+                78,
+                75,
+                77,
+                76,
+                75,
+                61,
+                0,
+                0,
+                0
+              ],
+              "Mon": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                36,
+                42,
+                42,
+                44,
+                50,
+                62,
+                78,
+                84,
+                70,
+                0,
+                0,
+                0
+              ],
+              "Tue": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                26,
+                36,
+                39,
+                42,
+                48,
+                61,
+                73,
+                76,
+                66,
+                0,
+                0,
+                0
+              ],
+              "Wed": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                29,
+                38,
+                41,
+                42,
+                49,
+                63,
+                79,
+                84,
+                68,
+                0,
+                0,
+                0
+              ],
+              "Thu": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                26,
+                30,
+                33,
+                36,
+                44,
+                61,
+                78,
+                82,
+                70,
+                0,
+                0,
+                0
+              ],
+              "Fri": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                48,
+                61,
+                61,
+                64,
+                69,
+                79,
+                88,
+                90,
+                81,
+                58,
+                0,
+                0
+              ],
+              "Sat": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                50,
+                68,
+                77,
+                82,
+                87,
+                95,
+                100,
+                95,
+                82,
+                61,
+                0,
+                0
+              ]
+            },
+            "liveBusyText": "A little busy",
+            "liveBusyPercent": 58,
+            "reviewsDistribution": {
+              "oneStar": 155,
+              "twoStar": 155,
+              "threeStar": 386,
+              "fourStar": 1196,
+              "fiveStar": 5048
+            },
+            "neighborhood": "",
+            "menuUrl": "https://scomas.com/menulist/",
+            "phone": "(415) 771-4383",
+            "website": "https://scomas.com/",
+            "address": "1965 Al Scoma Way, San Francisco, CA 94133",
+            "lat": 37.808932,
+            "lon": -122.4184329,
+            "url": "https://www.google.com/maps/search/?api=1&query=Scoma's%20Restaurant&query_place_id=ChIJrcYeh_yAhYARNMwNAmHKa5c",
+            "distanceMeters": 2796.8062180260395
+          },
+          {
+            "name": "Sotto Mare",
+            "category": "Seafood restaurant",
+            "categories": [
+              "Seafood restaurant",
+              "Italian restaurant",
+              "Restaurant"
+            ],
+            "cuisine": "Seafood restaurant",
+            "openingHours": "Monday: 11:30 AM to 9 PM; Tuesday: 11:30 AM to 9 PM; Wednesday: 11:30 AM to 9 PM; Thursday: 11:30 AM to 9 PM; Friday: 11:30 AM to 10 PM; Saturday: 11:30 AM to 10 PM; Sunday: 11:30 AM to 9 PM",
+            "openingHoursStruct": [
+              {
+                "open": 11.5,
+                "close": 21
+              },
+              {
+                "open": 11.5,
+                "close": 21
+              },
+              {
+                "open": 11.5,
+                "close": 21
+              },
+              {
+                "open": 11.5,
+                "close": 21
+              },
+              {
+                "open": 11.5,
+                "close": 22
+              },
+              {
+                "open": 11.5,
+                "close": 22
+              },
+              {
+                "open": 11.5,
+                "close": 21
+              }
+            ],
+            "rating": 4.6,
+            "reviews": 5023,
+            "price": "$30–70",
+            "priceTier": 3,
+            "description": "Neighborhood spot with nautical decor and a menu of pasta, cioppino, and other Italian-style seafood.",
+            "reviewsTags": [
+              {
+                "title": "cioppino",
+                "count": 1007
+              },
+              {
+                "title": "clam chowder",
+                "count": 146
+              },
+              {
+                "title": "outdoor seating",
+                "count": 58
+              },
+              {
+                "title": "seafood risotto",
+                "count": 56
+              },
+              {
+                "title": "seafood linguine",
+                "count": 36
+              },
+              {
+                "title": "bar seating",
+                "count": 54
+              },
+              {
+                "title": "west coast oysters",
+                "count": 35
+              },
+              {
+                "title": "Lobster Ravioli",
+                "count": 58
+              }
+            ],
+            "popularTimes": {
+              "Sun": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                19,
+                28,
+                37,
+                42,
+                47,
+                52,
+                60,
+                68,
+                66,
+                54,
+                0,
+                0,
+                0
+              ],
+              "Mon": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                14,
+                19,
+                21,
+                19,
+                22,
+                29,
+                40,
+                51,
+                52,
+                44,
+                0,
+                0,
+                0
+              ],
+              "Tue": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                12,
+                19,
+                23,
+                25,
+                23,
+                27,
+                32,
+                41,
+                44,
+                39,
+                0,
+                0,
+                0
+              ],
+              "Wed": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                11,
+                17,
+                23,
+                25,
+                26,
+                29,
+                36,
+                44,
+                47,
+                41,
+                0,
+                0,
+                0
+              ],
+              "Thu": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                15,
+                21,
+                23,
+                22,
+                22,
+                27,
+                37,
+                51,
+                58,
+                52,
+                0,
+                0,
+                0
+              ],
+              "Fri": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                20,
+                26,
+                30,
+                31,
+                35,
+                44,
+                59,
+                70,
+                75,
+                69,
+                56,
+                0,
+                0
+              ],
+              "Sat": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                23,
+                37,
+                47,
+                53,
+                59,
+                68,
+                81,
+                92,
+                100,
+                92,
+                76,
+                0,
+                0
+              ]
+            },
+            "liveBusyText": "Not too busy",
+            "liveBusyPercent": 29,
+            "reviewsDistribution": {
+              "oneStar": 135,
+              "twoStar": 99,
+              "threeStar": 231,
+              "fourStar": 804,
+              "fiveStar": 3754
+            },
+            "neighborhood": "North Beach",
+            "menuUrl": "https://www.sottomaresf.com/menu",
+            "phone": "(415) 398-3181",
+            "website": "http://sottomaresf.com/",
+            "address": "552 Green St, San Francisco, CA 94133",
+            "lat": 37.7997503,
+            "lon": -122.4083449,
+            "url": "https://www.google.com/maps/search/?api=1&query=Sotto%20Mare&query_place_id=ChIJQfYyVvGAhYARJVwoboB1WKQ",
+            "distanceMeters": 1445.6856691726352
+          },
+          {
+            "name": "Pier Market Seafood Restaurant",
+            "category": "Seafood restaurant",
+            "categories": [
+              "Seafood restaurant",
+              "American restaurant",
+              "Californian restaurant"
+            ],
+            "cuisine": "Seafood restaurant",
+            "openingHours": "Monday: 11 AM to 10 PM; Tuesday: 11 AM to 10 PM; Wednesday: 11 AM to 10 PM; Thursday: 11 AM to 10 PM; Friday: 11 AM to 10 PM; Saturday: 11 AM to 10 PM; Sunday: 11 AM to 10 PM",
+            "openingHoursStruct": [
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              },
+              {
+                "open": 11,
+                "close": 22
+              }
+            ],
+            "rating": 4.4,
+            "reviews": 8526,
+            "price": "$20–30",
+            "priceTier": 2,
+            "description": "Waterfront seafood restaurant & market offering fresh fish, patio seating & bay views at Pier 39.",
+            "reviewsTags": [
+              {
+                "title": "clam chowder",
+                "count": 388
+              },
+              {
+                "title": "crab cakes",
+                "count": 154
+              },
+              {
+                "title": "view of the bay",
+                "count": 23
+              },
+              {
+                "title": "cioppino",
+                "count": 75
+              },
+              {
+                "title": "view of the pier",
+                "count": 22
+              },
+              {
+                "title": "sourdough bread bowl",
+                "count": 71
+              },
+              {
+                "title": "sunset view",
+                "count": 36
+              },
+              {
+                "title": "calamari",
+                "count": 177
+              }
+            ],
+            "popularTimes": {
+              "Sun": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                31,
+                51,
+                67,
+                73,
+                72,
+                70,
+                75,
+                76,
+                69,
+                49,
+                0,
+                0,
+                0
+              ],
+              "Mon": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                22,
+                36,
+                46,
+                49,
+                47,
+                47,
+                52,
+                55,
+                52,
+                41,
+                0,
+                0,
+                0
+              ],
+              "Tue": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                16,
+                29,
+                36,
+                38,
+                38,
+                41,
+                48,
+                55,
+                54,
+                41,
+                0,
+                0,
+                0
+              ],
+              "Wed": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                18,
+                30,
+                40,
+                43,
+                41,
+                42,
+                46,
+                49,
+                47,
+                39,
+                0,
+                0,
+                0
+              ],
+              "Thu": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                19,
+                32,
+                42,
+                47,
+                48,
+                50,
+                54,
+                56,
+                55,
+                44,
+                0,
+                0,
+                0
+              ],
+              "Fri": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                27,
+                44,
+                54,
+                58,
+                57,
+                60,
+                66,
+                72,
+                73,
+                56,
+                0,
+                0,
+                0
+              ],
+              "Sat": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                35,
+                55,
+                70,
+                79,
+                84,
+                90,
+                95,
+                100,
+                91,
+                72,
+                0,
+                0,
+                0
+              ]
+            },
+            "liveBusyText": "Not too busy",
+            "liveBusyPercent": 43,
+            "reviewsDistribution": {
+              "oneStar": 197,
+              "twoStar": 218,
+              "threeStar": 650,
+              "fourStar": 2026,
+              "fiveStar": 5435
+            },
+            "neighborhood": "Fisherman's Wharf",
+            "menuUrl": "https://checkle.menu/piermarket_sf",
+            "phone": "(415) 989-7437",
+            "website": "https://www.piermarket.com/?utm_source=google&utm_medium=organic&utm_campaign=gmb_listing",
+            "address": "39 Pier, San Francisco, CA 94133",
+            "lat": 37.8097776,
+            "lon": -122.4105536,
+            "url": "https://www.google.com/maps/search/?api=1&query=Pier%20Market%20Seafood%20Restaurant&query_place_id=ChIJHSGzi_yAhYAR9CGTkz3GiJ0",
+            "distanceMeters": 2466.9034323666965
+          },
+          {
+            "name": "La Mar Cocina Peruana San Francisco",
+            "category": "Peruvian restaurant",
+            "categories": [
+              "Peruvian restaurant",
+              "Latin American restaurant",
+              "Restaurant",
+              "Seafood restaurant"
+            ],
+            "cuisine": "Seafood restaurant",
+            "openingHours": "Monday: 11:30 AM to 2:30 PM, 5 to 9 PM; Tuesday: 11:30 AM to 2:30 PM, 5 to 9 PM; Wednesday: 11:30 AM to 2:30 PM, 5 to 9 PM; Thursday: 11:30 AM to 2:30 PM, 5 to 9 PM; Friday: 11:30 AM to 2:30 PM, 5 to 9:30 PM; Saturday: 11:30 AM to 2:30 PM, 5 to 9:30 PM; Sunday: 11:30 AM to 2:30 PM, 5 to 9 PM",
+            "openingHoursStruct": [
+              {
+                "open": 11.5,
+                "close": 14.5
+              },
+              {
+                "open": 11.5,
+                "close": 14.5
+              },
+              {
+                "open": 11.5,
+                "close": 14.5
+              },
+              {
+                "open": 11.5,
+                "close": 14.5
+              },
+              {
+                "open": 11.5,
+                "close": 14.5
+              },
+              {
+                "open": 11.5,
+                "close": 14.5
+              },
+              {
+                "open": 11.5,
+                "close": 14.5
+              }
+            ],
+            "rating": 4.5,
+            "reviews": 4865,
+            "price": "$100+",
+            "priceTier": 4,
+            "description": "Celeb chef Gastón Acurio serves Peruvian seafood in a large, partially outdoor space on the pier.",
+            "reviewsTags": [
+              {
+                "title": "Lomo Saltado Beef",
+                "count": 33
+              },
+              {
+                "title": "tiraditos",
+                "count": 40
+              },
+              {
+                "title": "outdoor seating",
+                "count": 167
+              },
+              {
+                "title": "halibut",
+                "count": 42
+              },
+              {
+                "title": "tres leches cake",
+                "count": 45
+              },
+              {
+                "title": "bay view",
+                "count": 27
+              },
+              {
+                "title": "octopus",
+                "count": 113
+              },
+              {
+                "title": "water view",
+                "count": 11
+              }
+            ],
+            "popularTimes": {
+              "Sun": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                20,
+                31,
+                37,
+                34,
+                0,
+                0,
+                35,
+                44,
+                46,
+                38,
+                0,
+                0,
+                0
+              ],
+              "Mon": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                17,
+                24,
+                24,
+                20,
+                0,
+                0,
+                41,
+                61,
+                70,
+                61,
+                0,
+                0,
+                0
+              ],
+              "Tue": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                14,
+                20,
+                26,
+                24,
+                0,
+                0,
+                58,
+                81,
+                91,
+                80,
+                0,
+                0,
+                0
+              ],
+              "Wed": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                22,
+                30,
+                29,
+                25,
+                0,
+                0,
+                61,
+                82,
+                89,
+                75,
+                0,
+                0,
+                0
+              ],
+              "Thu": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                15,
+                23,
+                26,
+                23,
+                0,
+                0,
+                55,
+                78,
+                86,
+                80,
+                0,
+                0,
+                0
+              ],
+              "Fri": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                19,
+                27,
+                33,
+                32,
+                0,
+                0,
+                43,
+                60,
+                77,
+                78,
+                64,
+                0,
+                0
+              ],
+              "Sat": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                25,
+                39,
+                44,
+                37,
+                0,
+                0,
+                58,
+                84,
+                100,
+                96,
+                71,
+                0,
+                0
+              ]
+            },
+            "liveBusyText": "Not too busy",
+            "liveBusyPercent": 21,
+            "reviewsDistribution": {
+              "oneStar": 143,
+              "twoStar": 105,
+              "threeStar": 288,
+              "fourStar": 973,
+              "fiveStar": 3356
+            },
+            "neighborhood": "Northern Waterfront",
+            "menuUrl": "http://places.singleplatform.com/la-mar-cebicheria-peruana/menu?ref=google",
+            "phone": "(415) 397-8880",
+            "website": "https://lamarcebicheria.com/san-francisco/",
+            "address": "PIER 1 1/2 The Embarcadero N, San Francisco, CA 94111",
+            "lat": 37.797239,
+            "lon": -122.3953922,
+            "url": "https://www.google.com/maps/search/?api=1&query=La%20Mar%20Cocina%20Peruana%20San%20Francisco&query_place_id=ChIJURDKN2eAhYARN0AMzUEaiKo",
+            "distanceMeters": 776.2879365761482
+          },
+          {
+            "name": "Piccolo Forno",
+            "category": "Italian restaurant",
+            "categories": [
+              "Italian restaurant"
+            ],
+            "cuisine": "",
+            "openingHours": "Monday: 11:45 AM to 10 PM; Tuesday: Closed; Wednesday: 11:45 AM to 10 PM; Thursday: 11:45 AM to 10 PM; Friday: 11:45 AM to 10 PM; Saturday: 11:45 AM to 10 PM; Sunday: 11:45 AM to 10 PM",
+            "openingHoursStruct": [
+              {
+                "open": 11.75,
+                "close": 22
+              },
+              {
+                "open": -1,
+                "close": -1
+              },
+              {
+                "open": 11.75,
+                "close": 22
+              },
+              {
+                "open": 11.75,
+                "close": 22
+              },
+              {
+                "open": 11.75,
+                "close": 22
+              },
+              {
+                "open": 11.75,
+                "close": 22
+              },
+              {
+                "open": 11.75,
+                "close": 22
+              }
+            ],
+            "rating": 4.7,
+            "reviews": 2219,
+            "price": "$20–30",
+            "priceTier": 2,
+            "description": "Casual neighborhood trattoria with Italian classics & espresso in colorful, contemporary quarters.",
+            "reviewsTags": [
+              {
+                "title": "pinsa",
+                "count": 44
+              },
+              {
+                "title": "gluten free pasta",
+                "count": 48
+              },
+              {
+                "title": "outdoor seating",
+                "count": 16
+              },
+              {
+                "title": "mushroom ravioli",
+                "count": 20
+              },
+              {
+                "title": "fettuccine alfredo",
+                "count": 29
+              },
+              {
+                "title": "lobster ravioli",
+                "count": 17
+              },
+              {
+                "title": "al dente pasta",
+                "count": 20
+              },
+              {
+                "title": "butternut squash ravioli",
+                "count": 10
+              }
+            ],
+            "popularTimes": {
+              "Sun": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                14,
+                29,
+                47,
+                54,
+                60,
+                68,
+                81,
+                97,
+                100,
+                87,
+                61,
+                0,
+                0
+              ],
+              "Mon": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                13,
+                20,
+                27,
+                27,
+                30,
+                33,
+                45,
+                59,
+                67,
+                64,
+                50,
+                0,
+                0
+              ],
+              "Tue": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "Wed": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                14,
+                27,
+                34,
+                32,
+                31,
+                36,
+                44,
+                56,
+                60,
+                56,
+                41,
+                0,
+                0
+              ],
+              "Thu": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                15,
+                24,
+                30,
+                31,
+                30,
+                33,
+                46,
+                59,
+                66,
+                54,
+                39,
+                0,
+                0
+              ],
+              "Fri": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                18,
+                27,
+                34,
+                40,
+                45,
+                49,
+                62,
+                73,
+                74,
+                67,
+                50,
+                0,
+                0
+              ],
+              "Sat": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                26,
+                43,
+                53,
+                57,
+                62,
+                72,
+                84,
+                92,
+                88,
+                81,
+                63,
+                0,
+                0
+              ]
+            },
+            "liveBusyText": "Not too busy",
+            "liveBusyPercent": 42,
+            "reviewsDistribution": {
+              "oneStar": 49,
+              "twoStar": 31,
+              "threeStar": 82,
+              "fourStar": 283,
+              "fiveStar": 1774
+            },
+            "neighborhood": "Russian Hill",
+            "menuUrl": "http://places.singleplatform.com/piccolo-forno-1/menu?ref=google",
+            "phone": "(415) 757-0087",
+            "website": "https://piccolo-forno-sf.com/",
+            "address": "725 Columbus Ave, San Francisco, CA 94133",
+            "lat": 37.801363,
+            "lon": -122.412033,
+            "url": "https://www.google.com/maps/search/?api=1&query=Piccolo%20Forno&query_place_id=ChIJLeYyO_CAhYAR6j9XsEIm3GI",
+            "distanceMeters": 1802.7606677938688
+          }
+        ]
+      },
+      "intelligence": {
+        "competitorsAnalyzed": 15,
+        "pricedCompetitors": 15,
+        "avgRating": 4.49,
+        "dominantTier": 4,
+        "dominantTierLabel": "$$$$",
+        "priceDistribution": [
+          {
+            "tier": 1,
+            "label": "$",
+            "count": 1,
+            "pct": 7
+          },
+          {
+            "tier": 2,
+            "label": "$$",
+            "count": 5,
+            "pct": 33
+          },
+          {
+            "tier": 3,
+            "label": "$$$",
+            "count": 3,
+            "pct": 20
+          },
+          {
+            "tier": 4,
+            "label": "$$$$",
+            "count": 6,
+            "pct": 40
+          }
+        ],
+        "topReviewTags": [
+          {
+            "title": "outdoor seating",
+            "count": 551,
+            "places": 9
+          },
+          {
+            "title": "clam chowder",
+            "count": 2309,
+            "places": 7
+          },
+          {
+            "title": "cioppino",
+            "count": 1579,
+            "places": 5
+          },
+          {
+            "title": "crab cakes",
+            "count": 506,
+            "places": 5
+          },
+          {
+            "title": "bar seating",
+            "count": 209,
+            "places": 5
+          },
+          {
+            "title": "sunset view",
+            "count": 179,
+            "places": 4
+          },
+          {
+            "title": "view of the bay",
+            "count": 148,
+            "places": 4
+          },
+          {
+            "title": "halibut",
+            "count": 125,
+            "places": 3
+          },
+          {
+            "title": "dungeness crab",
+            "count": 163,
+            "places": 2
+          },
+          {
+            "title": "Lobster Ravioli",
+            "count": 75,
+            "places": 2
+          },
+          {
+            "title": "beef tartare",
+            "count": 69,
+            "places": 2
+          },
+          {
+            "title": "gumbo",
+            "count": 51,
+            "places": 2
+          }
+        ],
+        "positivePraise": [],
+        "negativeFlags": [],
+        "topRated": [
+          {
+            "name": "Fog Harbor Fish House",
+            "rating": 4.5,
+            "reviews": 10099,
+            "price": "$20–80",
+            "url": "https://www.google.com/maps/search/?api=1&query=Fog%20Harbor%20Fish%20House&query_place_id=ChIJHSGzi_yAhYARptfivXk-Qlo"
+          },
+          {
+            "name": "Scoma's Restaurant",
+            "rating": 4.6,
+            "reviews": 6940,
+            "price": "$50–100",
+            "url": "https://www.google.com/maps/search/?api=1&query=Scoma's%20Restaurant&query_place_id=ChIJrcYeh_yAhYARNMwNAmHKa5c"
+          },
+          {
+            "name": "Pier Market Seafood Restaurant",
+            "rating": 4.4,
+            "reviews": 8526,
+            "price": "$20–30",
+            "url": "https://www.google.com/maps/search/?api=1&query=Pier%20Market%20Seafood%20Restaurant&query_place_id=ChIJHSGzi_yAhYAR9CGTkz3GiJ0"
+          }
+        ],
+        "recommendations": [
+          {
+            "title": "Most nearby spots are $$$$ — premium pricing is normalized in this area",
+            "action": "Test a premium signature item or chef's special priced 25-40% above your current top item. Track redemption for two weeks.",
+            "detail": "6 of 15 priced competitors fall in the $$$$ tier."
+          },
+          {
+            "title": "Signature signals in this block: outdoor seating, clam chowder, crab cakes, bar seating",
+            "action": "Customers actively look for these in this area. Add the closest match to your menu or storefront signage and call it out in your Google business description.",
+            "detail": "Mentions across nearby places: \"outdoor seating\" (9), \"clam chowder\" (7), \"crab cakes\" (5), \"bar seating\" (5), \"sunset view\" (4)."
+          },
+          {
+            "title": "Block peaks Sat at 6pm (~88% busy)",
+            "action": "Staff up 30 min ahead of the peak window. Pre-prep top sellers, push pickup before peak so dine-in seats free up faster, and put your highest-margin item on counter signage.",
+            "detail": "Aggregated from 14 nearby places' popular-times histograms."
+          },
+          {
+            "title": "12 of 15 nearby places stay open past 9pm",
+            "action": "If your hours close earlier, you may be missing the late evening window. Pilot extended hours on Fri/Sat for 2 weeks and measure incremental revenue against added labor cost.",
+            "detail": "Hours coverage was parsed from 15 nearby places."
+          },
+          {
+            "title": "3 of 15 nearby places open before 8am",
+            "action": "Early-morning is a real demand window in this block. If you don't already, add a 7am open Mon-Fri and track foot traffic vs current opening time.",
+            "detail": "Hours coverage parsed from 15 nearby places."
+          }
+        ],
+        "busyHeatmap": {
+          "days": [
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat",
+            "Sun"
+          ],
+          "hours": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "grid": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              21,
+              23,
+              32,
+              39,
+              40,
+              43,
+              47,
+              52,
+              61,
+              62,
+              52,
+              37,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              25,
+              21,
+              30,
+              36,
+              38,
+              42,
+              47,
+              57,
+              67,
+              67,
+              55,
+              34,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              26,
+              37,
+              42,
+              43,
+              44,
+              51,
+              60,
+              71,
+              70,
+              59,
+              37,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              14,
+              23,
+              35,
+              41,
+              43,
+              44,
+              49,
+              58,
+              68,
+              68,
+              58,
+              38,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              15,
+              28,
+              41,
+              48,
+              55,
+              59,
+              62,
+              64,
+              74,
+              78,
+              69,
+              56,
+              28,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              24,
+              35,
+              52,
+              64,
+              69,
+              76,
+              80,
+              82,
+              88,
+              88,
+              77,
+              62,
+              35,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              32,
+              31,
+              45,
+              56,
+              61,
+              66,
+              68,
+              68,
+              71,
+              67,
+              54,
+              38,
+              0,
+              0
+            ]
+          ],
+          "peakDay": "Sat",
+          "peakHour": 18,
+          "peakValue": 88,
+          "contributing": 14
+        },
+        "priceVsRating": [
+          {
+            "name": "Fog Harbor Fish House",
+            "tier": 2,
+            "price": "$20–80",
+            "rating": 4.5,
+            "reviews": 10099,
+            "url": "https://www.google.com/maps/search/?api=1&query=Fog%20Harbor%20Fish%20House&query_place_id=ChIJHSGzi_yAhYARptfivXk-Qlo"
+          },
+          {
+            "name": "Scoma's Restaurant",
+            "tier": 4,
+            "price": "$50–100",
+            "rating": 4.6,
+            "reviews": 6940,
+            "url": "https://www.google.com/maps/search/?api=1&query=Scoma's%20Restaurant&query_place_id=ChIJrcYeh_yAhYARNMwNAmHKa5c"
+          },
+          {
+            "name": "Sotto Mare",
+            "tier": 3,
+            "price": "$30–70",
+            "rating": 4.6,
+            "reviews": 5023,
+            "url": "https://www.google.com/maps/search/?api=1&query=Sotto%20Mare&query_place_id=ChIJQfYyVvGAhYARJVwoboB1WKQ"
+          },
+          {
+            "name": "Pier Market Seafood Restaurant",
+            "tier": 2,
+            "price": "$20–30",
+            "rating": 4.4,
+            "reviews": 8526,
+            "url": "https://www.google.com/maps/search/?api=1&query=Pier%20Market%20Seafood%20Restaurant&query_place_id=ChIJHSGzi_yAhYAR9CGTkz3GiJ0"
+          },
+          {
+            "name": "La Mar Cocina Peruana San Francisco",
+            "tier": 4,
+            "price": "$100+",
+            "rating": 4.5,
+            "reviews": 4865,
+            "url": "https://www.google.com/maps/search/?api=1&query=La%20Mar%20Cocina%20Peruana%20San%20Francisco&query_place_id=ChIJURDKN2eAhYARN0AMzUEaiKo"
+          },
+          {
+            "name": "Piccolo Forno",
+            "tier": 2,
+            "price": "$20–30",
+            "rating": 4.7,
+            "reviews": 2219,
+            "url": "https://www.google.com/maps/search/?api=1&query=Piccolo%20Forno&query_place_id=ChIJLeYyO_CAhYAR6j9XsEIm3GI"
+          },
+          {
+            "name": "Wayfare Tavern",
+            "tier": 4,
+            "price": "$50–100",
+            "rating": 4.5,
+            "reviews": 2982,
+            "url": "https://www.google.com/maps/search/?api=1&query=Wayfare%20Tavern&query_place_id=ChIJE5T3YoqAhYARtxUohSbFVDc"
+          },
+          {
+            "name": "Bubba Gump Shrimp Co.",
+            "tier": 2,
+            "price": "$20–30",
+            "rating": 4.2,
+            "reviews": 8290,
+            "url": "https://www.google.com/maps/search/?api=1&query=Bubba%20Gump%20Shrimp%20Co.&query_place_id=ChIJ_8px9PyAhYARs6brg40w7Ao"
+          },
+          {
+            "name": "Crab House at Pier 39",
+            "tier": 3,
+            "price": "$30–90",
+            "rating": 4.3,
+            "reviews": 4890,
+            "url": "https://www.google.com/maps/search/?api=1&query=Crab%20House%20at%20Pier%2039&query_place_id=ChIJ9T3A5PyAhYARce9_Mje3PoE"
+          },
+          {
+            "name": "Boulevard",
+            "tier": 4,
+            "price": "$100+",
+            "rating": 4.6,
+            "reviews": 1695,
+            "url": "https://www.google.com/maps/search/?api=1&query=Boulevard&query_place_id=ChIJF-zbSmSAhYARvOafjdCRszQ"
+          },
+          {
+            "name": "Lazy Bear",
+            "tier": 4,
+            "price": "$100+",
+            "rating": 4.7,
+            "reviews": 1177,
+            "url": "https://www.google.com/maps/search/?api=1&query=Lazy%20Bear&query_place_id=ChIJk35bizx-j4AREil6UPp7Jn4"
+          },
+          {
+            "name": "Cotogna",
+            "tier": 4,
+            "price": "$100+",
+            "rating": 4.5,
+            "reviews": 2186,
+            "url": "https://www.google.com/maps/search/?api=1&query=Cotogna&query_place_id=ChIJA0YvGPWAhYAReXmaDTTdWzU"
+          },
+          {
+            "name": "Chowder's",
+            "tier": 1,
+            "price": "$10–20",
+            "rating": 4.3,
+            "reviews": 3203,
+            "url": "https://www.google.com/maps/search/?api=1&query=Chowder's&query_place_id=ChIJHSGzi_yAhYAR6nmtmfLpeWU"
+          },
+          {
+            "name": "Delancey Street Restaurant",
+            "tier": 2,
+            "price": "$20–30",
+            "rating": 4.5,
+            "reviews": 1601,
+            "url": "https://www.google.com/maps/search/?api=1&query=Delancey%20Street%20Restaurant&query_place_id=ChIJTRf2DXeAhYARsjppfRXu44s"
+          },
+          {
+            "name": "Mission Rock Resort",
+            "tier": 3,
+            "price": "$30–60",
+            "rating": 4.4,
+            "reviews": 2162,
+            "url": "https://www.google.com/maps/search/?api=1&query=Mission%20Rock%20Resort&query_place_id=ChIJryemAsd_j4AR60urAIzz6Dc"
+          }
+        ],
+        "categoryBreakdown": {
+          "sectorLabel": "Cuisines on this block",
+          "total": 15,
+          "entries": [
+            {
+              "label": "Seafood restaurant",
+              "count": 8,
+              "pct": 53
+            },
+            {
+              "label": "American restaurant",
+              "count": 3,
+              "pct": 20
+            },
+            {
+              "label": "Italian restaurant",
+              "count": 2,
+              "pct": 13
+            },
+            {
+              "label": "Peruvian restaurant",
+              "count": 1,
+              "pct": 7
+            },
+            {
+              "label": "New American restaurant",
+              "count": 1,
+              "pct": 7
+            }
+          ]
+        },
+        "hoursCoverage": {
+          "contributing": 15,
+          "openLateCount": 12,
+          "openEarlyCount": 3,
+          "open24Count": 0,
+          "avgOpenByHour": [
+            0,
+            0,
+            0,
+            0,
+            0.1,
+            1.7,
+            1.7,
+            1.7,
+            1.7,
+            1.7,
+            3.7,
+            12.7,
+            13.7,
+            13.7,
+            13.3,
+            12,
+            12,
+            12,
+            12,
+            12,
+            11.9,
+            7.9,
+            0.3,
+            0
+          ],
+          "peakHour": 12,
+          "peakValue": 13.7,
+          "days": [
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat",
+            "Sun"
+          ]
+        }
+      },
+      "message": "San Francisco Google Places scan via Apify Actor compass/crawler-google-places returned 20 live business records."
+    }
   }
 }

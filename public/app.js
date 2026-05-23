@@ -1588,7 +1588,16 @@ function renderBanners(banners) {
 }
 
 function renderFilters(groups) {
-  const filters = ["all", "Store Info", "Opportunities", "Warnings", "Weather & Climate", ...groups.map((group) => filterLabel(group.label))].filter(uniqueFilter);
+  const groupLabels = new Set((groups || []).map((group) => filterLabel(group.label)));
+  const filters = [
+    "all",
+    "Store Info",
+    "Opportunities",
+    "Warnings",
+    "Weather & Climate",
+    groupLabels.has("Compliance and Licensing") ? "Compliance and Licensing" : "",
+    groupLabels.has("Market and Competition") ? "Market and Competition" : ""
+  ].filter(Boolean).filter(uniqueFilter);
   if (!filters.includes(state.activeSignalFilter) && state.activeSignalFilter !== "Restock") state.activeSignalFilter = "all";
   els.subTabs.innerHTML = filters.map((filter) => `
     <button class="filter-btn ${state.activeSignalFilter === filter ? "active" : ""}" data-filter="${escapeAttr(filter)}">${escapeHtml(filterButtonLabel(filter))}</button>
@@ -1660,20 +1669,27 @@ function renderStoreInfo() {
   els.storeInfoMeta.textContent = `${labelType(store.businessType)} · ${store.city || "City not set"}`;
   if (!show) return;
 
+  const intel = state.latestIntel || {};
+  const market = intel.marketIntelligence || {};
+  const places = intel.marketPlaces || [];
+  const topPlace = places[0];
   const staff = [store.fullTimeStaff && `${store.fullTimeStaff} full-time`, store.partTimeStaff && `${store.partTimeStaff} part-time`].filter(Boolean).join(" / ") || "Not set";
+  const peak = market.busyHeatmap?.peakDay
+    ? `${market.busyHeatmap.peakDay} ${formatHourLabel(market.busyHeatmap.peakHour)}`
+    : "No peak window yet";
+  const marketLine = intel.marketProvider === "apify"
+    ? `${market.competitorsAnalyzed || places.length || 0} relevant competitors from Apify`
+    : `${places.length || 0} relevant map records`;
   const profileRows = [
     ["Business name", store.businessName || "Unnamed storefront", locationLine(store), "wide"],
     ["Business type", `${iconType(store.businessType)} ${labelType(store.businessType)}`, store.cityScopeLabel || `${store.city || "City"} city-wide`, ""],
     ["Owner", store.ownerName || "Not set", contactLine(store), ""],
-    ["Legal structure", store.legalStructure || "Not set", store.founded ? `Founded ${store.founded}` : "Founded date not set", ""],
-    ["Staff", staff, store.languages ? `Languages: ${store.languages}` : "Languages not set", ""],
-    ["Revenue profile", store.avgTicket || "Average ticket not set", store.dailyRevenue ? `Typical daily revenue: ${store.dailyRevenue}` : "Daily revenue not set", ""],
-    ["Inventory exposure", store.inventoryValue || "Not set", store.suppliers ? `Suppliers: ${store.suppliers}` : "Suppliers not set", ""],
-    ["Continuity", store.backupPower || "Backup power/cold storage not set", store.insuranceCarrier ? `Insurance: ${store.insuranceCarrier}` : "Insurance not set", ""],
-    ["Security", store.securitySystem || "Not set", "Used for safety and closing recommendations", ""],
-    ["License / permit notes", store.licenseNotes || "Not set", `${(store.licenses || []).length} saved license records`, "wide"],
-    ["Document notes", store.documentNotes || "Not set", `${(store.documents || []).length} saved documents`, "wide"],
-    ["Private operating notes", store.storeNotes || "Not set", "Used by the chatbot and owner actions for this store only", "full"]
+    ["Staff", staff, store.languages ? `Languages: ${store.languages}` : "Add staff counts for better prep tasks", ""],
+    ["Ticket / revenue", store.avgTicket || "Average ticket not set", store.dailyRevenue ? `Typical daily revenue: ${store.dailyRevenue}` : "Used for monthly report estimates", ""],
+    ["Live market read", marketLine, topPlace ? `Top comparison: ${topPlace.name}` : "Refresh scan to load competitors", "wide"],
+    ["Peak window", peak, market.busyHeatmap?.contributing ? `From ${market.busyHeatmap.contributing} nearby popular-times records` : "Used by prep automation", ""],
+    ["Permit notes", store.licenseNotes || "No owner notes yet", `${(store.licenses || []).length} saved license records`, ""],
+    ["Private notes", store.storeNotes || "No private notes yet", "Used by the chatbot and owner actions only", "wide"]
   ];
 
   els.storeInfoPanel.innerHTML = profileRows.map(([label, value, note, span]) => `
@@ -1875,9 +1891,10 @@ function restockSuggestionsForStore(store) {
 function renderOpportunities(items) {
   const show = state.activeSignalFilter === "all" || state.activeSignalFilter === "Opportunities";
   els.opportunitiesSection.style.display = show ? "" : "none";
-  els.opportunitiesMeta.textContent = `${items.length} actions`;
+  const visibleItems = (items || []).filter(isDemoRelevantAction).slice(0, 4);
+  els.opportunitiesMeta.textContent = `${visibleItems.length} actions`;
   if (!show) return;
-  els.opportunitiesPanel.innerHTML = items.map((item) => `
+  els.opportunitiesPanel.innerHTML = visibleItems.map((item) => `
     <article class="op-card">
       <div class="card-meta-row">
         <span class="card-type">${escapeHtml(actionIcon(item.type || "Opportunity"))} ${escapeHtml(item.type || "Opportunity")}</span>
@@ -1897,10 +1914,11 @@ function renderOpportunities(items) {
 function renderWarnings(items) {
   const show = state.activeSignalFilter === "all" || state.activeSignalFilter === "Warnings";
   els.warningsSection.style.display = show ? "" : "none";
-  const actionable = items.filter((item) => item.urgency !== "Low").length;
+  const visibleItems = (items || []).filter((item) => item.urgency !== "Low").filter(isDemoRelevantAction).slice(0, 4);
+  const actionable = visibleItems.length;
   els.warningsMeta.textContent = `${actionable} owner actions`;
   if (!show) return;
-  els.warningsPanel.innerHTML = items.map((item) => `
+  els.warningsPanel.innerHTML = visibleItems.map((item) => `
     <article class="warning-card ${item.urgency === "High" ? "high" : ""}">
       <div class="card-meta-row">
         <span class="card-type">${escapeHtml(actionIcon(item.type || "Warning", item.urgency))} ${escapeHtml(item.urgency || "Review")} / ${escapeHtml(item.type || "Warning")}</span>
@@ -1915,6 +1933,12 @@ function renderWarnings(items) {
     </article>
   `).join("") || `<div class="empty">No urgent owner action found yet.</div>`;
   queuePageTranslation();
+}
+
+function isDemoRelevantAction(item) {
+  const text = `${item?.title || ""} ${item?.why || ""} ${item?.action || ""}`.toLowerCase();
+  if (/no urgent issue|this week looks steady|no clear|no useful|no major event spike|no obvious/.test(text)) return false;
+  return Boolean(item?.title && item?.action);
 }
 
 function renderWeather(days) {
@@ -2029,7 +2053,11 @@ function renderMap(intel) {
   }
 
   // City-scope radius circle
-  const radiusMeters = Number(profile.radiusMeters) || Number(profile.cityRadiusMeters) || 0;
+  const radiusMeters = Number(intel?.rawPreview?.marketScan?.radiusMeters) ||
+    Number(profile.localRadiusMeters) ||
+    Number(profile.radiusMeters) ||
+    Number(profile.cityRadiusMeters) ||
+    0;
   if (radiusMeters > 200) {
     const circle = L.circle([lat, lon], {
       radius: radiusMeters,
@@ -2066,7 +2094,8 @@ function renderMap(intel) {
     const tagLine = Array.isArray(place.reviewsTags) && place.reviewsTags.length
       ? `<div class="map-popup-meta">Themes: ${place.reviewsTags.slice(0, 3).map((t) => escapeHtml(t.title)).join(", ")}</div>`
       : "";
-    const linkLine = place.url ? `<a class="map-popup-link" href="${escapeAttr(place.url)}" target="_blank" rel="noreferrer">View on Google Maps →</a>` : "";
+    const mapsUrl = googleMapsLinkForPlace(place, profile);
+    const linkLine = `<a class="map-popup-link" href="${escapeAttr(mapsUrl)}" target="_blank" rel="noreferrer">Open in Google Maps</a>`;
     marker.bindPopup(`
       <div class="map-popup">
         <div class="map-popup-name">${escapeHtml(place.name || "Place")}</div>
@@ -2076,6 +2105,7 @@ function renderMap(intel) {
         ${linkLine}
       </div>
     `);
+    marker.on("click", () => window.location.assign(mapsUrl));
     placeMarkers.push(marker);
   }
   if (placeMarkers.length) {
@@ -2129,6 +2159,20 @@ function renderMap(intel) {
     ].filter(Boolean);
     els.mapStats.innerHTML = stats.map((stat) => `<span class="map-stat"><b>${escapeHtml(stat.value)}</b>${escapeHtml(stat.label)}</span>`).join("");
   }
+}
+
+function googleMapsLinkForPlace(place = {}, profile = {}) {
+  const direct = String(place.url || place.googleUrl || place.placeUrl || place.googleMapsUrl || "");
+  if (/google\.[^/]+\/maps|maps\.app\.goo\.gl/i.test(direct)) return direct;
+
+  const lat = Number(place.lat);
+  const lon = Number(place.lon);
+  const label = [place.name, place.address || place.category || profile.city].filter(Boolean).join(" ").trim() || "business";
+  const params = new URLSearchParams({ api: "1", query: label });
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    params.set("query", `${label} @${lat.toFixed(6)},${lon.toFixed(6)}`);
+  }
+  return `https://www.google.com/maps/search/?${params.toString()}`;
 }
 
 function renderMarketIntelligence(intel) {
@@ -2209,7 +2253,7 @@ function renderMarketIntelligence(intel) {
         </div>
         <div class="intel-leaders">
           ${intelligence.topRated.map((leader) => `
-            <a class="intel-leader" href="${escapeAttr(leader.url || "#")}" target="_blank" rel="noreferrer">
+            <a class="intel-leader" href="${escapeAttr(googleMapsLinkForPlace(leader, intel.profile || {}))}" target="_blank" rel="noreferrer">
               <span><b>${escapeHtml(leader.name)}</b></span>
               <span class="intel-leader-rating">${leader.rating?.toFixed(1) || "--"}★ ${formatCount(leader.reviews || 0)}</span>
               <span class="intel-leader-price">${escapeHtml(leader.price || "—")}</span>
@@ -2252,7 +2296,7 @@ function renderMarketIntelligence(intel) {
     }
   }
 
-  els.intelPanel.innerHTML = cards.join("") || `<div class="intel-empty">Live data loaded but not enough signal to compute pricing or review intelligence yet.</div>`;
+  els.intelPanel.innerHTML = cards.slice(0, 4).join("") || `<div class="intel-empty">Live data loaded but not enough signal to compute pricing or review intelligence yet.</div>`;
   wireScatterTooltip();
   queuePageTranslation();
 }
@@ -2675,7 +2719,7 @@ function renderAgentAutonomy() {
     <div class="agent-feature-head">
       <div>
         <div class="agent-feature-title">Customer Comeback List</div>
-        <div class="agent-feature-copy">Owner-only customer memory. Warden can create the Gmail draft as the owner and keep the rest as internal work.</div>
+        <div class="agent-feature-copy">Owner-only customer memory. Warden can send the fixed demo Gmail as the owner and keep the rest as internal work.</div>
       </div>
       <button class="btn good" data-agent-autonomy-run ${state.agentAutonomyRunning || !actions.length ? "disabled" : ""}>${state.agentAutonomyRunning ? "Working..." : "Run automations"}</button>
     </div>
@@ -2845,7 +2889,7 @@ async function runAutonomousActions() {
   const store = selectedStore();
   if (!store) return;
   if (currentAgentUser()?.role !== "owner") {
-    renderBanners([{ level: "warning", title: "Owner approval needed", body: "Customer email drafts and send lists only appear in the owner tab." }]);
+    renderBanners([{ level: "warning", title: "Owner approval needed", body: "Customer send lists and the demo Gmail action only appear in the owner tab." }]);
     return;
   }
   state.agentAutonomyRunning = true;
@@ -2872,7 +2916,7 @@ async function runAutonomousActions() {
       entire: { summary: "Entire draft/task/segment records created" },
       gmail: gmailEvent?.gmail ? { summary: gmailEvent.gmail } : null
     };
-    renderBanners([{ level: "opportunity", title: "Automations finished", body: data.message || "Warden created a Gmail draft plus owner-only internal work." }]);
+    renderBanners([{ level: "opportunity", title: "Automations finished", body: data.message || "Warden sent the demo Gmail plus owner-only internal work." }]);
     await refreshAgentAutonomy();
     await refreshAgentActions();
     await refreshAgentTrail();
@@ -3255,21 +3299,32 @@ function renderSignals(groups) {
 
   let visible = (groups || []).map((group) => ({
     ...group,
-    signals: (group.signals || []).filter((s) => !dedupeKeys.has(normalizeSignalKey(s.headline)))
+    signals: (group.signals || [])
+      .filter((s) => !dedupeKeys.has(normalizeSignalKey(s.headline)))
+      .filter(isDemoRelevantSignal)
   }));
   if (state.activeSignalFilter === "Warnings") {
     visible = groups.map((group) => ({
       ...group,
-      signals: (group.signals || []).filter((signal) => signal.severity === "critical" || signal.severity === "warning")
+      signals: (group.signals || [])
+        .filter((signal) => signal.severity === "critical" || signal.severity === "warning")
+        .filter(isDemoRelevantSignal)
     })).filter((group) => group.signals.length);
   } else if (state.activeSignalFilter === "Opportunities") {
-    visible = groups.filter((group) => group.label === "Opportunities");
+    visible = groups
+      .filter((group) => group.label === "Opportunities")
+      .map((group) => ({ ...group, signals: (group.signals || []).filter(isDemoRelevantSignal) }));
   } else if (state.activeSignalFilter === "Weather & Climate") {
-    visible = groups.filter((group) => filterLabel(group.label) === "Weather & Climate");
+    visible = groups
+      .filter((group) => filterLabel(group.label) === "Weather & Climate")
+      .map((group) => ({ ...group, signals: (group.signals || []).filter(isDemoRelevantSignal) }));
   } else if (state.activeSignalFilter !== "all") {
-    visible = groups.filter((group) => filterLabel(group.label) === state.activeSignalFilter);
+    visible = groups
+      .filter((group) => filterLabel(group.label) === state.activeSignalFilter)
+      .map((group) => ({ ...group, signals: (group.signals || []).filter(isDemoRelevantSignal) }));
   }
 
+  visible = visible.filter((group) => group.signals?.length);
   if (!visible.length || !visible.some((group) => group.signals?.length)) {
     els.signalsRoot.innerHTML = `<div class="empty">No decision cards in this view.</div>`;
     queuePageTranslation();
@@ -3277,7 +3332,7 @@ function renderSignals(groups) {
   }
   const compact = state.activeSignalFilter === "all";
   els.signalsRoot.innerHTML = visible.map((group) => {
-    const signals = compact ? group.signals.slice(0, 2) : group.signals;
+    const signals = compact ? group.signals.slice(0, 1) : group.signals.slice(0, 4);
     return `
     <section class="section-block">
       <div class="group-head"><span class="kicker">${escapeHtml(group.label)}</span><span class="group-count">${group.signals.length} signals</span></div>
@@ -3286,6 +3341,14 @@ function renderSignals(groups) {
   `;
   }).join("");
   queuePageTranslation();
+}
+
+function isDemoRelevantSignal(signal) {
+  const text = `${signal?.headline || ""} ${signal?.body || ""} ${signal?.action || ""}`.toLowerCase();
+  if (/no major|no obvious|no useful|no urgent|did not clearly|looks steady|normal plan|keep normal|monitor only/.test(text)) return false;
+  if (signal?.ownerReady) return true;
+  if (["critical", "warning", "opportunity"].includes(signal?.severity)) return true;
+  return ["Market and Competition", "Compliance and Licensing"].includes(signal?.group);
 }
 
 function normalizeSignalKey(value) {

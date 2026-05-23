@@ -46,12 +46,14 @@ const DEFAULT_PROFILE = {
 
 const DELEGATED_ACTION_AUDIT = [];
 const DELEGATED_AGENT_INBOX = [];
+const DEMO_OWNER_EMAIL = process.env.DEMO_OWNER_EMAIL || "dhrumildeepakshah@gmail.com";
+const DEMO_CUSTOMER_EMAIL = process.env.DEMO_CUSTOMER_EMAIL || process.env.WARDEN_GMAIL_DEMO_TO || "dhrumil789789@gmail.com";
 
 const DEMO_AGENT_USERS = [
   {
     id: "owner-ava",
     name: "Ava Patel",
-    email: process.env.DEMO_OWNER_EMAIL || "ava@missiondemo.com",
+    email: DEMO_OWNER_EMAIL,
     role: "owner",
     title: "Owner",
     tenantId: "tenant-mission-demo",
@@ -96,8 +98,6 @@ const DEMO_AGENT_USERS = [
     ]
   }
 ];
-
-const DEMO_CUSTOMER_EMAIL = process.env.DEMO_CUSTOMER_EMAIL || "regular.customer@example.com";
 
 const SOURCE_CATALOG = [
   {
@@ -753,7 +753,8 @@ function buildAutonomousAgentPlan(body = {}, params = new URLSearchParams()) {
     actions,
     guardrails: [
       "Only internal Entire.io tasks, drafts, segments, and teammate messages run automatically.",
-      "No public posts, refunds, purchases, customer sends, or hour changes run without owner approval.",
+      `The only automatic customer send is the fixed Gmail demo recipient ${DEMO_CUSTOMER_EMAIL}.`,
+      "No public posts, refunds, purchases, real customer sends, or hour changes run without owner approval.",
       "Every automatic move is logged into the shared tenant report trail."
     ],
     audit: agentAuditForUser(user, 12),
@@ -777,7 +778,13 @@ async function executeAutonomousActions(body = {}) {
     };
     const entire = await executeEntireAction({ user, store, action, scalekit });
     const gmail = liveConnectors
-      ? await executeGmailAutomation({ user, store, action, demoRecipient: body.gmailDemoRecipient || body.demoRecipient })
+      ? await executeGmailAutomation({
+          user,
+          store,
+          action,
+          demoRecipient: body.gmailDemoRecipient || body.demoRecipient,
+          delivery: body.gmailDelivery || body.delivery
+        })
       : null;
     const auditEvent = {
       id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -829,6 +836,8 @@ async function executeAutonomousActions(body = {}) {
     }
   }
 
+  const gmailSent = results.some((result) => result.gmail?.delivery === "send");
+  const gmailTouched = results.some((result) => result.gmail);
   return {
     ok: true,
     executed: true,
@@ -839,7 +848,11 @@ async function executeAutonomousActions(body = {}) {
     audit: agentAuditForUser(user, 20),
     liveConnectors,
     message: liveConnectors
-      ? `Warden Autopilot created ${results.length} automations and used Scalekit Gmail when a live email draft was safe.`
+      ? gmailSent
+        ? `Warden Autopilot created ${results.length} automations and sent the fixed demo Gmail through Scalekit.`
+        : gmailTouched
+          ? `Warden Autopilot created ${results.length} automations and created a Scalekit Gmail draft.`
+          : `Warden Autopilot created ${results.length} automations with live connector guardrails.`
       : `Warden Autopilot safely created ${results.length} internal drafts, tasks, segments, or teammate messages.`
   };
 }
@@ -995,10 +1008,10 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
     }),
     autonomousAction({
       id: "auto-send-churn-save-email",
-      title: "Auto-create Gmail comeback draft",
-      target: "Gmail Draft via Scalekit",
-      summary: `Creates a Gmail comeback draft for an opted-in regular who usually buys ${signals.topItem}.`,
-      guardrail: "Opted-in regular only, under $5 offer value, one draft per 30 days, no SMS or public post.",
+      title: "Auto-send demo comeback email",
+      target: "Gmail Send via Scalekit",
+      summary: `Sends the demo comeback note to the approved test customer who usually buys ${signals.topItem}.`,
+      guardrail: "Demo customer only, under $5 offer value, one send per run, no SMS or public post.",
       evidence: `${customer.email} has not visited for ${customer.lastVisitDaysAgo} days after ${customer.visits90d} recent visits`,
       visibilityRoles: ["owner"],
       inboxRole: "",
@@ -1010,6 +1023,7 @@ function recommendedAutonomousActions({ user, store, intel, customers, signals, 
         offerCap: 5,
         consent: "opted_in",
         frequencyCapDays: 30,
+        delivery: "send",
         sentAutomatically: true
       }
     }),
@@ -1614,7 +1628,7 @@ async function executeEntireAction({ user, store, action, scalekit }) {
   };
 }
 
-async function executeGmailAutomation({ user, store, action, demoRecipient }) {
+async function executeGmailAutomation({ user, store, action, demoRecipient, delivery }) {
   if (action.id !== "auto-send-churn-save-email") return null;
 
   if (!scalekitConfiguredForTools()) {
@@ -1638,6 +1652,7 @@ async function executeGmailAutomation({ user, store, action, demoRecipient }) {
     }
 
     const recipient = safeDemoRecipient(action.payload?.to, account.identifier, demoRecipient);
+    const deliveryMode = gmailDeliveryMode(delivery || action.payload?.delivery, recipient);
     const subject = action.payload?.subject || `${store.businessName || "Your store"} saved your usual`;
     const body = [
       `Hi ${firstNameFromCustomer(action.payload?.customerName) || "there"},`,
@@ -1647,19 +1662,24 @@ async function executeGmailAutomation({ user, store, action, demoRecipient }) {
       "Owner review note: send only if this customer opted in and has not received a comeback note in the last 30 days."
     ].join("\n");
 
-    const response = await createGmailDraftViaScalekit({
+    const response = await createGmailMessageViaScalekit({
       connectedAccountId: account.id,
       to: recipient,
       subject,
-      body
+      body,
+      deliveryMode
     });
 
     return {
       mode: "live",
-      summary: `Created real Gmail draft as ${account.identifier} using the Scalekit connected account`,
+      summary: deliveryMode === "send"
+        ? `Sent real Gmail demo email as ${account.identifier} to ${recipient} using the Scalekit connected account`
+        : `Created real Gmail draft as ${account.identifier} to ${recipient} using the Scalekit connected account`,
       connector: account.connector,
       connectedAccountId: account.id,
-      draftId: response.id,
+      delivery: deliveryMode,
+      draftId: deliveryMode === "draft" ? response.id : null,
+      messageId: deliveryMode === "send" ? response.id : response.message?.id,
       response
     };
   } catch (error) {
@@ -1722,7 +1742,7 @@ function connectedAccountsFromPayload(payload) {
   return payload?.connected_accounts || payload?.data || payload?.items || [];
 }
 
-async function createGmailDraftViaScalekit({ connectedAccountId, to, subject, body }) {
+async function createGmailMessageViaScalekit({ connectedAccountId, to, subject, body, deliveryMode = "draft" }) {
   const detail = await scalekitApi(`/api/v1/connected_accounts/${encodeURIComponent(connectedAccountId)}`);
   const accessToken = detail?.connected_account?.authorization_details?.oauth_token?.access_token;
   if (!accessToken) throw new Error("Scalekit connected account did not return an active Gmail access token");
@@ -1731,20 +1751,41 @@ async function createGmailDraftViaScalekit({ connectedAccountId, to, subject, bo
     subject,
     body
   });
-  return fetchJson("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
+  const endpoint = deliveryMode === "send"
+    ? "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+    : "https://gmail.googleapis.com/gmail/v1/users/me/drafts";
+  const payload = deliveryMode === "send"
+    ? { raw }
+    : { message: { raw } };
+  return fetchJson(endpoint, {
     method: "POST",
     headers: {
       authorization: `Bearer ${accessToken}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify({ message: { raw } })
+    body: JSON.stringify(payload)
   }, 12000);
 }
 
 function safeDemoRecipient(candidate, fallback, requested) {
-  const value = String(requested || process.env.WARDEN_GMAIL_DEMO_TO || candidate || "").trim();
+  const value = String(requested || process.env.WARDEN_GMAIL_DEMO_TO || DEMO_CUSTOMER_EMAIL || candidate || "").trim();
   if (value && !/@example\.com$/i.test(value)) return value;
   return fallback || value || "owner@example.com";
+}
+
+function gmailDeliveryMode(requested, recipient) {
+  const mode = String(requested || process.env.WARDEN_GMAIL_DELIVERY || "send").toLowerCase();
+  if (mode !== "send") return "draft";
+  return approvedDemoRecipient(recipient) ? "send" : "draft";
+}
+
+function approvedDemoRecipient(recipient) {
+  const email = String(recipient || "").trim().toLowerCase();
+  const allowList = [
+    DEMO_CUSTOMER_EMAIL,
+    process.env.WARDEN_GMAIL_DEMO_TO
+  ].filter(Boolean).map((item) => String(item).trim().toLowerCase());
+  return allowList.includes(email);
 }
 
 function encodeGmailMime({ to, subject, body }) {
@@ -2612,6 +2653,7 @@ async function buildIntel(profile) {
   const context = { ...profile, ...location };
   const cityScope = await resolveCityScope(context);
   Object.assign(context, cityScope);
+  context.localRadiusMeters = Number(profile.radiusMeters) || DEFAULT_PROFILE.radiusMeters;
 
   const [
     weather,
@@ -2927,6 +2969,7 @@ async function fetchPoliceIncidents(profile) {
   });
   const sourceUrl = `https://data.sfgov.org/resource/wg3w-h783.json?${params}`;
   const data = await fetchSocrata(sourceUrl);
+  const radiusMeters = localBusinessRadiusMeters(profile, 3200);
   const items = (Array.isArray(data) ? data : [])
     .map((row) => ({
       title: row.incident_category || "Incident",
@@ -2937,7 +2980,7 @@ async function fetchPoliceIncidents(profile) {
       lon: Number(row.longitude),
       distanceMeters: distanceMeters(profile.lat, profile.lon, Number(row.latitude), Number(row.longitude))
     }))
-    .filter((row) => Number.isFinite(row.distanceMeters) && row.distanceMeters <= profile.radiusMeters)
+    .filter((row) => Number.isFinite(row.distanceMeters) && row.distanceMeters <= radiusMeters)
     .slice(0, 50);
 
   return { ok: true, sourceUrl, items, count: items.length };
@@ -2963,6 +3006,7 @@ async function fetch311Cases(profile) {
   });
   const sourceUrl = `https://data.sfgov.org/resource/vw6y-z8j6.json?${params}`;
   const data = await fetchSocrata(sourceUrl);
+  const radiusMeters = localBusinessRadiusMeters(profile, 4500);
   const items = (Array.isArray(data) ? data : [])
     .map((row) => ({
       id: row.service_request_id,
@@ -2975,34 +3019,38 @@ async function fetch311Cases(profile) {
       lon: Number(row.long),
       distanceMeters: distanceMeters(profile.lat, profile.lon, Number(row.lat), Number(row.long))
     }))
-    .filter((row) => Number.isFinite(row.distanceMeters) && row.distanceMeters <= profile.radiusMeters)
+    .filter((row) => Number.isFinite(row.distanceMeters) && row.distanceMeters <= radiusMeters)
     .slice(0, 75);
 
   return { ok: true, sourceUrl, items, count: items.length };
 }
 
-// 7-day TTL so demo data survives reboots / overnight gaps without re-burning Apify credits.
-const APIFY_PLACES_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// Cache Apify places aggressively so the hackathon demo stays responsive and
+// does not re-burn credits while the judges are watching the same storefront.
+const APIFY_PLACES_TTL_MS = Number(process.env.APIFY_PLACES_TTL_DAYS || 30) * 24 * 60 * 60 * 1000;
 
 async function fetchApifyPlaces(profile) {
-  const radius = clamp(Number(profile.radiusMeters || profile.cityRadiusMeters || 16000), 3000, 35000);
-  const sourceUrl = osmMapUrl(profile);
+  const radius = localBusinessRadiusMeters(profile, 4800);
   const actorId = process.env.APIFY_PLACES_ACTOR || "compass/crawler-google-places";
   const max = Number(process.env.APIFY_MAX_PLACES || 10);
   const queries = competitorSearchQueries(profile);
+  const sourceUrl = googleMapsSearchUrl(queries[0], profile);
   const consoleUrl = `https://console.apify.com/actors/${actorId.replace("/", "~")}`;
 
-  const cacheKey = [
+  const cacheKeyParts = [
     actorId,
-    "v6",
+    "v7",
     String(profile.city || "").toLowerCase().trim(),
     String(profile.state || "").toLowerCase().trim(),
     normalizeType(profile.businessType),
     max
-  ].join("|");
-  const cached = APIFY_PLACES_CACHE.get(cacheKey);
+  ];
+  const cacheKey = cacheKeyParts.join("|");
+  const legacyCacheKey = [actorId, "v6", ...cacheKeyParts.slice(2)].join("|");
+  const cached = APIFY_PLACES_CACHE.get(cacheKey) || APIFY_PLACES_CACHE.get(legacyCacheKey);
   if (cached && (Date.now() - cached.at) < APIFY_PLACES_TTL_MS) {
-    return { ...cached.payload, message: `${cached.payload.message} (cached ${Math.round((Date.now() - cached.at) / 1000)}s ago)` };
+    const normalized = normalizeCachedApifyPlaces(cached.payload, profile, radius, sourceUrl, consoleUrl, actorId);
+    return { ...normalized, message: `${normalized.message} (cached ${Math.round((Date.now() - cached.at) / 1000)}s ago)` };
   }
 
   // Tight search radius so Google Maps returns places ACTUALLY near the store,
@@ -3026,7 +3074,7 @@ async function fetchApifyPlaces(profile) {
     input.locationQuery = [profile.city, profile.state || "", "USA"].filter(Boolean).join(", ");
   }
 
-  const result = await runApifyActor(actorId, input, 240000);
+  const result = await runApifyActor(actorId, input, Number(process.env.APIFY_PLACES_TIMEOUT_MS || 20000));
   if (!result.ok) {
     return {
       ok: false,
@@ -3067,14 +3115,20 @@ async function fetchApifyPlaces(profile) {
     address: place.address || "",
     lat: Number(place.location?.lat ?? place.lat),
     lon: Number(place.location?.lng ?? place.lon ?? place.lng),
-    url: place.url || place.googleUrl || ""
-  })).filter((item) => item.name && item.category);
+    url: googleMapsUrlFromPlace(place, profile)
+  }))
+    .filter((item) => item.name && item.category)
+    .map((item) => ({
+      ...item,
+      distanceMeters: distanceMeters(profile.lat, profile.lon, item.lat, item.lon)
+    }))
+    .filter((item) => Number.isFinite(item.distanceMeters) && item.distanceMeters <= radius);
 
   const categories = topCounts(items.map((item) => item.category), 8);
   const sameCategory = competitorCategories(profile.businessType);
   const competitors = items
     .filter((item) => sameCategory.some((term) => String(item.category).toLowerCase().includes(term)))
-    .sort((a, b) => apifyCompetitorScore(b) - apifyCompetitorScore(a))
+    .sort((a, b) => apifyCompetitorScore(b) - apifyCompetitorScore(a) || a.distanceMeters - b.distanceMeters)
     .slice(0, 15);
 
   const intelligence = buildMarketIntelligence(items, competitors, profile);
@@ -3084,7 +3138,7 @@ async function fetchApifyPlaces(profile) {
     technicalUrl: consoleUrl,
     provider: "apify",
     actorId,
-    items: items.slice(0, 80),
+    items: competitors,
     count: items.length,
     summary: {
       radiusMeters: radius,
@@ -3098,6 +3152,74 @@ async function fetchApifyPlaces(profile) {
   APIFY_PLACES_CACHE.set(cacheKey, { at: Date.now(), payload });
   persistPlacesCache();
   return payload;
+}
+
+function normalizeCachedApifyPlaces(payload, profile, radius, sourceUrl, consoleUrl, actorId) {
+  const rawItems = Array.isArray(payload?.items) ? payload.items : [];
+  const items = rawItems.map((place) => {
+    const lat = Number(place.location?.lat ?? place.lat);
+    const lon = Number(place.location?.lng ?? place.lon ?? place.lng);
+    return {
+      name: place.title || place.name || "Place",
+      category: place.categoryName || place.category || (Array.isArray(place.categories) ? place.categories[0] : "") || "business",
+      categories: Array.isArray(place.categories) ? place.categories : [],
+      cuisine: place.cuisine || "",
+      openingHours: formatApifyHours(place.openingHours),
+      openingHoursStruct: Array.isArray(place.openingHoursStruct) ? place.openingHoursStruct : parseOpeningHours(place.openingHours),
+      rating: Number(place.totalScore ?? place.rating) || null,
+      reviews: Number(place.reviewsCount ?? place.reviews) || null,
+      price: typeof place.price === "string" ? place.price.trim() : "",
+      priceTier: Number(place.priceTier) || priceTierFromString(place.price),
+      description: typeof place.description === "string" ? place.description : "",
+      reviewsTags: Array.isArray(place.reviewsTags) ? place.reviewsTags.slice(0, 8).map((tag) => ({
+        title: String(tag.title || tag.name || tag).trim(),
+        count: Number(tag.count) || 0
+      })).filter((tag) => tag.title) : [],
+      popularTimes: place.popularTimes || compactPopularTimes(place.popularTimesHistogram),
+      liveBusyText: place.popularTimesLiveText || place.liveBusyText || "",
+      liveBusyPercent: Number(place.popularTimesLivePercent ?? place.liveBusyPercent) || null,
+      reviewsDistribution: place.reviewsDistribution || null,
+      neighborhood: place.neighborhood || "",
+      menuUrl: place.menu || place.menuUrl || "",
+      phone: place.phone || place.phoneUnformatted || "",
+      website: place.website || "",
+      address: place.address || "",
+      lat,
+      lon,
+      url: googleMapsUrlFromPlace(place, profile),
+      distanceMeters: distanceMeters(profile.lat, profile.lon, lat, lon)
+    };
+  })
+    .filter((item) => item.name && item.category)
+    .filter((item) => Number.isFinite(item.distanceMeters) && item.distanceMeters <= radius);
+
+  const sameCategory = competitorCategories(profile.businessType);
+  const competitors = items
+    .filter((item) => {
+      const haystack = [item.category, ...(item.categories || [])].join(" ").toLowerCase();
+      return sameCategory.some((term) => haystack.includes(term));
+    })
+    .sort((a, b) => apifyCompetitorScore(b) - apifyCompetitorScore(a) || a.distanceMeters - b.distanceMeters)
+    .slice(0, 15);
+  const visibleItems = competitors.length ? competitors : items.sort((a, b) => a.distanceMeters - b.distanceMeters).slice(0, 15);
+  const intelligence = buildMarketIntelligence(items, visibleItems, profile);
+  return {
+    ok: true,
+    sourceUrl,
+    technicalUrl: payload?.technicalUrl || consoleUrl,
+    provider: "apify",
+    actorId: payload?.actorId || actorId,
+    items: visibleItems,
+    count: items.length,
+    summary: {
+      radiusMeters: radius,
+      topCategories: topCounts(items.map((item) => item.category), 8),
+      competitorCount: visibleItems.length,
+      sampleCompetitors: visibleItems.slice(0, 6)
+    },
+    intelligence,
+    message: `${profile.city || "City"} Google Places scan via Apify returned ${items.length} local business records`
+  };
 }
 
 function priceTierFromString(value) {
@@ -3529,7 +3651,7 @@ function apifyCompetitorScore(item) {
 }
 
 async function fetchMarketScan(profile) {
-  if (process.env.APIFY_TOKEN && process.env.APIFY_PLACES_DISABLED !== "1") {
+  if (process.env.APIFY_PLACES_DISABLED !== "1" && (process.env.APIFY_TOKEN || scalekitConfiguredForTools())) {
     try {
       const apifyResult = await fetchApifyPlaces(profile);
       if (apifyResult?.ok && apifyResult.count > 0) return apifyResult;
@@ -3538,8 +3660,8 @@ async function fetchMarketScan(profile) {
     }
   }
 
-  const radius = clamp(Number(profile.radiusMeters || profile.cityRadiusMeters || 16000), 3000, 35000);
-  const sourceUrl = osmMapUrl(profile);
+  const radius = localBusinessRadiusMeters(profile, 4800);
+  const sourceUrl = googleMapsSearchUrl(competitorSearchQueries(profile)[0], profile);
   const query = `
     [out:json][timeout:18];
     (
@@ -3564,17 +3686,23 @@ async function fetchMarketScan(profile) {
         openingHours: tags.opening_hours || "",
         lat: Number(element.lat || element.center?.lat),
         lon: Number(element.lon || element.center?.lon),
-        url: osmElementUrl(element)
+        url: googleMapsSearchUrl(`${tags.name || labelForType(category)} ${profile.city || ""}`, { ...profile, lat: Number(element.lat || element.center?.lat), lon: Number(element.lon || element.center?.lon) })
       };
-    }).filter((item) => item.name && item.category);
+    })
+      .filter((item) => item.name && item.category)
+      .map((item) => ({ ...item, distanceMeters: distanceMeters(profile.lat, profile.lon, item.lat, item.lon) }))
+      .filter((item) => Number.isFinite(item.distanceMeters) && item.distanceMeters <= radius);
     const categories = topCounts(items.map((item) => item.category), 8);
     const sameCategory = competitorCategories(profile.businessType);
-    const competitors = items.filter((item) => sameCategory.some((term) => String(item.category).toLowerCase().includes(term))).slice(0, 15);
+    const competitors = items
+      .filter((item) => sameCategory.some((term) => String(item.category).toLowerCase().includes(term)))
+      .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .slice(0, 15);
     return {
       ok: true,
       sourceUrl,
       technicalUrl,
-      items: items.slice(0, 80),
+      items: competitors,
       count: items.length,
       summary: {
         radiusMeters: radius,
@@ -3582,7 +3710,7 @@ async function fetchMarketScan(profile) {
         competitorCount: competitors.length,
         sampleCompetitors: competitors.slice(0, 6)
       },
-      message: `${profile.city || "City"} OpenStreetMap scan sampled ${items.length} public business/amenity records through Overpass.`
+      message: `${profile.city || "City"} fallback map scan found ${competitors.length} relevant nearby competitors.`
     };
   } catch (error) {
     return {
@@ -3594,6 +3722,56 @@ async function fetchMarketScan(profile) {
       error: error.message,
       message: "OpenStreetMap Overpass scan did not return in time; other city scans still ran."
     };
+  }
+}
+
+function localBusinessRadiusMeters(profile, fallback = 4500) {
+  const configured = Number(process.env.WARDEN_LOCAL_RADIUS_METERS);
+  if (Number.isFinite(configured) && configured > 500) return clamp(configured, 800, 12000);
+  const local = Number(profile.localRadiusMeters);
+  if (Number.isFinite(local) && local > 500 && local < 12000) return local;
+  const stored = Number(profile.radiusMeters);
+  if (Number.isFinite(stored) && stored > 500 && stored < 12000) return stored;
+  return fallback;
+}
+
+function googleMapsSearchUrl(query, profile = {}) {
+  const text = String(query || "").trim() || [profile.businessName, profile.address, profile.city].filter(Boolean).join(" ");
+  const params = new URLSearchParams({ api: "1", query: text });
+  const lat = Number(profile.lat);
+  const lon = Number(profile.lon);
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    params.set("query", `${text} @${lat.toFixed(6)},${lon.toFixed(6)}`);
+  }
+  return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
+function googleMapsUrlFromPlace(place, profile) {
+  const direct = place.url || place.googleUrl || place.placeUrl || place.googleMapsUrl || "";
+  if (/google\.[^/]+\/maps|maps\.app\.goo\.gl/i.test(String(direct))) return direct;
+  const name = place.title || place.name || "business";
+  const address = place.address || [profile.city, profile.state].filter(Boolean).join(", ");
+  const lat = Number(place.location?.lat ?? place.lat);
+  const lon = Number(place.location?.lng ?? place.lon ?? place.lng);
+  return googleMapsSearchUrl([name, address].filter(Boolean).join(" "), { ...profile, lat, lon });
+}
+
+async function getScalekitStaticToken({ connectorPattern, providerPattern }) {
+  if (!scalekitConfiguredForTools()) return "";
+  try {
+    const payload = await scalekitApi("/api/v1/connected_accounts?page_size=30");
+    const account = connectedAccountsFromPayload(payload).find((item) =>
+      /active/i.test(String(item.status || "")) &&
+      (connectorPattern.test(String(item.connector || item.connection_name || item.connector_name || "")) ||
+        providerPattern.test(String(item.provider || "")))
+    );
+    if (!account?.id) return "";
+    const detail = await scalekitApi(`/api/v1/connected_accounts/${encodeURIComponent(account.id)}`);
+    const staticAuth = detail?.connected_account?.authorization_details?.static_auth?.details || {};
+    return staticAuth.token || staticAuth.api_token || staticAuth.apiKey || staticAuth.api_key || "";
+  } catch (error) {
+    console.warn(`Scalekit static token lookup failed: ${error.message}`);
+    return "";
   }
 }
 
@@ -3808,16 +3986,20 @@ async function fetchNaturalEvents(profile) {
 }
 
 async function runApifyActor(actorId, input, timeoutMs = 240000) {
-  if (!process.env.APIFY_TOKEN) {
+  const token = process.env.APIFY_TOKEN || await getScalekitStaticToken({
+    connectorPattern: /apify/i,
+    providerPattern: /apify/i
+  });
+  if (!token) {
     return {
       ok: false,
-      error: "APIFY_TOKEN is not configured.",
-      next: "Add APIFY_TOKEN to .env when you want Actor-backed sources."
+      error: "No active Apify token found in local env or Scalekit connected accounts.",
+      next: "Connect Apify in Scalekit or add APIFY_TOKEN to .env when you want Actor-backed sources."
     };
   }
 
   const apiActorId = actorId.replace("/", "~");
-  const endpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(apiActorId)}/run-sync-get-dataset-items?token=${encodeURIComponent(process.env.APIFY_TOKEN)}`;
+  const endpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(apiActorId)}/run-sync-get-dataset-items?token=${encodeURIComponent(token)}`;
   try {
     const items = await fetchJson(endpoint, {
       method: "POST",
@@ -5160,7 +5342,7 @@ function numberOrNull(value) {
 
 function competitorCategories(type) {
   const map = {
-    restaurant: ["restaurant", "cafe", "fast_food", "bar", "pub", "food"],
+    restaurant: ["restaurant", "cafe", "fast_food", "food"],
     grocery: ["supermarket", "convenience", "greengrocer", "grocery", "deli"],
     retail: ["clothes", "convenience", "gift", "department_store", "shop"],
     salon: ["beauty", "hairdresser"],
