@@ -2345,10 +2345,11 @@ async function handleChat({ message, store, intel, history }) {
   const intent = detectChatIntent(text);
   const sentiment = detectChatSentiment(text);
   const liveContext = await buildChatLiveContext({ text, store: chatStore, intel: chatIntel, intent });
+  const groundedReply = () => buildGroundedChatReply({ text, store: chatStore, intel: chatIntel, intent, sentiment, liveContext });
   if (intent === "product") {
     return {
       ok: true,
-      reply: buildGroundedChatReply({ text, store: chatStore, intel: chatIntel, intent, sentiment, liveContext }),
+      reply: groundedReply(),
       provider: liveContext?.product?.options?.length ? "apify-restock" : "local-grounded",
       intent,
       sentiment
@@ -2357,8 +2358,17 @@ async function handleChat({ message, store, intel, history }) {
   if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
     return {
       ok: true,
-      reply: buildGroundedChatReply({ text, store: chatStore, intel: chatIntel, intent, sentiment, liveContext }),
-      provider: "local-grounded",
+      reply: groundedReply(),
+      provider: chatProviderForContext(intent, liveContext),
+      intent,
+      sentiment
+    };
+  }
+  if (process.env.LIVE_LLM_CHAT !== "1") {
+    return {
+      ok: true,
+      reply: groundedReply(),
+      provider: chatProviderForContext(intent, liveContext),
       intent,
       sentiment
     };
@@ -2385,7 +2395,17 @@ async function handleChat({ message, store, intel, history }) {
   }
 
   if (!process.env.ANTHROPIC_API_KEY && process.env.GEMINI_API_KEY) {
-    return callGeminiChat({ model, system, messages });
+    const llm = await callGeminiChat({ model, system, messages });
+    if (llm.ok) return { ...llm, provider: llm.provider || "gemini", intent, sentiment };
+    return {
+      ok: true,
+      reply: groundedReply(),
+      provider: chatProviderForContext(intent, liveContext),
+      intent,
+      sentiment,
+      fallback: true,
+      error: llm.error || "Gemini fallback"
+    };
   }
 
   try {
@@ -2406,7 +2426,11 @@ async function handleChat({ message, store, intel, history }) {
     if (!response.ok) {
       const errText = await response.text().catch(() => "");
       return {
-        ok: false,
+        ok: true,
+        reply: groundedReply(),
+        provider: chatProviderForContext(intent, liveContext),
+        intent,
+        sentiment,
         fallback: true,
         error: `Anthropic ${response.status}: ${errText.slice(0, 240)}`
       };
@@ -2417,28 +2441,44 @@ async function handleChat({ message, store, intel, history }) {
       ok: true,
       reply: reply || "I didn't have anything to add — try asking about warnings, opportunities, weather, or competitor pricing.",
       model: data.model || model,
-      usage: data.usage || null
+      usage: data.usage || null,
+      provider: "anthropic",
+      intent,
+      sentiment
     };
   } catch (error) {
     return {
-      ok: false,
+      ok: true,
+      reply: groundedReply(),
+      provider: chatProviderForContext(intent, liveContext),
+      intent,
+      sentiment,
       fallback: true,
       error: `Chat call failed: ${error.message}`
     };
   }
 }
 
+function chatProviderForContext(intent, liveContext) {
+  if (intent === "product" && liveContext?.product?.options?.length) return "apify-restock";
+  if (liveContext?.lookup?.places?.provider?.includes("apify")) return "apify-web";
+  if (liveContext?.lookup) return "open-web";
+  if (intent === "news") return "web-news";
+  return "local-grounded";
+}
+
 function detectChatIntent(text) {
   const t = String(text || "").toLowerCase();
   if (/(weather|rain|heat|hot|cold|storm|wind|air quality|forecast)/.test(t)) return "weather";
   if (/(review|rating|google review|1-star|one star|stars)/.test(t)) return "reviews";
-  if (/(profit|margin|sales|revenue|money|earn|pricing|price|discount|promo|offer|coupon)/.test(t)) return "profit";
+  if (/(buy|find|available|availability|stock|restock|supplier|order|where can i get|where should i buy|in stock|tortilla|takeout|container|cup|napkin|chair|table|oil|parts?|jack|gloves?|receipt paper|utensils?|tomatoes?|produce|vegetables?)/.test(t)) return "product";
   if (/(footfall|foot traffic|walk[- ]?in|visits?|customers?|busy|slow|traffic)/.test(t)) return "footfall";
   if (/(loss|waste|spoil|spoilage|overstock|stockout|shortage|risk|threat|warning|safety|crime|danger)/.test(t)) return "risk";
   if (/(permit|license|inspection|compliance|document|health department|records?)/.test(t)) return "compliance";
-  if (/(news|event|trend|internet|web|current|today around|happening|festival|concert|game)/.test(t)) return "news";
   if (/(competitor|competition|compare|near me|nearby place|top-rated)/.test(t)) return "competitors";
-  if (/(buy|find|available|availability|stock|restock|supplier|order|where can i get|tortilla|takeout|container|cup|napkin|chair|table|oil|parts?|jack|gloves?|receipt paper|utensils?|tomatoes?|produce|vegetables?)/.test(t)) return "product";
+  if (/(news|event|trend|internet|web|current|today around|happening|festival|concert|game)/.test(t)) return "news";
+  if (/(tell me about|what is|who is|look up|search for|google|find info|information on|info about|do you know|where is|hours for|menu for|phone for|reviews? for)\b/.test(t)) return "web";
+  if (/(profit|margin|sales|revenue|money|earn|pricing strategy|discount|promo|offer|coupon)/.test(t)) return "profit";
   return "general";
 }
 
@@ -2459,6 +2499,18 @@ async function buildChatLiveContext({ text, store, intel, intent }) {
       context.product = await buildRestockComparison(profile, new URLSearchParams({ q: productQuery }));
     } catch (error) {
       context.productError = error.message;
+    }
+  }
+  const webQuery = extractWebLookupQuery(text, profile);
+  if (webQuery && (intent === "web" || intent === "general" || intent === "news" || /\b(internet|web|current|happening|event|news|tell me about|look up|search)\b/i.test(text))) {
+    try {
+      const [places, web] = await Promise.all([
+        fetchLivePlaceLookup(profile, webQuery).catch((error) => ({ ok: false, places: [], message: error.message })),
+        fetchOpenWebLookup(profile, webQuery).catch((error) => ({ ok: false, articles: [], message: error.message }))
+      ]);
+      context.lookup = { query: webQuery, places, web, question: text };
+    } catch (error) {
+      context.lookupError = error.message;
     }
   }
   if (intent === "news" || /\b(internet|web|current|happening|event|news)\b/i.test(text)) {
@@ -2506,6 +2558,26 @@ function extractProductQuery(text, businessType) {
   return "receipt paper";
 }
 
+function extractWebLookupQuery(text, profile = {}) {
+  const raw = String(text || "").replace(/[?!]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!raw) return "";
+  const lowered = raw.toLowerCase();
+  const shopOnly = /(increase profit|reduce waste|get more reviews|get more footfall|what should i prep|how do i sell|what permits|what warnings|what threats)/i.test(raw);
+  if (shopOnly) return "";
+  const cleaned = raw
+    .replace(/\b(can you|could you|please|i want to|want to|tell me about|what is|who is|look up|search for|google|find info about|find information about|information on|info about|do you know|where is|hours for|menu for|phone for|reviews? for)\b/gi, " ")
+    .replace(/\b(my store|this store|the store|near me|nearby|around my shop|around the shop|in my area)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (cleaned.length >= 3 && cleaned.length <= 90) return cleaned;
+  const quoted = raw.match(/["“”']([^"“”']{3,90})["“”']/);
+  if (quoted) return quoted[1].trim();
+  const named = raw.match(/\b([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*){0,5})\b/);
+  if (named && !new RegExp(`^${escapeRegExp(profile.city || "")}$`, "i").test(named[1])) return named[1].trim();
+  if (/\b(news|event|trend|happening|current)\b/i.test(raw)) return [profile.businessType, profile.city].filter(Boolean).join(" ").trim();
+  return lowered === raw ? "" : raw.slice(0, 90);
+}
+
 function buildChatLiveContextPrompt({ intent, sentiment, liveContext }) {
   const lines = [
     "CHAT ROUTING:",
@@ -2532,6 +2604,37 @@ function buildChatLiveContextPrompt({ intent, sentiment, liveContext }) {
       lines.push(`- ${article.title} (${article.domain || "news"}) ${article.url || ""}`);
     }
   }
+  if (liveContext?.lookup) {
+    const lookup = liveContext.lookup;
+    const places = lookup.places?.places || [];
+    const web = lookup.web || {};
+    lines.push("");
+    lines.push(`OPEN WEB LOOKUP for "${lookup.query}":`);
+    if (places.length) {
+      lines.push("Live place results:");
+      for (const place of places.slice(0, 5)) {
+        const bits = [
+          place.name,
+          place.category,
+          place.rating ? `${place.rating}★` : "",
+          place.reviews ? `${place.reviews} reviews` : "",
+          place.address,
+          place.website || place.url
+        ].filter(Boolean);
+        lines.push(`- ${bits.join(" · ")}`);
+      }
+    }
+    if (web.abstract) lines.push(`Open web summary: ${web.abstract}`);
+    if (web.wikipedia?.title) lines.push(`Wikipedia: ${web.wikipedia.title} — ${web.wikipedia.extract || ""} ${web.wikipedia.url || ""}`);
+    const webArticles = uniqueArticles([...(web.articles || []), ...(web.news || [])]).slice(0, 6);
+    if (webArticles.length) {
+      lines.push("Related web/news results:");
+      for (const article of webArticles) {
+        lines.push(`- ${article.title} (${article.domain || "web"}) ${article.url || ""}`);
+      }
+    }
+    lines.push("If the lookup is thin, say what was found and what is uncertain. Do not invent missing facts.");
+  }
   return lines.join("\n");
 }
 
@@ -2542,6 +2645,7 @@ function buildGroundedChatReply({ text, store, intel, intent, sentiment, liveCon
     ? `I hear the pressure. For ${profile.businessName}, a ${label} in ${profile.city}, I would keep this practical:`
     : `For ${profile.businessName}, a ${label} in ${profile.city}, here is the practical answer:`;
   if (intent === "product") return productChatReply({ intro, liveContext, profile });
+  if (intent === "web" || (intent === "general" && liveContext?.lookup)) return webLookupChatReply({ intro, liveContext, profile });
   if (intent === "news") return newsChatReply({ intro, liveContext, profile });
   if (intent === "weather") return weatherChatReply({ intro, intel, profile });
   if (intent === "reviews") return reviewsChatReply({ intro, intel, profile });
@@ -2550,6 +2654,77 @@ function buildGroundedChatReply({ text, store, intel, intent, sentiment, liveCon
   if (intent === "compliance") return complianceChatReply({ intro, intel, profile });
   if (intent === "competitors") return competitorChatReply({ intro, intel, profile });
   return profitChatReply({ intro, intel, profile, text });
+}
+
+function webLookupChatReply({ intro, liveContext, profile }) {
+  const lookup = liveContext?.lookup || {};
+  const places = lookup.places?.places || [];
+  const web = lookup.web || {};
+  const articles = uniqueArticles([...(web.articles || []), ...(web.news || [])]).slice(0, 4);
+  const subject = lookup.query || "that";
+  const preferWebSummary = /\b(what is|who is|define|explain)\b/i.test(lookup.question || "") && (web.wikipedia?.title || web.abstract || articles.length);
+  if (places.length && !preferWebSummary) {
+    const rows = places.slice(0, 5).map((place) => {
+      const rating = place.rating ? `${place.rating}★${place.reviews ? ` / ${formatCompactNumber(place.reviews)} reviews` : ""}` : "not listed";
+      const action = place.url ? `[Open map](${place.url})` : (place.website ? `[Website](${place.website})` : "verify live");
+      return `| ${markdownTableCell(place.name)} | ${markdownTableCell(place.category || "business")} | ${markdownTableCell(rating)} | ${markdownTableCell(place.address || profile.city)} | ${action} |`;
+    });
+    const best = places[0];
+    return [
+      intro,
+      "",
+      `I looked up **${subject}** and found live local/place results. Use this as a business signal, not a final legal or purchasing source.`,
+      "",
+      "| Result | Type | Public signal | Location | Link |",
+      "|---|---|---|---|---|",
+      ...rows,
+      "",
+      `Owner read: ${best?.name ? `if ${best.name} overlaps your customers, compare their photos, menu clarity, hours and review themes before choosing your next offer.` : "compare the best-matching result against your photos, menu clarity and hours."}`
+    ].join("\n");
+  }
+  if (web.wikipedia?.title || web.abstract || articles.length) {
+    const sourceRows = [];
+    if (web.wikipedia?.title) sourceRows.push(`| ${markdownTableCell(web.wikipedia.title)} | ${markdownTableCell(web.wikipedia.extract || "summary")} | ${web.wikipedia.url ? `[Open](${web.wikipedia.url})` : "source"} |`);
+    if (web.abstract) sourceRows.push(`| Web summary | ${markdownTableCell(web.abstract)} | ${web.abstractUrl ? `[Open](${web.abstractUrl})` : "source"} |`);
+    for (const article of articles) {
+      sourceRows.push(`| ${markdownTableCell(article.domain || "web")} | ${markdownTableCell(article.title)} | ${article.url ? `[Open](${article.url})` : "source"} |`);
+    }
+    const closing = preferWebSummary
+      ? `Quick read: this is general web context. If it affects ${profile.businessName}, ask me how it changes payments, pricing, risk, or customer demand.`
+      : `Business use: translate this into one practical move for ${profile.businessName}: improve your listing clarity, compare the offer, or use the event/news angle only if it affects customers near ${profile.city}.`;
+    return [
+      intro,
+      "",
+      `I found public web signals for **${subject}**:`,
+      "",
+      "| Source | What it says | Link |",
+      "|---|---|---|",
+      ...sourceRows.slice(0, 6),
+      "",
+      closing
+    ].join("\n");
+  }
+  return [
+    intro,
+    "",
+    `I could not verify a strong public source for **${subject}** in the quick lookup. I would not invent details, but here are the fastest live checks.`,
+    "",
+    "| Next check | Why it matters | Link |",
+    "|---|---|---|",
+    `| Google Maps | Confirms address, hours, reviews and photos | [Open](${googleMapsSearchUrl(`${subject} ${profile.city || ""}`, profile)}) |`,
+    `| Google Search | Finds official site, menu, social page and photos | [Open](${googleSearchUrl(`${subject} ${profile.city || ""}`)}) |`,
+    `| Local news search | Shows whether anything current affects demand | [Open](${googleNewsLookupUrl(`${subject} ${profile.city || ""}`)}) |`,
+    "",
+    "Owner move: do not act on an unverified name. Ask me with a city, address, or website and I will narrow it down."
+  ].join("\n");
+}
+
+function googleSearchUrl(query) {
+  return `https://www.google.com/search?${new URLSearchParams({ q: String(query || "").trim() })}`;
+}
+
+function googleNewsLookupUrl(query) {
+  return `https://news.google.com/search?${new URLSearchParams({ q: String(query || "").trim(), hl: "en-US", gl: "US", ceid: "US:en" })}`;
 }
 
 function productChatReply({ intro, liveContext, profile }) {
@@ -4795,6 +4970,256 @@ async function fetchArticleScan(profile, query, label, terms, days = 30) {
       message: `${label} via Google News RSS after GDELT issue: ${error.message.slice(0, 90)}`
     };
   }
+}
+
+async function fetchLivePlaceLookup(profile, query) {
+  const cleanQuery = String(query || "").replace(/\s+/g, " ").trim();
+  if (!cleanQuery) return { ok: false, provider: "none", places: [], message: "No lookup query" };
+  const [apify, osm] = await Promise.all([
+    fetchApifyLookupPlaces(profile, cleanQuery).catch((error) => ({ ok: false, places: [], message: error.message })),
+    fetchNominatimPlaces(profile, cleanQuery).catch((error) => ({ ok: false, places: [], message: error.message }))
+  ]);
+  const places = uniquePlaces([...(apify.places || []), ...(osm.places || [])])
+    .sort((a, b) => lookupPlaceScore(b, cleanQuery, profile) - lookupPlaceScore(a, cleanQuery, profile))
+    .slice(0, 6);
+  return {
+    ok: places.length > 0,
+    provider: apify.places?.length ? "apify-google-places" : "openstreetmap",
+    places,
+    sourceUrl: apify.sourceUrl || osm.sourceUrl || googleMapsSearchUrl(cleanQuery, profile),
+    message: places.length
+      ? `Found ${places.length} place result(s) for ${cleanQuery}`
+      : `No place result found for ${cleanQuery}`
+  };
+}
+
+async function fetchApifyLookupPlaces(profile, query) {
+  if (!process.env.APIFY_TOKEN && !scalekitConfiguredForTools()) {
+    return { ok: false, provider: "apify", places: [], message: "Apify is not connected" };
+  }
+  const actorId = process.env.APIFY_PLACES_ACTOR || "compass/crawler-google-places";
+  const max = Math.min(8, Number(process.env.APIFY_LOOKUP_MAX_PLACES || 5));
+  const cityLine = [profile.city, profile.state || "", "USA"].filter(Boolean).join(", ");
+  const searchQuery = [query, cityLine].filter(Boolean).join(" ");
+  const sourceUrl = googleMapsSearchUrl(searchQuery, profile);
+  const cacheKey = ["lookup", "v1", actorId, searchQuery.toLowerCase()].join("|");
+  const cached = APIFY_PLACES_CACHE.get(cacheKey);
+  if (cached && Date.now() - cached.at < APIFY_PLACES_TTL_MS) return cached.payload;
+
+  const input = {
+    searchStringsArray: [searchQuery, query],
+    maxCrawledPlacesPerSearch: max,
+    language: "en",
+    skipClosedPlaces: false,
+    additionalInfo: true,
+    scrapePlaceDetailPage: true
+  };
+  if (Number.isFinite(Number(profile.lat)) && Number.isFinite(Number(profile.lon))) {
+    input.customGeolocation = {
+      type: "Point",
+      coordinates: [Number(profile.lon), Number(profile.lat)],
+      radiusKm: Number(process.env.APIFY_LOOKUP_RADIUS_KM || 30)
+    };
+  }
+  if (cityLine) input.locationQuery = cityLine;
+
+  const result = await runApifyActor(actorId, input, Number(process.env.APIFY_PLACES_TIMEOUT_MS || 25000));
+  if (!result.ok) return { ok: false, provider: "apify", sourceUrl, places: [], message: result.error || "Apify lookup failed" };
+  const places = (result.items || [])
+    .map((item) => normalizeLookupPlace(item, profile, "Apify Google Places"))
+    .filter((place) => place.name && place.category)
+    .slice(0, max);
+  const payload = { ok: places.length > 0, provider: "apify", sourceUrl, actorId, places, count: places.length };
+  APIFY_PLACES_CACHE.set(cacheKey, { at: Date.now(), payload });
+  persistPlacesCache();
+  return payload;
+}
+
+async function fetchNominatimPlaces(profile, query) {
+  const cityLine = [profile.city, profile.state || "", "USA"].filter(Boolean).join(", ");
+  const q = [query, cityLine].filter(Boolean).join(", ");
+  const sourceUrl = `https://www.openstreetmap.org/search?${new URLSearchParams({ query: q })}`;
+  const url = `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
+    q,
+    format: "jsonv2",
+    limit: "5",
+    addressdetails: "1",
+    extratags: "1",
+    namedetails: "1"
+  })}`;
+  const data = await fetchJson(url, { headers: { "User-Agent": APP_USER_AGENT } }, 9000);
+  const places = (Array.isArray(data) ? data : [])
+    .map((item) => normalizeNominatimPlace(item, profile))
+    .filter((place) => place.name)
+    .slice(0, 5);
+  return { ok: places.length > 0, provider: "openstreetmap", sourceUrl, places, count: places.length };
+}
+
+async function fetchOpenWebLookup(profile, query) {
+  const cleanQuery = String(query || "").replace(/\s+/g, " ").trim();
+  if (!cleanQuery) return { ok: false, articles: [], message: "No web query" };
+  const cityLine = [profile.city, profile.state].filter(Boolean).join(" ");
+  const localizedQuery = [cleanQuery, cityLine].filter(Boolean).join(" ");
+  const [duck, wikipedia, news] = await Promise.all([
+    fetchDuckDuckGoSummary(localizedQuery).catch((error) => ({ ok: false, message: error.message })),
+    fetchWikipediaSummary(cleanQuery).catch((error) => ({ ok: false, message: error.message })),
+    fetchLookupNews(profile, cleanQuery).catch((error) => ({ ok: false, articles: [], message: error.message }))
+  ]);
+  const abstract = duck.abstract || wikipedia.extract || "";
+  return {
+    ok: Boolean(abstract || wikipedia.title || news.articles?.length),
+    query: cleanQuery,
+    abstract,
+    abstractUrl: duck.url || wikipedia.url || "",
+    wikipedia: wikipedia.title ? wikipedia : null,
+    articles: news.articles || [],
+    news: news.articles || [],
+    sourceUrl: news.sourceUrl || duck.url || wikipedia.url || "",
+    message: [duck.message, wikipedia.message, news.message].filter(Boolean).join(" · ")
+  };
+}
+
+async function fetchDuckDuckGoSummary(query) {
+  const url = `https://api.duckduckgo.com/?${new URLSearchParams({
+    q: query,
+    format: "json",
+    no_html: "1",
+    skip_disambig: "1"
+  })}`;
+  const data = await fetchJson(url, { headers: { "User-Agent": APP_USER_AGENT } }, 9000);
+  const abstract = String(data.AbstractText || data.Abstract || data.Heading || "").replace(/\s+/g, " ").trim();
+  const related = flattenDuckTopics(data.RelatedTopics || []).slice(0, 5);
+  return {
+    ok: Boolean(abstract || related.length),
+    abstract,
+    url: data.AbstractURL || data.Results?.[0]?.FirstURL || "",
+    related,
+    message: abstract ? "DuckDuckGo instant answer found" : "DuckDuckGo returned related topics only"
+  };
+}
+
+async function fetchWikipediaSummary(query) {
+  const searchUrl = `https://en.wikipedia.org/w/api.php?${new URLSearchParams({
+    action: "query",
+    list: "search",
+    srsearch: query,
+    format: "json",
+    origin: "*",
+    srlimit: "1"
+  })}`;
+  const search = await fetchJson(searchUrl, { headers: { "User-Agent": APP_USER_AGENT } }, 9000);
+  const title = search?.query?.search?.[0]?.title;
+  if (!title) return { ok: false, message: "No Wikipedia match" };
+  const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+  const summary = await fetchJson(summaryUrl, { headers: { "User-Agent": APP_USER_AGENT } }, 9000);
+  return {
+    ok: Boolean(summary.extract),
+    title: summary.title || title,
+    extract: String(summary.extract || "").replace(/\s+/g, " ").trim(),
+    url: summary.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/\s/g, "_"))}`,
+    message: "Wikipedia summary found"
+  };
+}
+
+async function fetchLookupNews(profile, query) {
+  const locationTerms = newsLocationTerms(profile);
+  const cityLine = locationTerms.map((term) => `"${term}"`).join(" OR ");
+  const q = cityLine ? `("${query}" OR ${query}) (${cityLine})` : `"${query}"`;
+  const rssUrl = `https://news.google.com/rss/search?${new URLSearchParams({
+    q,
+    hl: "en-US",
+    gl: "US",
+    ceid: "US:en"
+  })}`;
+  const xml = await fetchText(rssUrl, {}, 10000);
+  const articles = localizeArticles(parseRssItems(xml), [query, ...locationTerms]).slice(0, 10);
+  return { ok: articles.length > 0, sourceUrl: rssUrl, articles, count: articles.length, message: `News lookup for ${query}` };
+}
+
+function normalizeLookupPlace(raw, profile, source) {
+  const lat = Number(raw.location?.lat ?? raw.lat);
+  const lon = Number(raw.location?.lng ?? raw.lon ?? raw.lng);
+  const place = {
+    name: String(raw.title || raw.name || "").trim(),
+    category: raw.categoryName || raw.category || (Array.isArray(raw.categories) ? raw.categories[0] : "") || "business",
+    categories: Array.isArray(raw.categories) ? raw.categories : [],
+    openingHours: formatApifyHours(raw.openingHours),
+    rating: Number(raw.totalScore ?? raw.rating) || null,
+    reviews: Number(raw.reviewsCount ?? raw.reviews) || null,
+    price: typeof raw.price === "string" ? raw.price.trim() : "",
+    description: typeof raw.description === "string" ? raw.description : "",
+    phone: raw.phone || raw.phoneUnformatted || "",
+    website: raw.website || "",
+    address: raw.address || "",
+    lat,
+    lon,
+    url: googleMapsUrlFromPlace(raw, profile),
+    source
+  };
+  return {
+    ...place,
+    distanceMeters: distanceMeters(profile.lat, profile.lon, lat, lon)
+  };
+}
+
+function normalizeNominatimPlace(raw, profile) {
+  const lat = Number(raw.lat);
+  const lon = Number(raw.lon);
+  const tags = raw.extratags || {};
+  const address = raw.address || {};
+  const name = raw.namedetails?.name || raw.name || String(raw.display_name || "").split(",")[0] || "";
+  const category = tags.cuisine || raw.type || raw.class || "place";
+  return {
+    name: String(name).trim(),
+    category,
+    categories: [raw.class, raw.type].filter(Boolean),
+    openingHours: tags.opening_hours || "",
+    rating: null,
+    reviews: null,
+    price: "",
+    description: raw.display_name || "",
+    phone: tags.phone || "",
+    website: tags.website || "",
+    address: [address.house_number, address.road, address.city || address.town || address.village, address.state].filter(Boolean).join(", ") || raw.display_name || "",
+    lat,
+    lon,
+    url: googleMapsSearchUrl(raw.display_name || name, { ...profile, lat, lon }),
+    source: "OpenStreetMap",
+    distanceMeters: distanceMeters(profile.lat, profile.lon, lat, lon)
+  };
+}
+
+function uniquePlaces(places = []) {
+  const seen = new Set();
+  const out = [];
+  for (const place of places) {
+    const key = `${String(place.name || "").toLowerCase()}|${String(place.address || "").toLowerCase()}`;
+    if (!place.name || seen.has(key)) continue;
+    seen.add(key);
+    out.push(place);
+  }
+  return out;
+}
+
+function lookupPlaceScore(place, query, profile) {
+  const haystack = `${place.name || ""} ${place.category || ""} ${place.address || ""}`.toLowerCase();
+  const terms = String(query || "").toLowerCase().split(/\s+/).filter((term) => term.length > 2);
+  const termScore = terms.reduce((score, term) => score + (haystack.includes(term) ? 12 : 0), 0);
+  const ratingScore = Number(place.rating || 0) * 2;
+  const reviewScore = Math.min(10, Math.log10(Number(place.reviews || 0) + 1) * 4);
+  const distance = Number(place.distanceMeters);
+  const distanceScore = Number.isFinite(distance) ? Math.max(0, 12 - distance / 1600) : 0;
+  const cityScore = profile.city && haystack.includes(String(profile.city).toLowerCase()) ? 6 : 0;
+  return termScore + ratingScore + reviewScore + distanceScore + cityScore;
+}
+
+function flattenDuckTopics(topics = []) {
+  const rows = [];
+  for (const item of topics || []) {
+    if (item.Text || item.FirstURL) rows.push({ title: item.Text || "", url: item.FirstURL || "" });
+    if (Array.isArray(item.Topics)) rows.push(...flattenDuckTopics(item.Topics));
+  }
+  return rows;
 }
 
 async function fetchNews(profile) {

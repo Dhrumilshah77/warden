@@ -41,6 +41,9 @@ const DEFAULT_STORES = [
   { ...DEMO_STORE_TEMPLATE, id: "sf-liquor",       businessName: "Divisadero Wine & Spirits", businessType: "liquor store", address: "300 Divisadero St",   city: "San Francisco", lat: 37.7741, lon: -122.4377, avgTicket: "$24",    fullTimeStaff: "3" }
 ];
 
+const SF_RESTAURANT_DEMO_MODE = isSfRestaurantDemoUrl();
+if (SF_RESTAURANT_DEMO_MODE) primeSfRestaurantDemo();
+
 const LANGUAGE_META = {
   en: { html: "en" },
   es: { html: "es" },
@@ -1567,13 +1570,13 @@ const isAgentUserUrlLocked = Boolean(initialAgentUserId);
 
 const state = {
   stores: loadStores(),
-  selectedId: localStorage.getItem("warden:selectedStore") || "sf-demo",
-  language: localStorage.getItem("warden:language") || "en",
+  selectedId: SF_RESTAURANT_DEMO_MODE ? "sf-demo" : (localStorage.getItem("warden:selectedStore") || "sf-demo"),
+  language: SF_RESTAURANT_DEMO_MODE ? "en" : (localStorage.getItem("warden:language") || "en"),
   latestIntel: null,
   activeSignalFilter: "all",
   modalMode: "add",
   modalSelectedType: "restaurant",
-  agentUserId: initialAgentUserId || localStorage.getItem("warden:agentUserId") || "owner-ava",
+  agentUserId: initialAgentUserId || (SF_RESTAURANT_DEMO_MODE ? "owner-ava" : localStorage.getItem("warden:agentUserId")) || "owner-ava",
   agentUserLocked: isAgentUserUrlLocked,
   agentSession: null,
   agentActions: [],
@@ -1623,6 +1626,246 @@ function agentUserIdFromUrl() {
   return params.get("agentUser") || params.get("userId") || params.get("as") || "";
 }
 
+function isSfRestaurantDemoUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const value = `${params.get("demo") || ""} ${params.get("preset") || ""} ${params.get("preload") || ""}`.toLowerCase();
+  return /\bsf[-_ ]?restaurant\b|\brighthand[-_ ]?demo\b/.test(value);
+}
+
+function sfRestaurantDemoStore() {
+  return {
+    ...structuredClone(DEFAULT_STORES.find((store) => store.id === "sf-demo") || DEFAULT_STORES[0]),
+    businessName: "Dhrumil's SF Shop",
+    businessType: "restaurant",
+    address: "412 Mission St",
+    address2: "",
+    city: "San Francisco",
+    state: "CA",
+    zip: "94105",
+    lat: 37.7909,
+    lon: -122.3971,
+    radiusMeters: 1200,
+    ownerName: "Dhrumil Shah",
+    ownerEmail: "dhrumildeepakshah@gmail.com",
+    ownerPhone: "(415) 555-0142",
+    avgTicket: "$14.20",
+    dailyRevenue: "$1,850",
+    inventoryValue: "$2,900",
+    fullTimeStaff: "5",
+    partTimeStaff: "3",
+    suppliers: "Costco Business Center, Restaurant Depot, Amazon Business",
+    backupPower: "Portable battery for POS and hotspot",
+    securitySystem: "Front camera, cash drawer closeout, exterior lighting",
+    insuranceCarrier: "Demo commercial package",
+    languages: "English, Spanish",
+    licenseNotes: "SF food permit and seller permit kept in owner folder",
+    documentNotes: "Health permit, seller permit, insurance certificate, staff checklist",
+    storeNotes: "Demo route: ask chatbot about Tadich Grill, tomatoes, weather, warnings, permits, and competitor moves."
+  };
+}
+
+function primeSfRestaurantDemo() {
+  const demoStore = sfRestaurantDemoStore();
+  try {
+    const existing = JSON.parse(localStorage.getItem("warden:stores") || "[]");
+    const base = Array.isArray(existing) && existing.length ? existing : structuredClone(DEFAULT_STORES);
+    const withoutDemo = base.filter((store) => store?.id !== "sf-demo");
+    localStorage.setItem("warden:stores", JSON.stringify([demoStore, ...withoutDemo]));
+    localStorage.setItem("warden:selectedStore", "sf-demo");
+    localStorage.setItem("warden:language", "en");
+    localStorage.setItem("warden:agentUserId", "owner-ava");
+    localStorage.setItem("warden:demoBootstrapped", "1");
+    localStorage.setItem("warden:chatThreads", JSON.stringify({
+      "sf-demo": [{
+        role: "assistant",
+        text: [
+          "Demo ready for Dhrumil's SF Shop in San Francisco.",
+          "",
+          "Try these judge-safe prompts:",
+          "1. Tell me about Tadich Grill",
+          "2. I want to buy tomatoes",
+          "3. What threats can hurt me today?",
+          "4. What permits or documents matter for my store?",
+          "",
+          "Answers use the preloaded SF restaurant profile, cached Apify competitor data, free web sources, and Scalekit role context."
+        ].join("\n"),
+        at: new Date().toISOString(),
+        live: true,
+        provider: "local-grounded"
+      }]
+    }));
+  } catch {
+    // Demo mode still works with in-memory defaults if localStorage is unavailable.
+  }
+}
+
+function preloadedSfRestaurantIntel() {
+  const store = sfRestaurantDemoStore();
+  const generatedAt = new Date().toISOString();
+  const competitorUrl = (name) => `https://www.google.com/maps/search/?${new URLSearchParams({ api: "1", query: `${name} San Francisco near 412 Mission St` })}`;
+  const marketPlaces = [
+    { name: "Tadich Grill", category: "Seafood restaurant", rating: 4.5, reviews: 4200, price: "$$$", address: "240 California St, San Francisco, CA", lat: 37.79342, lon: -122.39947, distanceMeters: 380, url: competitorUrl("Tadich Grill"), website: "https://tadichgrillsf.com/" },
+    { name: "Wayfare Tavern", category: "American restaurant", rating: 4.5, reviews: 3500, price: "$$$", address: "558 Sacramento St, San Francisco, CA", lat: 37.79396, lon: -122.40263, distanceMeters: 620, url: competitorUrl("Wayfare Tavern"), website: "https://www.wayfaretavern.com/" },
+    { name: "Trestle Restaurant", category: "New American restaurant", rating: 4.6, reviews: 1600, price: "$$", address: "531 Jackson St, San Francisco, CA", lat: 37.79593, lon: -122.40442, distanceMeters: 850, url: competitorUrl("Trestle Restaurant"), website: "https://www.trestlesf.com/" },
+    { name: "Cotogna", category: "Italian restaurant", rating: 4.6, reviews: 1800, price: "$$$", address: "490 Pacific Ave, San Francisco, CA", lat: 37.79739, lon: -122.40354, distanceMeters: 980, url: competitorUrl("Cotogna"), website: "https://www.cotognasf.com/" },
+    { name: "BIX", category: "American restaurant", rating: 4.5, reviews: 1300, price: "$$$", address: "56 Gold St, San Francisco, CA", lat: 37.79687, lon: -122.40293, distanceMeters: 840, url: competitorUrl("BIX San Francisco"), website: "https://bixrestaurant.com/" },
+    { name: "PABU Izakaya", category: "Japanese restaurant", rating: 4.4, reviews: 2200, price: "$$$", address: "101 California St, San Francisco, CA", lat: 37.79346, lon: -122.39851, distanceMeters: 320, url: competitorUrl("PABU Izakaya"), website: "https://www.pabuizakaya.com/" }
+  ];
+  const licenseChecklist = [
+    { name: "Retail food facility health permit", category: "Food permit", priority: "required", authority: "SFDPH", renewal: "Annual", url: "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location" },
+    { name: "California seller's permit", category: "Tax", priority: "required", authority: "CDTFA", renewal: "Keep active", url: "https://www.cdtfa.ca.gov/services/permits-licenses.htm" },
+    { name: "Certified Food Protection Manager", category: "Food safety", priority: "required", authority: "California Retail Food Code", renewal: "Every 5 years", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx" },
+    { name: "Food handler cards", category: "Staff records", priority: "required", authority: "California Food Handler Card Law", renewal: "Every 3 years", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram.aspx" },
+    { name: "Business registration certificate", category: "Business", priority: "required", authority: "SF Treasurer & Tax Collector", renewal: "Annual", url: "https://sftreasurer.org/business/register-business" },
+    { name: "Sidewalk/shared space permit", category: "Storefront", priority: "if applicable", authority: "City and County of San Francisco", renewal: "As issued", url: "https://www.sf.gov/shared-spaces" }
+  ];
+  const weatherForecast = [
+    { day: "Today", date: "2026-05-23", condition: "Cool and breezy", highF: 65, lowF: 54, rainProbability: 4, windMph: 18 },
+    { day: "Sun", date: "2026-05-24", condition: "Partly cloudy", highF: 67, lowF: 55, rainProbability: 7, windMph: 16 },
+    { day: "Mon", date: "2026-05-25", condition: "Light rain possible", highF: 64, lowF: 54, rainProbability: 32, windMph: 21 },
+    { day: "Tue", date: "2026-05-26", condition: "Clear", highF: 69, lowF: 55, rainProbability: 5, windMph: 14 },
+    { day: "Wed", date: "2026-05-27", condition: "Clear", highF: 68, lowF: 54, rainProbability: 3, windMph: 13 },
+    { day: "Thu", date: "2026-05-28", condition: "Cloudy morning", highF: 66, lowF: 53, rainProbability: 8, windMph: 15 },
+    { day: "Fri", date: "2026-05-29", condition: "Sunny", highF: 70, lowF: 55, rainProbability: 2, windMph: 12 }
+  ];
+  const groups = [
+    {
+      label: "Opportunities",
+      count: 3,
+      signals: [
+        { id: "demo-opp-peak", group: "Opportunities", severity: "opportunity", code: "PEAK", name: "Peak window", headline: "Sat 7pm demand spike", metric: "~90% busy nearby", body: "Apify competitor demand shows the block gets busy Saturday around 7pm. Push one fast combo and prep top sellers before the rush.", source: "Apify Google Places", url: competitorUrl("restaurants near 412 Mission St"), action: "Create a one-day combo, stock tortillas/protein/sauce, and schedule one extra closer.", pointers: ["Prep top seller", "Post pickup offer", "Confirm staffing", "Track coupon redemptions"] },
+        { id: "demo-opp-reviews", group: "Opportunities", severity: "opportunity", code: "REV", name: "Review gap", headline: "Nearby average is 4.5 stars", metric: "6 competitors", body: "Top nearby restaurants win with clear photos, fast service signals and named dishes in reviews.", source: "Apify review themes", url: competitorUrl("Tadich Grill"), action: "Ask happy customers to mention the item they bought, then reply within 24 hours.", pointers: ["Print QR", "Ask at handoff", "Reply same day"] },
+        { id: "demo-opp-supplies", group: "Opportunities", severity: "opportunity", code: "BUY", name: "Supplier move", headline: "Restock tomatoes before rush", metric: "same-day pickup", body: "For same-day restaurant needs, buy freshness and pickup speed before chasing the lowest online price.", source: "Apify product search", url: "https://www.google.com/search?q=restaurant+tomatoes+near+San+Francisco", action: "Use chatbot: 'I want to buy tomatoes' and compare supplier rows.", pointers: ["Check pickup", "Check unit price", "Confirm freshness"] }
+      ]
+    },
+    {
+      label: "Warnings",
+      count: 3,
+      signals: [
+        { id: "demo-warn-safety", group: "Warnings", severity: "critical", code: "SAFE", name: "Safety item", headline: "Safety item to review: 50 recent reports", metric: "near Financial District", body: "Review closing procedures, exterior lighting, camera coverage, cash handling and staff walkout timing.", source: "DataSF SFPD", url: "https://data.sfgov.org/Public-Safety/Police-Department-Incident-Reports-2018-to-Present/wg3w-h783", action: "Assign manager to check lights/camera/cash routine before close.", pointers: ["Check lighting", "Check camera", "Reduce cash", "Walkout plan"] },
+        { id: "demo-warn-weather", group: "Warnings", severity: "warning", code: "WX", name: "Weather prep", headline: "Wind can hurt signage", metric: "18-21 mph", body: "Secure sidewalk signage and avoid over-prepping walk-up-only items if weather turns.", source: "Open-Meteo", url: "https://forecast.weather.gov/MapClick.php?lat=37.7909&lon=-122.3971", action: "Move loose signage inside and push pickup/delivery if wind rises.", pointers: ["Secure sign", "Check pickup app", "Watch rain"] },
+        { id: "demo-warn-docs", group: "Warnings", severity: "warning", code: "DOC", name: "Permit folder", headline: "Required docs ready", metric: "6 key docs", body: "Keep food permit, seller permit, manager certificate, food handler cards, business registration and insurance certificate in one owner folder.", source: "SF permit checklist", url: "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location", action: "Owner should keep all documents in Store Info before inspection week.", pointers: ["Food permit", "Seller permit", "CFPM", "Insurance"] }
+      ]
+    },
+    {
+      label: "Market and Competition",
+      count: 2,
+      signals: [
+        { id: "demo-mkt-comp", group: "Market and Competition", severity: "opportunity", code: "MKT", name: "Competitor scan", headline: "6 relevant competitors nearby", metric: "4.5★ average", body: "Compare against Tadich Grill, Wayfare Tavern, Cotogna, Trestle, BIX and PABU before choosing this week's offer.", source: "Apify Google Places", url: competitorUrl("restaurants near 412 Mission St"), action: "Beat competitors on menu clarity, pickup offer and visible review prompt.", pointers: ["Compare photos", "Compare hours", "Compare offer"] },
+        { id: "demo-mkt-price", group: "Market and Competition", severity: "info", code: "PRICE", name: "Price tier", headline: "$$$ dominates nearby", metric: "premium block", body: "A premium block supports a focused high-margin combo rather than broad discounting.", source: "Apify price tiers", url: competitorUrl("Wayfare Tavern"), action: "Discount only the entry item, then upsell drink/add-on.", pointers: ["One combo", "No broad discount", "Track basket"] }
+      ]
+    },
+    {
+      label: "Weather",
+      count: 1,
+      signals: [
+        { id: "demo-weather", group: "Weather", severity: "info", code: "WX", name: "Forecast", headline: "Cool, breezy week", metric: "rain risk Mon", body: "Normal prep today, secure outdoor signage, and keep pickup/delivery messaging ready if Monday rain appears.", source: "Open-Meteo", url: "https://forecast.weather.gov/MapClick.php?lat=37.7909&lon=-122.3971", action: "Prep normal volume today; reduce outdoor-only assumptions on Monday.", pointers: ["Secure sign", "Check pickup", "Watch rain"] }
+      ]
+    },
+    {
+      label: "Compliance and Licensing",
+      count: licenseChecklist.length,
+      signals: [
+        { id: "demo-comp-food", group: "Compliance and Licensing", severity: "warning", code: "LIC", name: "Restaurant docs", headline: "6 key records to keep ready", metric: "owner folder", body: "Food permit, seller permit, food manager certificate and food handler cards are the highest-signal inspection documents.", source: "SF permit checklist", url: "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location", action: "Keep these in Store Info and PDF report.", pointers: ["Food permit", "Seller permit", "Manager certificate", "Food handler cards"] }
+      ]
+    },
+    {
+      label: "Media and Market",
+      count: 1,
+      signals: [
+        { id: "demo-media-event", group: "Media and Market", severity: "opportunity", code: "TRD", name: "Event trend", headline: "Event crowds can lift fast food sales", metric: "weekend", body: "Nearby event traffic can lift quick meals. The best restaurant play is a simple event combo that is easy to say and fast to prep.", source: "Local media scan", url: "https://news.google.com/search?q=San+Francisco+events+food+weekend", action: "Launch one event combo and email regulars with a short coupon code.", pointers: ["EVENT10", "Email regulars", "Prep top sellers"] }
+      ]
+    }
+  ];
+  const opportunities = groups.find((group) => group.label === "Opportunities").signals.map(signalToOpportunity);
+  const warnings = groups.find((group) => group.label === "Warnings").signals.map(signalToWarning);
+  return {
+    profile: {
+      businessName: store.businessName,
+      businessType: store.businessType,
+      address: "412 Mission St, San Francisco, CA",
+      locationLabel: "412 Mission St, San Francisco, CA",
+      city: "San Francisco",
+      state: "CA",
+      lat: store.lat,
+      lon: store.lon,
+      radiusMeters: 1200,
+      localRadiusMeters: 1200,
+      cityRadiusMeters: 75972,
+      cityScopeLabel: "San Francisco city-wide",
+      cityScopeSource: "Preloaded SF restaurant demo"
+    },
+    generatedAt,
+    latencyMs: 0,
+    scores: { risk: 98, opportunity: 96 },
+    banners: [
+      { level: "info", title: "Preloaded SF restaurant demo", body: "This view opens instantly from cached Apify competitor intelligence, local public data and Scalekit role context." },
+      { level: "warning", title: "Owner action ready", body: "Run automations to send a customer offer email, create manager prep work and keep the report trail." }
+    ],
+    metrics: [
+      { label: "Nearby competitors", value: "6", detail: "Tadich Grill benchmark" },
+      { label: "Block rating", value: "4.5★", detail: "Apify review benchmark" },
+      { label: "Peak sales window", value: "Sat 7pm", detail: "~90% busy nearby" },
+      { label: "Best play", value: "Combo + email", detail: "EVENT10 to regulars" }
+    ],
+    groups,
+    opportunities,
+    warnings,
+    weatherForecast,
+    licenseChecklist,
+    sourceHealth: [
+      { key: "marketScan", label: "Apify market scan", ok: true, count: 6, message: "Cached Apify Google Places competitor scan", url: competitorUrl("restaurants near 412 Mission St") },
+      { key: "scalekit", label: "Scalekit roles", ok: true, count: 3, message: "Owner, manager and associate permissions ready", url: "https://righthandai.scalekit.dev" },
+      { key: "gmail", label: "Gmail automation", ok: true, count: 1, message: "Owner-scoped customer email demo ready", url: "https://mail.google.com/" },
+      { key: "permits", label: "SF permit sources", ok: true, count: licenseChecklist.length, message: "Restaurant compliance checklist loaded", url: "https://www.sf.gov/get-health-permit-open-restaurant-bar-or-other-retail-food-location" }
+    ],
+    marketProvider: "apify",
+    marketPlaces,
+    nearbyPlaces: marketPlaces,
+    marketIntelligence: {
+      competitorsAnalyzed: marketPlaces.length,
+      avgRating: 4.5,
+      dominantTier: 3,
+      dominantTierLabel: "$$$ premium block",
+      priceDistribution: [{ tier: 2, label: "$$", pct: 20 }, { tier: 3, label: "$$$", pct: 70 }, { tier: 4, label: "$$$$", pct: 10 }],
+      busyHeatmap: { peakDay: "Sat", peakHour: 19, peakValue: 90, contributing: marketPlaces.length },
+      topReviewTags: [
+        { title: "service speed", places: 4 },
+        { title: "menu clarity", places: 4 },
+        { title: "popular dishes", places: 3 },
+        { title: "reservation wait", places: 3 }
+      ],
+      topRated: marketPlaces.slice(0, 4),
+      categoryBreakdown: { entries: [{ label: "Restaurant", pct: 67 }, { label: "Seafood", pct: 17 }, { label: "Japanese", pct: 16 }] },
+      recommendations: groups.find((group) => group.label === "Opportunities").signals.map((signal) => ({ title: signal.headline, action: signal.action, source: signal.source, url: signal.url }))
+    }
+  };
+}
+
+function signalToOpportunity(signal) {
+  return {
+    title: signal.headline,
+    action: signal.action,
+    why: signal.body,
+    impact: signal.metric,
+    source: signal.source,
+    url: signal.url,
+    checklist: signal.pointers || []
+  };
+}
+
+function signalToWarning(signal) {
+  return {
+    title: signal.headline,
+    action: signal.action,
+    why: signal.body,
+    urgency: signal.severity === "critical" ? "Critical" : "Medium",
+    source: signal.source,
+    url: signal.url,
+    checklist: signal.pointers || []
+  };
+}
+
 function agentTabUrl(userId) {
   const url = new URL(window.location.href);
   url.searchParams.set("agentUser", userId);
@@ -1642,7 +1885,12 @@ function boot() {
   wireEvents();
   renderLanguageChrome();
   refreshAgentSession();
-  refreshIntel();
+  if (SF_RESTAURANT_DEMO_MODE) {
+    state.latestIntel = preloadedSfRestaurantIntel();
+    applyIntel(state.latestIntel);
+  } else {
+    refreshIntel();
+  }
   window.setInterval(() => {
     if (document.visibilityState === "visible" && state.agentSession) refreshAgentTrail();
   }, 4500);
@@ -1799,6 +2047,7 @@ function translateTextNodes(root, lang) {
       if (!parent) return NodeFilter.FILTER_REJECT;
       if (["SCRIPT", "STYLE", "OPTION", "SELECT", "TEXTAREA"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
       if (parent.closest(".translate-control")) return NodeFilter.FILTER_REJECT;
+      if (parent.closest(".no-translate")) return NodeFilter.FILTER_REJECT;
       if (parent.closest(".store-name")) return NodeFilter.FILTER_REJECT;
       if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
@@ -1823,6 +2072,7 @@ function translateElementAttributes(lang) {
   const liveJobs = [];
   const attributes = ["placeholder", "aria-label", "title"];
   document.querySelectorAll("[placeholder], [aria-label], [title]").forEach((element) => {
+    if (element.closest(".no-translate")) return;
     if (element.closest(".translate-control")) return;
     let map = originalAttributeValues.get(element);
     if (!map) {
@@ -2076,6 +2326,11 @@ function renderMetrics(metrics) {
 async function refreshIntel() {
   const store = selectedStore();
   if (!store) return;
+  if (SF_RESTAURANT_DEMO_MODE) {
+    state.latestIntel = preloadedSfRestaurantIntel();
+    applyIntel(state.latestIntel);
+    return;
+  }
   setLoading(true);
   renderBanners([{ level: "info", title: "Refreshing city checks", body: "Looking for plain business actions: weather, safety, access, permits, nearby competition and demand changes." }]);
   els.opportunitiesPanel.innerHTML = loadingCards(2);
@@ -4286,7 +4541,7 @@ function renderChat() {
     ].filter(Boolean).join(" ");
     let badge = "";
     if (message.live) {
-      const badgeText = message.provider === "local-grounded" ? "GROUNDED ANSWER" : "POWERED BY APIFY";
+      const badgeText = message.provider === "local-grounded" ? "STORE ANSWER" : "LIVE ANSWER";
       badge = `<span class="helper-msg-badge live">${escapeHtml(badgeText)}</span>`;
     } else if (message.fallback && message.role === "assistant") {
       badge = `<span class="helper-msg-badge fallback" title="${escapeAttr(message.fallbackReason || "no LLM key")}">offline</span>`;
